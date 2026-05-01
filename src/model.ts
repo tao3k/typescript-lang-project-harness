@@ -177,6 +177,7 @@ export interface TypeScriptProjectReferencePackageFact {
   readonly name?: string;
   readonly packageType?: string;
   readonly configPath?: string;
+  readonly compilerOptions?: TypeScriptCompilerOptionFacts;
   readonly diagnostics: readonly TypeScriptNativeDiagnostic[];
 }
 
@@ -307,6 +308,11 @@ export interface TypeScriptReasoningOwnerDependencyFact {
   readonly toRole?: TypeScriptModuleRole;
 }
 
+export interface TypeScriptReasoningSourceShadowFact {
+  readonly ownerNamespace: string;
+  readonly paths: readonly string[];
+}
+
 export interface TypeScriptPackageEntryResolutionFact {
   readonly kind: "exports" | "imports" | "bin" | "field";
   readonly subpath: string;
@@ -363,6 +369,8 @@ export interface TypeScriptReasoningTree {
   readonly modules: readonly TypeScriptReasoningModule[];
   readonly ownerBranches: readonly TypeScriptReasoningOwnerBranchFact[];
   readonly ownerDependencies: readonly TypeScriptReasoningOwnerDependencyFact[];
+  readonly shadowedSourceOwners: readonly TypeScriptReasoningSourceShadowFact[];
+  readonly orphanedSourceFiles: readonly string[];
   readonly edges: readonly TypeScriptImportEdgeFact[];
 }
 
@@ -375,6 +383,17 @@ export interface TypeScriptHarnessReport {
   readonly blockingRuleIds: readonly string[];
   readonly projectScope?: TypeScriptProjectHarnessScope;
   readonly reasoningTree: TypeScriptReasoningTree;
+}
+
+export interface TypeScriptProjectHarnessAgentSnapshotPackage {
+  readonly packageRoot: string;
+  readonly packagePath: string;
+  readonly report: TypeScriptHarnessReport;
+}
+
+export interface TypeScriptProjectHarnessAgentSnapshot {
+  readonly projectRoot: string;
+  readonly packages: readonly TypeScriptProjectHarnessAgentSnapshotPackage[];
 }
 
 export function blockingFindings(

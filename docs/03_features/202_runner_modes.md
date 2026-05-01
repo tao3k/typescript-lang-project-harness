@@ -10,7 +10,7 @@ project facts.
 Use `runTypeScriptProjectHarness()` or
 `assertTypeScriptProjectHarnessClean()` when a caller has a project path. The
 requested path must exist. The runner resolves the nearest parent
-`package.json` as the package project anchor, discovers a `tsconfig.json` from
+`package.json` as the package project anchor, reads a local `tsconfig.json` in
 that package root, parses it with TypeScript's native config parser, builds a
 reasoning tree from parser-owned facts, and evaluates the default rule packs
 over that reasoning tree. Project runs also collect TypeScript `Program` semantic
@@ -44,13 +44,13 @@ const config = {
 `ignoredDirNames` controls recursive fallback discovery. `blockingSeverities`
 keeps assertion behavior independent from rule emission. `disabledRuleIds`
 suppresses selected findings, and `blockingRuleIds` lets a project promote
-specific advisory rules without changing catalog severities. M2 semantic
-diagnostics, modularity and test-layout rules, plus malformed `package.json`
-metadata diagnostics, are rendered as `info` advice by default. Package
-metadata diagnostics include root, TypeScript project-reference, and workspace
-package files and are produced through TypeScript's JSON parser. Package
-scripts and workspaces are parser-owned orientation facts, not package-manager
-policy.
+specific advisory rules without changing catalog severities. Semantic
+diagnostics, project-shape advice, modularity and test-layout rules, plus
+malformed `package.json` metadata diagnostics, are rendered as `info` advice by
+default. Package metadata diagnostics include root, TypeScript
+project-reference, and workspace package files and are produced through
+TypeScript's JSON parser. Package scripts and workspaces are parser-owned
+orientation facts, not package-manager policy.
 
 ## Explicit-Path Runner
 
@@ -72,18 +72,26 @@ Reports always include a reasoning tree assembled from parser-owned facts.
 shape: `Modules:`, `OwnerBranches:`, `OwnerDependencies:`, and
 `FindingGroups:`. It summarizes module roles, exports, path-alias/package
 edges, package-name import owners, project-reference/workspace owner
-provenance, and package entry owners while omitting singleton and zero-value
-boilerplate.
+provenance, package entry owners, and Rust-style source-shape counters such as
+`shadowed=` and `orphaned=` while omitting singleton and zero-value boilerplate.
 Explicit-path reports use the same grouping surface, with diagnostics grouped
 under `FindingGroups:` when rule findings exist. Full TypeScript diagnostic
 codes and related information remain in compact findings and JSON output.
 Parser-visible package `bin` owners are still classified as `entrypoint`
 modules before entering this snapshot.
 
+`runTypeScriptProjectHarnessAgentSnapshot()` and
+`renderTypeScriptProjectHarnessAgentSnapshot()` provide the project-level
+snapshot used by `--agent-snapshot`. The runner starts from the root package
+report, follows parser-owned workspace and project-reference package facts, and
+runs each member package from its own package anchor. The renderer adds compact
+`pkg <path>` headings only when multiple package scopes produce source facts or
+findings.
+
 ## Public Facade
 
-Consumers should import from the package root. The root facade exposes the M2
-contract: parser entrypoints, project/explicit runners, assertion helpers,
-compact/JSON/reasoning renderers, rule catalog functions, and model types,
-including `TypeScriptHarnessRunMode`. Reasoning builders and rule evaluators
-remain internal implementation details.
+Consumers should import from the package root. The root facade exposes the M3
+contract: parser entrypoints, project/explicit runners, project snapshot
+helpers, assertion helpers, compact/JSON/reasoning renderers, rule catalog
+functions, and model types, including `TypeScriptHarnessRunMode`. Reasoning
+builders and rule evaluators remain internal implementation details.

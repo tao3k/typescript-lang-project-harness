@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import path from "node:path";
 
 import {
   DEFAULT_IGNORED_DIR_NAMES,
@@ -16,6 +17,8 @@ import {
   isTypeScriptHarnessClean,
   type TypeScriptHarnessConfig,
   type TypeScriptHarnessReport,
+  type TypeScriptProjectHarnessAgentSnapshot,
+  type TypeScriptProjectHarnessAgentSnapshotPackage,
 } from "./model.js";
 
 export function defaultTypeScriptHarnessConfig(): TypeScriptHarnessConfig {
@@ -54,6 +57,30 @@ export function runTypeScriptProjectHarness(
   };
 }
 
+export function runTypeScriptProjectHarnessAgentSnapshot(
+  projectRootInput: string | URL,
+  config: TypeScriptHarnessConfig = defaultTypeScriptHarnessConfig(),
+): TypeScriptProjectHarnessAgentSnapshot {
+  return buildTypeScriptProjectHarnessAgentSnapshot(
+    runTypeScriptProjectHarness(projectRootInput, config),
+    config,
+  );
+}
+
+export function buildTypeScriptProjectHarnessAgentSnapshot(
+  rootReport: TypeScriptHarnessReport,
+  config: TypeScriptHarnessConfig = defaultTypeScriptHarnessConfig(),
+): TypeScriptProjectHarnessAgentSnapshot {
+  const projectRoot = rootReport.reasoningTree.projectRoot;
+  const memberReports = agentSnapshotMemberPackageRoots(rootReport).map((packageRoot) =>
+    runTypeScriptProjectHarness(packageRoot, config),
+  );
+  const packages = [rootReport, ...memberReports].map((report) =>
+    agentSnapshotPackage(projectRoot, report),
+  );
+  return { projectRoot, packages };
+}
+
 export function runTypeScriptLangHarness(
   pathInputs: readonly (string | URL)[],
   config: TypeScriptHarnessConfig = defaultTypeScriptHarnessConfig(),
@@ -88,6 +115,41 @@ export function assertTypeScriptProjectHarnessClean(
     throw new Error(renderAssertionMessage(report));
   }
   return report;
+}
+
+function agentSnapshotMemberPackageRoots(rootReport: TypeScriptHarnessReport): string[] {
+  const projectRoot = path.resolve(rootReport.reasoningTree.projectRoot);
+  const packageRoots = new Set<string>();
+  for (const referencePackage of rootReport.reasoningTree.projectReferencePackages) {
+    const packageRoot = path.resolve(referencePackage.path);
+    if (packageRoot !== projectRoot) {
+      packageRoots.add(packageRoot);
+    }
+  }
+  for (const workspacePackage of rootReport.reasoningTree.workspacePackages) {
+    const packageRoot = path.resolve(workspacePackage.path);
+    if (packageRoot !== projectRoot) {
+      packageRoots.add(packageRoot);
+    }
+  }
+  return [...packageRoots].sort((left, right) => left.localeCompare(right));
+}
+
+function agentSnapshotPackage(
+  snapshotRoot: string,
+  report: TypeScriptHarnessReport,
+): TypeScriptProjectHarnessAgentSnapshotPackage {
+  const packageRoot = report.reasoningTree.projectRoot;
+  return {
+    packageRoot,
+    packagePath: displayRelativePath(snapshotRoot, packageRoot),
+    report,
+  };
+}
+
+function displayRelativePath(root: string, child: string): string {
+  const rendered = path.relative(root, child).replaceAll("\\", "/");
+  return rendered.length === 0 ? "." : rendered;
 }
 
 export function assertTypeScriptLangHarnessClean(

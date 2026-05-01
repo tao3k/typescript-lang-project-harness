@@ -138,7 +138,10 @@ test("project parser reads tsconfig compiler and package metadata facts", () => 
   );
   fs.writeFileSync(
     path.join(root, "packages", "app", "tsconfig.json"),
-    JSON.stringify({ include: ["src/**/*.ts"] }),
+    JSON.stringify({
+      compilerOptions: { composite: true, declaration: true },
+      include: ["src/**/*.ts"],
+    }),
   );
   fs.writeFileSync(path.join(root, "src", "domain.ts"), "export const domain = 1;\n");
   fs.writeFileSync(path.join(root, "src", "types.ts"), "export interface Domain { id: string }\n");
@@ -178,7 +181,6 @@ test("project parser reads tsconfig compiler and package metadata facts", () => 
       references: [{ path: "./packages/app" }],
       compilerOptions: {
         module: "NodeNext",
-        moduleResolution: "NodeNext",
         baseUrl: ".",
         rootDir: ".",
         rootDirs: ["src", "generated"],

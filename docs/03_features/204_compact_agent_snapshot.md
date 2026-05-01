@@ -10,18 +10,21 @@ JSON-like dump of every parser fact.
 TypeScript parser facts -> reasoning tree facts -> agent owner snapshot
 ```
 
-The renderer consumes `TypeScriptHarnessReport.reasoningTree.ownerBranches`,
-`ownerDependencies`, package owner facts, and grouped findings. It must not
-inspect raw source files, `tsconfig`, `package.json`, `report.modules`,
-`report.projectScope`, `report.rootPaths`, or raw import edges to rediscover
-owner structure.
+The single-package renderer consumes
+`TypeScriptHarnessReport.reasoningTree.ownerBranches`, `ownerDependencies`,
+package owner facts, and grouped findings. The project-level snapshot renderer
+consumes package reports prepared by the runner from parser-owned
+workspace/project-reference facts. Neither renderer inspects raw source files,
+`tsconfig`, `package.json`, `report.modules`, `report.projectScope`,
+`report.rootPaths`, or raw import edges to rediscover owner structure.
 
 ## Format Shape
 
 The output uses the same section grammar as the Rust harness agent snapshot:
 
 ```text
-Modules: source=<n> roots=<n> branches=<n> deps=<n> paths=<n> refs=<n> workspaces=<n> package-owners=<n> findings=<n>
+pkg <path>
+Modules: source=<n> roots=<n> branches=<n> deps=<n> shadowed=<n> orphaned=<n> paths=<n> refs=<n> workspaces=<n> package-owners=<n> findings=<n>
 OwnerBranches:
  - <path> [<roles>] owner=<owner> imports=<resolution:count,...> exports=<names> -> <edge-kind:path,...>
 OwnerDependencies:
@@ -31,12 +34,24 @@ FindingGroups:
  - <severity> <rule-id> x<count> first=<path> <title>
 ```
 
-Only non-empty sections are emitted. Singleton and zero-value boilerplate is
-omitted.
+`pkg <path>` headings are emitted only by project-level snapshots when multiple
+package scopes are rendered. Single-package snapshots start directly at
+`Modules:`. Only non-empty sections are emitted. Singleton and zero-value
+boilerplate is omitted.
 
 ## Semantics
 
 - `Modules:` summarizes parser-visible non-test modules.
+- `shadowed=` counts parser-visible TypeScript source owners that have more
+  than one source shape for the same owner namespace, such as a file owner and
+  an `index.*` directory owner, unless one shape explicitly re-exports the
+  other as a local facade/proxy.
+- `orphaned=` counts parser-visible `source` modules that are not reachable
+  from entrypoint, facade, or package-entry roots through TypeScript-native
+  owner dependencies.
+- `pkg <path>` identifies the package scope relative to the requested snapshot
+  root. Member packages are run from their own `package.json` anchor and local
+  `tsconfig.json`; root package config is not inherited across package anchors.
 - `OwnerBranches:` lists source owners that are roots, facades, entrypoints,
   configs, or modules with parser-owned re-export structure edges. Ordinary
   imports stay in `OwnerDependencies:`.
@@ -63,6 +78,10 @@ omitted.
   not manifest dependency governance.
 - Keep diagnostic detail out of the snapshot. Full diagnostic cards stay in the
   default compact renderer; the snapshot only groups findings.
+- Keep source-shape detail out of the snapshot. `shadowed=` and `orphaned=`
+  are orientation counters from reasoning-tree facts, not style gates and not
+  replacement rules for TypeScript, ESLint, or project-specific architecture
+  policy.
 - Compact renderers normalize project-root absolute path mentions in diagnostic
   summaries to relative paths before rendering.
 
@@ -78,8 +97,11 @@ The expected compact text lives at:
 
 ```text
 tests/snapshots/agent_snapshot_project.snap
+tests/snapshots/agent_snapshot_workspace_project.snap
 ```
 
-`tests/unit/agent_snapshot.test.ts` compares both the library renderer and the
-CLI `--agent-snapshot` output against that golden file. Update the fixture and
-golden together only when the compact reasoning surface intentionally changes.
+`tests/unit/agent_snapshot.test.ts` compares the single-package library
+renderer against `agent_snapshot_project.snap` and the project-level
+CLI/snapshot renderer against `agent_snapshot_workspace_project.snap`. Update
+the fixture and golden files together only when the compact reasoning surface
+intentionally changes.

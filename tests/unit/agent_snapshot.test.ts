@@ -5,8 +5,10 @@ import { fileURLToPath } from "node:url";
 import test from "node:test";
 
 import {
+  renderTypeScriptProjectHarnessAgentSnapshot,
   renderTypeScriptProjectHarness,
   renderTypeScriptReasoningTree,
+  runTypeScriptProjectHarnessAgentSnapshot,
   runTypeScriptProjectHarness,
   type TypeScriptHarnessReport,
 } from "../../src/index.js";
@@ -27,8 +29,10 @@ test("agent snapshot matches the golden project reasoning surface", () => {
 test("golden agent snapshot obeys the compact text design", () => {
   const fixtureRoot = path.join(projectRoot, "tests", "fixtures", "agent_snapshot_project");
   const snapshot = goldenSnapshot();
+  const workspaceSnapshot = workspaceGoldenSnapshot();
 
   assertCompactSnapshotDesign(snapshot, [projectRoot, fixtureRoot]);
+  assertCompactSnapshotDesign(workspaceSnapshot, [projectRoot, fixtureRoot]);
 });
 
 test("repository agent snapshot self-applies the compact text design", () => {
@@ -36,15 +40,29 @@ test("repository agent snapshot self-applies the compact text design", () => {
   const snapshot = `${renderTypeScriptReasoningTree(report)}\n`;
 
   assertCompactSnapshotDesign(snapshot, [projectRoot]);
+  assert.doesNotMatch(snapshot, /shadowed=/u);
+  assert.doesNotMatch(snapshot, /orphaned=/u);
 });
 
-test("CLI agent snapshot mode matches the golden project reasoning surface", () => {
+test("project agent snapshot segments workspace package scopes", () => {
+  const fixtureRoot = path.join(projectRoot, "tests", "fixtures", "agent_snapshot_project");
+  const snapshot = runTypeScriptProjectHarnessAgentSnapshot(fixtureRoot);
+  const rendered = `${renderTypeScriptProjectHarnessAgentSnapshot(snapshot)}\n`;
+
+  assert.equal(rendered, workspaceGoldenSnapshot());
+  assert.deepEqual(
+    snapshot.packages.map((packageSnapshot) => packageSnapshot.packagePath),
+    [".", "packages/core", "packages/util"],
+  );
+});
+
+test("CLI agent snapshot mode matches the golden workspace reasoning surface", () => {
   const fixtureRoot = path.join(projectRoot, "tests", "fixtures", "agent_snapshot_project");
   const output = runCliCapture(["--agent-snapshot", "."], fixtureRoot);
 
   assert.equal(output.exitCode, 0);
   assert.equal(output.stderr, "");
-  assert.equal(goldenSnapshot(), output.stdout);
+  assert.equal(workspaceGoldenSnapshot(), output.stdout);
 });
 
 test("compact renderers normalize diagnostic messages to the reasoning root", () => {
@@ -75,10 +93,24 @@ function goldenSnapshot(): string {
   );
 }
 
+function workspaceGoldenSnapshot(): string {
+  return fs.readFileSync(
+    path.join(projectRoot, "tests", "snapshots", "agent_snapshot_workspace_project.snap"),
+    "utf8",
+  );
+}
+
 function assertCompactSnapshotDesign(snapshot: string, hiddenPaths: readonly string[]): void {
   const lines = snapshot.trimEnd().split("\n");
-  assert.match(lines[0] ?? "", /^Modules: source=\d+/u);
-  assertOrderedSections(lines);
+  const segments = snapshotSegments(lines);
+  assert.ok(segments.length > 0, "snapshot should include at least one package segment");
+  for (const line of lines.filter((line) => line.startsWith("pkg "))) {
+    assert.match(line, /^pkg (\.|[^\s]+)$/u);
+  }
+  for (const segment of segments) {
+    assert.match(segment[0] ?? "", /^Modules: source=\d+/u);
+    assertOrderedSections(segment);
+  }
   assert.doesNotMatch(snapshot, /^\{/u);
   assert.doesNotMatch(snapshot, /"modules"|"projectScope"|"rootPaths"/u);
   assert.doesNotMatch(
@@ -92,6 +124,25 @@ function assertCompactSnapshotDesign(snapshot: string, hiddenPaths: readonly str
       `snapshot leaked absolute path: ${hiddenPath}`,
     );
   }
+}
+
+function snapshotSegments(lines: readonly string[]): readonly (readonly string[])[] {
+  const segments: string[][] = [];
+  let currentSegment: string[] = [];
+  for (const line of lines) {
+    if (line.startsWith("pkg ")) {
+      if (currentSegment.length > 0) {
+        segments.push(currentSegment);
+      }
+      currentSegment = [];
+      continue;
+    }
+    currentSegment.push(line);
+  }
+  if (currentSegment.length > 0) {
+    segments.push(currentSegment);
+  }
+  return segments;
 }
 
 function assertOrderedSections(lines: readonly string[]): void {
@@ -218,6 +269,8 @@ function diagnosticReport(
       ],
       ownerBranches: [],
       ownerDependencies: [],
+      shadowedSourceOwners: [],
+      orphanedSourceFiles: [],
       edges: [],
     },
   };

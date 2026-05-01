@@ -21,7 +21,7 @@ export function ownerBranches(
     )
     .map((moduleReport) => ({
       path: moduleReport.path,
-      ownerNamespace: ownerNamespace(projectRoot, moduleReport.path),
+      ownerNamespace: reasoningOwnerNamespace(projectRoot, moduleReport.path),
       roles: ownerBranchRoleLabels(moduleReport),
       hasIntentDoc: moduleReport.hasIntentDoc,
       importSummary: importSummary(moduleEdges(edges, moduleReport.path)),
@@ -129,7 +129,7 @@ function countResolution(
   return edges.filter((edge) => edge.resolution === resolution).length;
 }
 
-function ownerNamespace(projectRoot: string, modulePath: string): string {
+export function reasoningOwnerNamespace(projectRoot: string, modulePath: string): string {
   const relativePath = path.relative(projectRoot, modulePath);
   const parsed = path.parse(relativePath);
   const withoutExtension = path.join(parsed.dir, parsed.name).replaceAll("\\", "/");

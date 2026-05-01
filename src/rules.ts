@@ -2,7 +2,6 @@ import path from "node:path";
 
 import type {
   RulePackDescriptor,
-  SourceLocation,
   TypeScriptHarnessConfig,
   TypeScriptHarnessFinding,
   TypeScriptHarnessRule,
@@ -10,13 +9,9 @@ import type {
   TypeScriptReasoningModule,
   TypeScriptReasoningTree,
 } from "./model.js";
-
-interface DiagnosticFactLike {
-  readonly code: number;
-  readonly message: string;
-  readonly location: SourceLocation;
-  readonly sourceLine?: string;
-}
+import { diagnosticFinding, relativeToProject } from "./rules/common.js";
+import { evaluateProjectPolicyRules } from "./rules/project_policy.js";
+export { typeScriptProjectPolicyRules } from "./rules/project_policy.js";
 
 const PACK_DESCRIPTORS: readonly RulePackDescriptor[] = [
   {
@@ -74,35 +69,6 @@ const TS_SEM_R001: TypeScriptHarnessRule = {
   requirement:
     "TypeScript Program semantic diagnostics should be visible from parser-native facts without replacing tsc.",
   labels: { surface: "source", parser: "typescript-program" },
-};
-
-const TS_PROJ_R001: TypeScriptHarnessRule = {
-  ruleId: "TS-PROJ-R001",
-  packId: "typescript.project_policy",
-  severity: "warning",
-  title: "Project should declare tsconfig",
-  requirement:
-    "Project runs should declare tsconfig.json so the harness sees TypeScript's source set.",
-  labels: { surface: "project", parser: "tsconfig" },
-};
-
-const TS_PROJ_R002: TypeScriptHarnessRule = {
-  ruleId: "TS-PROJ-R002",
-  packId: "typescript.project_policy",
-  severity: "error",
-  title: "tsconfig must parse",
-  requirement: "tsconfig.json must parse through TypeScript's native config parser.",
-  labels: { surface: "project", parser: "tsconfig" },
-};
-
-const TS_PROJ_R003: TypeScriptHarnessRule = {
-  ruleId: "TS-PROJ-R003",
-  packId: "typescript.project_policy",
-  severity: "info",
-  title: "package.json should parse",
-  requirement:
-    "package.json should parse so package entry fields, exports, imports, bins, scripts, and workspaces are visible.",
-  labels: { surface: "project", parser: "package-json" },
 };
 
 const TS_MOD_R001: TypeScriptHarnessRule = {
@@ -177,10 +143,6 @@ export function typeScriptSemanticRules(): readonly TypeScriptHarnessRule[] {
   return [TS_SEM_R001];
 }
 
-export function typeScriptProjectPolicyRules(): readonly TypeScriptHarnessRule[] {
-  return [TS_PROJ_R001, TS_PROJ_R002, TS_PROJ_R003];
-}
-
 export function typeScriptModularityRules(): readonly TypeScriptHarnessRule[] {
   return [TS_MOD_R001, TS_MOD_R002];
 }
@@ -222,67 +184,6 @@ function evaluateSemanticRules(reasoningTree: TypeScriptReasoningTree): TypeScri
     .map((diagnostic) =>
       diagnosticFinding(TS_SEM_R001, diagnostic, "TypeScript semantic diagnostic"),
     );
-}
-
-function diagnosticFinding(
-  rule: TypeScriptHarnessRule,
-  diagnostic: DiagnosticFactLike,
-  label: string,
-): TypeScriptHarnessFinding {
-  const finding: TypeScriptHarnessFinding = {
-    ruleId: rule.ruleId,
-    packId: rule.packId,
-    severity: rule.severity,
-    title: rule.title,
-    summary: diagnosticSummary(diagnostic),
-    location: diagnostic.location,
-    requirement: rule.requirement,
-    label,
-    labels: rule.labels,
-  };
-  return diagnostic.sourceLine === undefined
-    ? finding
-    : { ...finding, sourceLine: diagnostic.sourceLine };
-}
-
-function evaluateProjectPolicyRules(
-  reasoningTree: TypeScriptReasoningTree,
-): TypeScriptHarnessFinding[] {
-  const findings: TypeScriptHarnessFinding[] = [];
-  if (reasoningTree.runMode === "project" && reasoningTree.configPath === undefined) {
-    findings.push({
-      ruleId: TS_PROJ_R001.ruleId,
-      packId: TS_PROJ_R001.packId,
-      severity: TS_PROJ_R001.severity,
-      title: TS_PROJ_R001.title,
-      summary: "No tsconfig.json was found for this project run.",
-      location: { path: reasoningTree.projectRoot, line: 1, column: 0 },
-      requirement: TS_PROJ_R001.requirement,
-      label: "missing tsconfig.json",
-      labels: TS_PROJ_R001.labels,
-    });
-  }
-  findings.push(
-    ...reasoningTree.diagnostics
-      .filter((diagnostic) => diagnostic.phase === "config")
-      .map((diagnostic) =>
-        diagnosticFinding(TS_PROJ_R002, diagnostic, "TypeScript config parser diagnostic"),
-      ),
-    ...reasoningTree.diagnostics
-      .filter((diagnostic) => diagnostic.phase === "package-json")
-      .map((diagnostic) =>
-        diagnosticFinding(TS_PROJ_R003, diagnostic, "package.json parser diagnostic"),
-      ),
-  );
-  return findings;
-}
-
-function diagnosticSummary(diagnostic: DiagnosticFactLike): string {
-  return `${diagnosticCodeLabel(diagnostic.code)}: ${diagnostic.message}`;
-}
-
-function diagnosticCodeLabel(code: number): string {
-  return `TS${code}`;
 }
 
 function evaluateModularityRules(
@@ -463,8 +364,4 @@ function isInsideAny(filePath: string, roots: readonly string[]): boolean {
       relativePath === "" || (!relativePath.startsWith("..") && !path.isAbsolute(relativePath))
     );
   });
-}
-
-function relativeToProject(reasoningTree: TypeScriptReasoningTree, filePath: string): string {
-  return path.relative(reasoningTree.projectRoot, filePath) || ".";
 }

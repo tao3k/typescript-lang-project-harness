@@ -71,7 +71,7 @@ raw source text.
      that rules/renderers consume reasoning-tree facts.
    - The repository must pass its own default harness and advice surface with
      zero findings.
-   - Acceptance stays: `npm run check`, `oxlint`, `npm test`,
+   - Acceptance stays: `npm run check`, `npm run lint`, `npm test`,
      `npm run harness`, and `git diff --check` through `direnv exec .`.
 
 ## Current Parser Slice

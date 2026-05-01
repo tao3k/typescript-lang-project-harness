@@ -99,7 +99,12 @@ test("agent policy reports unresolved package entries without blocking", () => {
   fs.writeFileSync(
     path.join(root, "tsconfig.json"),
     JSON.stringify({
-      compilerOptions: { rootDir: ".", outDir: "dist" },
+      compilerOptions: {
+        module: "NodeNext",
+        moduleResolution: "NodeNext",
+        rootDir: ".",
+        outDir: "dist",
+      },
       include: ["src/**/*.ts"],
     }),
   );

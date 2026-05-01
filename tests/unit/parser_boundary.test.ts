@@ -38,7 +38,10 @@ test("TypeScript semantics stay in the parser layer", () => {
   );
   assert.doesNotMatch(reasoningSource, /escapeRegExp|new RegExp/u);
 
-  const rulesSource = fs.readFileSync(path.join(projectRoot, "src", "rules.ts"), "utf8");
+  const rulesSource = sourceFiles(path.join(projectRoot, "src"))
+    .filter(isRulesLayerSource)
+    .map((sourcePath) => fs.readFileSync(sourcePath, "utf8"))
+    .join("\n");
   assert.doesNotMatch(
     rulesSource,
     /TypeScriptModuleReport|TypeScriptProjectHarnessScope|TypeScriptHarnessRunMode/u,
@@ -71,6 +74,11 @@ function isParserLayerSource(sourcePath: string): boolean {
 function isReasoningLayerSource(sourcePath: string): boolean {
   const relativePath = path.relative(path.join(projectRoot, "src"), sourcePath);
   return relativePath === "reasoning.ts" || relativePath.startsWith(`reasoning${path.sep}`);
+}
+
+function isRulesLayerSource(sourcePath: string): boolean {
+  const relativePath = path.relative(path.join(projectRoot, "src"), sourcePath);
+  return relativePath === "rules.ts" || relativePath.startsWith(`rules${path.sep}`);
 }
 
 function sourceFiles(root: string): string[] {

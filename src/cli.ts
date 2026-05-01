@@ -2,10 +2,13 @@ import path from "node:path";
 
 import {
   renderTypeScriptProjectHarness,
+  renderTypeScriptProjectHarnessAgentSnapshot,
   renderTypeScriptProjectHarnessJson,
-  renderTypeScriptReasoningTree,
 } from "./render.js";
-import { runTypeScriptProjectHarness } from "./runner.js";
+import {
+  buildTypeScriptProjectHarnessAgentSnapshot,
+  runTypeScriptProjectHarness,
+} from "./runner.js";
 import { isTypeScriptHarnessClean } from "./model.js";
 
 export interface CliStreams {
@@ -83,7 +86,9 @@ function renderCliOutput(
     return renderTypeScriptProjectHarnessJson(report);
   }
   if (args.agentSnapshot) {
-    return `${renderTypeScriptReasoningTree(report)}\n`;
+    return `${renderTypeScriptProjectHarnessAgentSnapshot(
+      buildTypeScriptProjectHarnessAgentSnapshot(report),
+    )}\n`;
   }
   return `${renderTypeScriptProjectHarness(report)}\n`;
 }

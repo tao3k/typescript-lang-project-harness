@@ -254,6 +254,8 @@ test("reasoning tree renders tsconfig paths, package entries, roles, and import 
     tree.ownerDependencies.some((dependency) => dependency.moduleSpecifier === "react"),
     false,
   );
+  assert.deepEqual(tree.shadowedSourceOwners, []);
+  assert.deepEqual(tree.orphanedSourceFiles, []);
 
   const rendered = renderTypeScriptReasoningTree(report);
   assert.match(rendered, /^Modules: source=4 roots=2 branches=2 deps=/u);
@@ -270,4 +272,97 @@ test("reasoning tree renders tsconfig paths, package entries, roles, and import 
     /src\/consumer\.ts --package-name\/import--> packages\/core owner=project-reference/u,
   );
   assert.doesNotMatch(rendered, /src\/consumer\.ts --external\/import--> react/u);
+});
+
+test("reasoning tree reports shadowed TypeScript source owner shapes", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-shadowed-source-"));
+  fs.mkdirSync(path.join(root, "src", "domain"), { recursive: true });
+  fs.writeFileSync(
+    path.join(root, "package.json"),
+    JSON.stringify({ name: "@example/shadowed-source", type: "module" }),
+  );
+  fs.writeFileSync(
+    path.join(root, "tsconfig.json"),
+    JSON.stringify({
+      compilerOptions: { module: "NodeNext", moduleResolution: "NodeNext" },
+      include: ["src/**/*.ts"],
+    }),
+  );
+  fs.writeFileSync(path.join(root, "src", "index.ts"), 'export { domain } from "./domain.js";\n');
+  fs.writeFileSync(path.join(root, "src", "domain.ts"), "export const domain = 1;\n");
+  fs.writeFileSync(path.join(root, "src", "domain", "index.ts"), "export const indexed = 1;\n");
+
+  const report = runTypeScriptProjectHarness(root);
+  const tree = report.reasoningTree;
+  const rendered = renderTypeScriptReasoningTree(report);
+
+  assert.deepEqual(
+    tree.shadowedSourceOwners.map((shadow) => ({
+      ownerNamespace: shadow.ownerNamespace,
+      paths: shadow.paths.map((filePath) => path.relative(root, filePath)),
+    })),
+    [
+      {
+        ownerNamespace: "src/domain",
+        paths: ["src/domain.ts", "src/domain/index.ts"],
+      },
+    ],
+  );
+  assert.match(rendered, /^Modules: .*shadowed=1/mu);
+  assert.doesNotMatch(rendered, /shadowed=0/u);
+});
+
+test("reasoning tree does not treat explicit facade forwarding as shadowed source", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-facade-forward-"));
+  fs.mkdirSync(path.join(root, "src", "domain"), { recursive: true });
+  fs.writeFileSync(
+    path.join(root, "package.json"),
+    JSON.stringify({ name: "@example/facade-forward", type: "module" }),
+  );
+  fs.writeFileSync(
+    path.join(root, "tsconfig.json"),
+    JSON.stringify({
+      compilerOptions: { module: "NodeNext", moduleResolution: "NodeNext" },
+      include: ["src/**/*.ts"],
+    }),
+  );
+  fs.writeFileSync(path.join(root, "src", "index.ts"), 'export * from "./domain.js";\n');
+  fs.writeFileSync(path.join(root, "src", "domain.ts"), 'export * from "./domain/index.js";\n');
+  fs.writeFileSync(path.join(root, "src", "domain", "index.ts"), "export const domain = 1;\n");
+
+  const report = runTypeScriptProjectHarness(root);
+  const rendered = renderTypeScriptReasoningTree(report);
+
+  assert.deepEqual(report.reasoningTree.shadowedSourceOwners, []);
+  assert.doesNotMatch(rendered, /shadowed=/u);
+});
+
+test("reasoning tree reports orphaned TypeScript source files from entry roots", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-orphaned-source-"));
+  fs.mkdirSync(path.join(root, "src"), { recursive: true });
+  fs.writeFileSync(
+    path.join(root, "package.json"),
+    JSON.stringify({ name: "@example/orphaned-source", type: "module" }),
+  );
+  fs.writeFileSync(
+    path.join(root, "tsconfig.json"),
+    JSON.stringify({
+      compilerOptions: { module: "NodeNext", moduleResolution: "NodeNext" },
+      include: ["src/**/*.ts"],
+    }),
+  );
+  fs.writeFileSync(path.join(root, "src", "index.ts"), "export const ok = 1;\n");
+  fs.writeFileSync(path.join(root, "src", "forgotten.ts"), "export const forgotten = 1;\n");
+
+  const report = runTypeScriptProjectHarness(root);
+  const tree = report.reasoningTree;
+  const rendered = renderTypeScriptReasoningTree(report);
+
+  assert.deepEqual(
+    tree.orphanedSourceFiles.map((filePath) => path.relative(root, filePath)),
+    ["src/forgotten.ts"],
+  );
+  assert.match(rendered, /^Modules: .*orphaned=1/mu);
+  assert.doesNotMatch(rendered, /orphaned=0/u);
+  assert.doesNotMatch(rendered, /FindingGroups:/u);
 });

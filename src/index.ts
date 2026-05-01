@@ -27,6 +27,8 @@ export type {
   TypeScriptPackageImportOwnerFact,
   TypeScriptPackageEntryResolutionFact,
   TypeScriptPathAliasFact,
+  TypeScriptProjectHarnessAgentSnapshot,
+  TypeScriptProjectHarnessAgentSnapshotPackage,
   TypeScriptProjectConfigFacts,
   TypeScriptProjectHarnessScope,
   TypeScriptProjectReferencePackageFact,
@@ -37,6 +39,7 @@ export type {
   TypeScriptReasoningOwnerBranchFact,
   TypeScriptReasoningOwnerBranchRole,
   TypeScriptReasoningOwnerDependencyFact,
+  TypeScriptReasoningSourceShadowFact,
   TypeScriptReasoningTree,
   TypeScriptWorkspacePackageFact,
 } from "./model.js";
@@ -57,6 +60,7 @@ export {
 export {
   renderAssertionMessage,
   renderTypeScriptProjectHarness,
+  renderTypeScriptProjectHarnessAgentSnapshot,
   renderTypeScriptProjectHarnessAdvice,
   renderTypeScriptProjectHarnessJson,
   renderTypeScriptReasoningTree,
@@ -65,8 +69,10 @@ export type { TypeScriptRenderOptions } from "./render.js";
 export {
   assertTypeScriptLangHarnessClean,
   assertTypeScriptProjectHarnessClean,
+  buildTypeScriptProjectHarnessAgentSnapshot,
   defaultTypeScriptHarnessConfig,
   runTypeScriptLangHarness,
+  runTypeScriptProjectHarnessAgentSnapshot,
   runTypeScriptProjectHarness,
 } from "./runner.js";
 export {

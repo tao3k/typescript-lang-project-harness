@@ -32,6 +32,8 @@ import type {
   TypeScriptPackageImportOwnerFact,
   TypeScriptPackageEntryResolutionFact,
   TypeScriptPathAliasFact,
+  TypeScriptProjectHarnessAgentSnapshot,
+  TypeScriptProjectHarnessAgentSnapshotPackage,
   TypeScriptProjectConfigFacts,
   TypeScriptProjectHarnessScope,
   TypeScriptProjectReferencePackageFact,
@@ -42,6 +44,7 @@ import type {
   TypeScriptReasoningOwnerBranchFact,
   TypeScriptReasoningOwnerBranchRole,
   TypeScriptReasoningOwnerDependencyFact,
+  TypeScriptReasoningSourceShadowFact,
   TypeScriptReasoningTree,
   TypeScriptRenderOptions,
   TypeScriptWorkspacePackageFact,
@@ -74,6 +77,8 @@ type PublicModelContract = readonly [
   TypeScriptPackageImportOwnerFact,
   TypeScriptPackageEntryResolutionFact,
   TypeScriptPathAliasFact,
+  TypeScriptProjectHarnessAgentSnapshot,
+  TypeScriptProjectHarnessAgentSnapshotPackage,
   TypeScriptProjectConfigFacts,
   TypeScriptProjectHarnessScope,
   TypeScriptProjectReferencePackageFact,
@@ -84,6 +89,7 @@ type PublicModelContract = readonly [
   TypeScriptReasoningOwnerBranchFact,
   TypeScriptReasoningOwnerBranchRole,
   TypeScriptReasoningOwnerDependencyFact,
+  TypeScriptReasoningSourceShadowFact,
   TypeScriptReasoningTree,
   TypeScriptRenderOptions,
   TypeScriptWorkspacePackageFact,
@@ -91,13 +97,14 @@ type PublicModelContract = readonly [
 
 const publicModelContract: PublicModelContract | undefined = undefined;
 
-test("public facade exposes the stable M2 runtime surface", () => {
+test("public facade exposes the stable M3 runtime surface", () => {
   assert.deepEqual(Object.keys(api).sort(), [
     "DEFAULT_IGNORED_DIR_NAMES",
     "advisoryFindings",
     "assertTypeScriptLangHarnessClean",
     "assertTypeScriptProjectHarnessClean",
     "blockingFindings",
+    "buildTypeScriptProjectHarnessAgentSnapshot",
     "defaultTypeScriptHarnessConfig",
     "discoverTypeScriptFiles",
     "fileCount",
@@ -109,10 +116,12 @@ test("public facade exposes the stable M2 runtime surface", () => {
     "renderAssertionMessage",
     "renderTypeScriptProjectHarness",
     "renderTypeScriptProjectHarnessAdvice",
+    "renderTypeScriptProjectHarnessAgentSnapshot",
     "renderTypeScriptProjectHarnessJson",
     "renderTypeScriptReasoningTree",
     "runTypeScriptLangHarness",
     "runTypeScriptProjectHarness",
+    "runTypeScriptProjectHarnessAgentSnapshot",
     "typeScriptAgentPolicyRules",
     "typeScriptModularityRules",
     "typeScriptProjectPolicyRules",
@@ -169,8 +178,11 @@ test("public runner renders compact agent snapshots from parser-native facts", (
 
   const report = api.runTypeScriptProjectHarness(root);
   const snapshot = api.renderTypeScriptReasoningTree(report);
+  const projectSnapshot = api.runTypeScriptProjectHarnessAgentSnapshot(root);
+  const renderedProjectSnapshot = api.renderTypeScriptProjectHarnessAgentSnapshot(projectSnapshot);
 
   assert.equal(api.isTypeScriptHarnessClean(report), true);
+  assert.equal(renderedProjectSnapshot, snapshot);
   assert.match(snapshot, /^Modules: source=3 branches=1 deps=3 paths=1/u);
   assert.match(snapshot, /OwnerBranches:/u);
   assert.match(snapshot, /src\/index\.ts \[root, facade\] owner=src/u);

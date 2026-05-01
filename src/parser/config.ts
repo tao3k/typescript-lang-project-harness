@@ -13,8 +13,8 @@ import { projectReferencePackageFacts } from "./package_json.js";
 import type { TypeScriptProgramInputs } from "./types.js";
 
 export function readTypeScriptConfigFacts(projectRoot: string): TypeScriptProjectConfigFacts {
-  const configPath = ts.findConfigFile(projectRoot, ts.sys.fileExists, "tsconfig.json");
-  if (configPath === undefined) {
+  const configPath = path.join(projectRoot, "tsconfig.json");
+  if (!ts.sys.fileExists(configPath)) {
     return {
       fileNames: [],
       projectReferences: [],

@@ -8,6 +8,7 @@ import {
   type TypeScriptHarnessFinding,
   type TypeScriptHarnessReport,
   type TypeScriptImportEdgeFact,
+  type TypeScriptProjectHarnessAgentSnapshot,
   type TypeScriptReasoningImportSummaryFact,
   type TypeScriptReasoningOwnerBranchFact,
   type TypeScriptReasoningOwnerDependencyFact,
@@ -66,6 +67,25 @@ export function renderTypeScriptReasoningTree(report: TypeScriptHarnessReport): 
   return lines.join("\n");
 }
 
+export function renderTypeScriptProjectHarnessAgentSnapshot(
+  snapshot: TypeScriptProjectHarnessAgentSnapshot,
+): string {
+  const packageSnapshots = snapshot.packages.flatMap((packageSnapshot) => {
+    const rendered = renderTypeScriptReasoningTree(packageSnapshot.report);
+    if (rendered.length === 0) {
+      return [];
+    }
+    return [{ packagePath: packageSnapshot.packagePath, rendered }];
+  });
+  const includePackageHeading =
+    packageSnapshots.length > 1 || (packageSnapshots[0]?.packagePath ?? ".") !== ".";
+  return packageSnapshots
+    .map(({ packagePath, rendered }) =>
+      includePackageHeading ? `pkg ${packagePath}\n${rendered}` : rendered,
+    )
+    .join("\n");
+}
+
 export function renderTypeScriptProjectHarnessAdvice(report: TypeScriptHarnessReport): string {
   const advice = report.findings.filter((finding) => finding.severity === "info");
   if (advice.length === 0) {
@@ -85,6 +105,18 @@ function renderModuleSummary(
   pushMetricIf(parts, "roots", agentRootCount(tree), agentRootCount(tree) > 1);
   pushMetricIf(parts, "branches", branchCount, branchCount > 0);
   pushMetricIf(parts, "deps", dependencyCount, dependencyCount > 0);
+  pushMetricIf(
+    parts,
+    "shadowed",
+    tree.shadowedSourceOwners.length,
+    tree.shadowedSourceOwners.length > 0,
+  );
+  pushMetricIf(
+    parts,
+    "orphaned",
+    tree.orphanedSourceFiles.length,
+    tree.orphanedSourceFiles.length > 0,
+  );
   pushMetricIf(parts, "paths", tree.pathAliases.length, tree.pathAliases.length > 0);
   pushMetricIf(
     parts,

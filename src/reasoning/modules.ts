@@ -95,7 +95,10 @@ function moduleLayer(
   ) {
     return "reasoning";
   }
-  if (relativePath === "src/rules.ts") {
+  if (
+    relativePath === "src/rules.ts" ||
+    relativePath.startsWith(`src${path.sep}rules${path.sep}`)
+  ) {
     return "policy";
   }
   if (relativePath === "src/render.ts") {

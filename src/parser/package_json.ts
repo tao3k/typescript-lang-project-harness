@@ -9,8 +9,10 @@ import type {
   PackageJsonScriptFact,
   PackageJsonWorkspaceFact,
   SourceLocation,
+  TypeScriptCompilerOptionFacts,
   TypeScriptProjectReferencePackageFact,
 } from "../model.js";
+import { compilerOptionFacts } from "./compiler_options.js";
 import { locationForNode } from "./diagnostics.js";
 import {
   jsonObjectProperty,
@@ -396,13 +398,23 @@ function projectReferencePackageFact(
   if (!fs.existsSync(packageJsonPath)) {
     return undefined;
   }
-  const configPath = ts.findConfigFile(packageRoot, ts.sys.fileExists, "tsconfig.json");
+  const configCandidate = path.join(packageRoot, "tsconfig.json");
+  const configPath = fs.existsSync(configCandidate) ? configCandidate : undefined;
   const fact: TypeScriptProjectReferencePackageFact = {
     path: packageRoot,
     packageJsonPath,
     diagnostics: [],
   };
-  const withConfig = configPath === undefined ? fact : { ...fact, configPath };
+  const compilerOptions =
+    configPath === undefined ? undefined : referencedProjectCompilerOptions(configPath);
+  const withConfig =
+    configPath === undefined
+      ? fact
+      : {
+          ...fact,
+          configPath,
+          ...(compilerOptions === undefined ? {} : { compilerOptions }),
+        };
   const rawJson = fs.readFileSync(packageJsonPath, "utf8");
   const document = parsePackageJsonDocument(packageJsonPath, rawJson);
   const parsed = document.packageJson;
@@ -425,4 +437,21 @@ function projectReferencePackageRoot(referencePath: string): string {
   }
   const stat = fs.statSync(resolvedReference);
   return stat.isFile() ? path.dirname(resolvedReference) : resolvedReference;
+}
+
+function referencedProjectCompilerOptions(
+  configPath: string,
+): TypeScriptCompilerOptionFacts | undefined {
+  const readResult = ts.readConfigFile(configPath, ts.sys.readFile);
+  if (readResult.error !== undefined) {
+    return undefined;
+  }
+  const parsed = ts.parseJsonConfigFileContent(
+    readResult.config,
+    ts.sys,
+    path.dirname(configPath),
+    undefined,
+    configPath,
+  );
+  return parsed.errors.length > 0 ? undefined : compilerOptionFacts(parsed.options);
 }

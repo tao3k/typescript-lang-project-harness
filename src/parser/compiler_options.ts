@@ -42,10 +42,11 @@ export function compilerOptionFacts(options: ts.CompilerOptions): TypeScriptComp
     options.module === undefined
       ? withJsx
       : { ...withJsx, module: moduleKindLabel(options.module) };
+  const effectiveModuleResolution = effectiveModuleResolutionKind(options);
   const withModuleResolution =
-    options.moduleResolution === undefined
+    effectiveModuleResolution === undefined
       ? withModule
-      : { ...withModule, moduleResolution: moduleResolutionKindLabel(options.moduleResolution) };
+      : { ...withModule, moduleResolution: moduleResolutionKindLabel(effectiveModuleResolution) };
   return options.target === undefined
     ? withModuleResolution
     : { ...withModuleResolution, target: scriptTargetLabel(options.target) };
@@ -94,4 +95,17 @@ function moduleResolutionKindLabel(moduleResolutionKind: ts.ModuleResolutionKind
 
 function scriptTargetLabel(scriptTarget: ts.ScriptTarget): string {
   return ts.ScriptTarget[scriptTarget] ?? String(scriptTarget);
+}
+
+interface TypeScriptRuntimeModuleResolutionApi {
+  readonly getEmitModuleResolutionKind?: (
+    options: ts.CompilerOptions,
+  ) => ts.ModuleResolutionKind | undefined;
+}
+
+function effectiveModuleResolutionKind(
+  options: ts.CompilerOptions,
+): ts.ModuleResolutionKind | undefined {
+  const runtimeApi = ts as typeof ts & TypeScriptRuntimeModuleResolutionApi;
+  return runtimeApi.getEmitModuleResolutionKind?.(options) ?? options.moduleResolution;
 }

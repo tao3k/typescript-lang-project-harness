@@ -26,7 +26,13 @@ test("project harness reports malformed package json without throwing", () => {
   assert.equal(isTypeScriptHarnessClean(report), true);
   assert.deepEqual(
     typeScriptProjectPolicyRules().map((rule) => `${rule.ruleId}:${rule.severity}`),
-    ["TS-PROJ-R001:warning", "TS-PROJ-R002:error", "TS-PROJ-R003:info"],
+    [
+      "TS-PROJ-R001:warning",
+      "TS-PROJ-R002:error",
+      "TS-PROJ-R003:info",
+      "TS-PROJ-R004:info",
+      "TS-PROJ-R005:info",
+    ],
   );
   assert.deepEqual(
     report.findings.map((finding) => `${finding.ruleId}:${finding.severity}`),
@@ -59,7 +65,10 @@ test("project harness reports malformed project reference package json without t
   );
   fs.writeFileSync(
     path.join(root, "packages", "broken", "tsconfig.json"),
-    JSON.stringify({ include: ["src/**/*.ts"] }),
+    JSON.stringify({
+      compilerOptions: { composite: true, declaration: true },
+      include: ["src/**/*.ts"],
+    }),
   );
   fs.writeFileSync(path.join(root, "packages", "broken", "package.json"), '{ "name": }\n');
   fs.writeFileSync(path.join(root, "src", "index.ts"), "export const ok = 1;\n");
@@ -84,6 +93,113 @@ test("project harness reports malformed project reference package json without t
       ownerPath: path.relative(root, diagnostic.ownerPath),
     })),
     [{ phase: "package-json", ownerPath: "packages/broken/package.json" }],
+  );
+});
+
+test("project policy reports referenced package config shape as advice", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-reference-config-"));
+  fs.mkdirSync(path.join(root, "src"));
+  fs.mkdirSync(path.join(root, "packages", "core", "src"), { recursive: true });
+  fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ name: "@example/root" }));
+  fs.writeFileSync(
+    path.join(root, "tsconfig.json"),
+    JSON.stringify({
+      references: [{ path: "./packages/core" }],
+      include: ["src/**/*.ts"],
+    }),
+  );
+  fs.writeFileSync(
+    path.join(root, "packages", "core", "package.json"),
+    JSON.stringify({ name: "@example/core" }),
+  );
+  fs.writeFileSync(
+    path.join(root, "packages", "core", "tsconfig.json"),
+    JSON.stringify({ include: ["src/**/*.ts"] }),
+  );
+  fs.writeFileSync(path.join(root, "src", "index.ts"), "export const ok = 1;\n");
+  fs.writeFileSync(
+    path.join(root, "packages", "core", "src", "index.ts"),
+    "export const core = 1;\n",
+  );
+
+  const report = runTypeScriptProjectHarness(root);
+
+  assert.equal(isTypeScriptHarnessClean(report), true);
+  assert.deepEqual(
+    report.findings
+      .filter((finding) => finding.ruleId === "TS-PROJ-R004")
+      .map((finding) => `${finding.severity}:${finding.label}`),
+    ["info:referenced project config"],
+  );
+  assert.deepEqual(
+    report.projectScope?.config.projectReferencePackages.map((referencePackage) => ({
+      path: path.relative(root, referencePackage.path),
+      composite: referencePackage.compilerOptions?.composite,
+      declaration: referencePackage.compilerOptions?.declaration,
+    })),
+    [{ path: "packages/core", composite: false, declaration: false }],
+  );
+});
+
+test("project policy reports package entry module resolution as advice", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-package-resolution-"));
+  fs.mkdirSync(path.join(root, "src"));
+  fs.writeFileSync(
+    path.join(root, "package.json"),
+    JSON.stringify({
+      name: "@example/package-resolution",
+      exports: { ".": "./src/index.ts" },
+    }),
+  );
+  fs.writeFileSync(
+    path.join(root, "tsconfig.json"),
+    JSON.stringify({
+      compilerOptions: { module: "ESNext" },
+      include: ["src/**/*.ts"],
+    }),
+  );
+  fs.writeFileSync(path.join(root, "src", "index.ts"), "export const ok = 1;\n");
+
+  const report = runTypeScriptProjectHarness(root);
+
+  assert.equal(isTypeScriptHarnessClean(report), true);
+  assert.deepEqual(
+    report.findings
+      .filter((finding) => finding.ruleId === "TS-PROJ-R005")
+      .map((finding) => `${finding.severity}:${finding.label}`),
+    ["info:package entry module resolution"],
+  );
+  assert.match(
+    report.findings.find((finding) => finding.ruleId === "TS-PROJ-R005")?.summary ?? "",
+    /classic/u,
+  );
+});
+
+test("project policy uses TypeScript effective module resolution facts", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-effective-resolution-"));
+  fs.mkdirSync(path.join(root, "src"));
+  fs.writeFileSync(
+    path.join(root, "package.json"),
+    JSON.stringify({
+      name: "@example/effective-resolution",
+      exports: { ".": "./src/index.ts" },
+    }),
+  );
+  fs.writeFileSync(
+    path.join(root, "tsconfig.json"),
+    JSON.stringify({
+      compilerOptions: { module: "NodeNext" },
+      include: ["src/**/*.ts"],
+    }),
+  );
+  fs.writeFileSync(path.join(root, "src", "index.ts"), "export const ok = 1;\n");
+
+  const report = runTypeScriptProjectHarness(root);
+
+  assert.equal(report.reasoningTree.compilerOptions.moduleResolution, "NodeNext");
+  assert.deepEqual(
+    report.findings.filter((finding) => finding.ruleId === "TS-PROJ-R005"),
+    [],
   );
 });
 
@@ -151,7 +267,10 @@ test("project harness discovers workspace package facts from package json", () =
   );
   fs.writeFileSync(
     path.join(root, "packages", "core", "tsconfig.json"),
-    JSON.stringify({ include: ["src/**/*.ts"] }),
+    JSON.stringify({
+      compilerOptions: { composite: true, declaration: true },
+      include: ["src/**/*.ts"],
+    }),
   );
   fs.writeFileSync(
     path.join(root, "tsconfig.json"),
@@ -220,7 +339,13 @@ test("project harness discovers workspace package facts from package json", () =
 test("project harness keeps package entry source locations from the TypeScript JSON AST", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-package-json-locations-"));
   fs.mkdirSync(path.join(root, "src"));
-  fs.writeFileSync(path.join(root, "tsconfig.json"), JSON.stringify({ include: ["src/**/*.ts"] }));
+  fs.writeFileSync(
+    path.join(root, "tsconfig.json"),
+    JSON.stringify({
+      compilerOptions: { module: "NodeNext", moduleResolution: "NodeNext" },
+      include: ["src/**/*.ts"],
+    }),
+  );
   fs.writeFileSync(path.join(root, "src", "index.ts"), "export const ok = 1;\n");
   fs.writeFileSync(path.join(root, "src", "internal.ts"), "export const internal = 1;\n");
   fs.writeFileSync(
@@ -284,7 +409,13 @@ test("project harness keeps package entry source locations from the TypeScript J
 test("project harness preserves conditional package targets from the TypeScript JSON AST", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-package-json-conditions-"));
   fs.mkdirSync(path.join(root, "src"));
-  fs.writeFileSync(path.join(root, "tsconfig.json"), JSON.stringify({ include: ["src/**/*.ts"] }));
+  fs.writeFileSync(
+    path.join(root, "tsconfig.json"),
+    JSON.stringify({
+      compilerOptions: { module: "NodeNext", moduleResolution: "NodeNext" },
+      include: ["src/**/*.ts"],
+    }),
+  );
   fs.writeFileSync(path.join(root, "src", "index.ts"), "export const ok = 1;\n");
   fs.writeFileSync(path.join(root, "src", "internal.ts"), "export const internal = 1;\n");
   fs.writeFileSync(

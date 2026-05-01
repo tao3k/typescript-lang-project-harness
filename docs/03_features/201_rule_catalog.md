@@ -38,9 +38,10 @@ require.
 
 ## Agent Advice Rules
 
-`TS-SEM-*`, `TS-PROJ-R003`, `TS-MOD-*`, `TS-TEST-*`, and `TS-AGENT-*` rules are
-`info` findings. They are rendered by default for repair agents but do not fail
-assertions unless a caller promotes them.
+`TS-SEM-*`, `TS-PROJ-R003`, `TS-PROJ-R004`, `TS-PROJ-R005`, `TS-MOD-*`,
+`TS-TEST-*`, and `TS-AGENT-*` rules are `info` findings. They are rendered by
+default for repair agents but do not fail assertions unless a caller promotes
+them.
 
 - `TS-SEM-R001`: TypeScript `Program` semantic diagnostics should be visible
   from parser-native facts, including stable TypeScript diagnostic codes,
@@ -50,6 +51,14 @@ assertions unless a caller promotes them.
   workspace, referenced package, and workspace package facts are visible.
   Package diagnostics, entry locations, conditional exports/imports target
   details, script locations, and workspace locations come from TypeScript's JSON AST.
+- `TS-PROJ-R004`: TypeScript project references should point to package-local
+  configs whose parser-owned compiler option facts show `composite` and
+  `declaration` enabled. This stays non-blocking so agents can still inspect
+  partial workspaces.
+- `TS-PROJ-R005`: projects using package `exports` or `imports` should have an
+  effective TypeScript `moduleResolution` of `node16`, `nodenext`, or `bundler`.
+  The value comes from TypeScript compiler-option facts, including defaults
+  implied by `module`, not raw JSON string matching.
 - `TS-MOD-R001`: production source, facade, entrypoint, and config modules
   should not depend on parser-visible test owners.
 - `TS-MOD-R002`: package project modules should stay below their layer line
@@ -90,6 +99,9 @@ right owner boundary without guessing.
 When TypeScript selects JavaScript through `allowJs`, parser-visible `.js`,
 `.jsx`, `.mjs`, and `.cjs` files participate in the same module-role policy as
 TypeScript files.
+Shadowed owner namespaces and orphaned source files are reasoning-tree
+orientation metrics. They may appear as `shadowed=` and `orphaned=` counters in
+agent snapshots, but they do not create default rule findings in M3.
 
 `renderTypeScriptReasoningTree()` exposes those facts as Rust-style agent
 snapshot text: `Modules:`, `OwnerBranches:`, `OwnerDependencies:`, and
@@ -102,9 +114,10 @@ inspect before editing.
 
 ## Future Agent Advice
 
-`TS-MOD-*`, `TS-TEST-*`, and `TS-AGENT-*` rules should be `info` findings. They
-are intended as repair hints for LLMs and should not block by default. Candidate
-future rules include:
+`TS-PROJ-*` advice beyond the structural blocking rules, `TS-MOD-*`,
+`TS-TEST-*`, and `TS-AGENT-*` rules should be `info` findings. They are intended
+as repair hints for LLMs and should not block by default. Candidate future rules
+include:
 
 - source paths should avoid generic buckets such as `utils` and `shared`
 - owner dependency graphs should avoid local cycles and leaf-module reach-ins
@@ -141,8 +154,12 @@ status, top-of-file intent docs, granular type-only import/export facts,
 `import("...")` type query imports, declaration export assignments,
 package entry metadata, package metadata diagnostics and package metadata source
 locations for root, project-reference, and workspace packages, compiler-option
-facts, module line counts, package-root anchored module layers, and project/module-level
-diagnostic facts consumed by the reasoning tree. The harness layer
+facts, effective module resolution, referenced package compiler-option facts,
+module line counts, package-root anchored module layers, and project/module-level
+diagnostic facts consumed by the reasoning tree. The reasoning layer owns
+source-shape projections such as shadowed owner namespaces and orphaned source
+files after native parser facts and TypeScript import resolution are available.
+The harness layer
 owns rule catalogs, project/test layout policy, reporting, and assertion
 behavior. Rule evaluation consumes the reasoning tree, including its typed
 `runMode`, not parser module reports or project parser scopes. The

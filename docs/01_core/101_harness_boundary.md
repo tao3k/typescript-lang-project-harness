@@ -48,14 +48,15 @@ specifier-level `import { type T }` / `export { type T }`, and `import("...")`
 type queries. Declaration-file export facts include `export =` and
 `export as namespace`.
 Project facts include `compilerOptions.paths`, `baseUrl`, `rootDirs`,
-module/moduleResolution/target, JSX/emit/declaration options, project
+module/effective moduleResolution/target, JSX/emit/declaration options, project
 references, TypeScript JSON AST-backed package entry fields,
 exports/imports/bin/scripts/workspaces, conditional exports/imports target
 details, package metadata source locations, package metadata diagnostics,
-referenced package metadata from TypeScript project references, workspace
+referenced package metadata and referenced package compiler options from
+TypeScript project references, workspace
 package metadata from root `workspaces`, package-root anchored module roles,
 module layers, module line counts, owner branches, owner dependencies, package
-entry owners, and import edges.
+entry owners, shadowed/orphaned source-shape counters, and import edges.
 Parser-visible package `bin` owners feed the `entrypoint` module role.
 Parser-visible `index.*`, `main.*`, config, and test file roles are matched by
 explicit module suffix lists, not dynamic regular-expression construction.
@@ -130,7 +131,10 @@ It follows the Rust harness agent snapshot shape: `Modules:`, `OwnerBranches:`,
 roles, source exports, import specifiers, TypeScript-native
 relative/path-alias/package/external import resolution, package-name import
 owners, resolved workspace packages, project references, and package entry
-owners. It groups findings by rule instead of rendering full diagnostic cards.
+owners. It also carries source-shape counters such as shadowed owner
+namespaces and orphaned source files as compact orientation metrics, not
+blocking policy. It groups findings by rule instead of rendering full
+diagnostic cards.
 This is the preferred first read when an agent needs to choose which TypeScript
 owner, facade, entrypoint, or package surface to edit. Full diagnostic detail
 stays in the default compact renderer and JSON output.
@@ -143,10 +147,12 @@ because they should be visible to agents without turning the harness into a
 replacement for `tsc`. Malformed `package.json` metadata is reported as
 `TS-PROJ-R003` advice, including malformed package metadata in TypeScript
 project references, so the project harness can still produce a repair surface.
-M2 modularity findings are `TS-MOD-*` ownership advice over the parser-owned
-reasoning tree, and M2 test layout findings are `TS-TEST-*` advice over
-parser-owned module roles and configured test roots. Future `TS-MOD-*`,
-`TS-TEST-*`, and
+Project-reference config shape and package-entry module-resolution shape are
+reported as `TS-PROJ-R004`/`TS-PROJ-R005` advice from parser-owned
+compiler-option facts, not package-manager or style policy. Modularity findings
+are `TS-MOD-*` ownership advice over the parser-owned reasoning tree, and test
+layout findings are `TS-TEST-*` advice over parser-owned module roles and
+configured test roots. Future `TS-MOD-*`, `TS-TEST-*`, and
 `TS-AGENT-*` rules should remain non-blocking unless a caller explicitly
 promotes them.
 

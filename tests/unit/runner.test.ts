@@ -59,6 +59,33 @@ test("project runner anchors project scope at nearest package json", () => {
   assert.match(snapshot, /src\/index\.ts \[root, facade\] owner=src exports=ok -> -/u);
 });
 
+test("project runner does not inherit parent tsconfig across a package json anchor", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-package-local-config-"));
+  const packageRoot = path.join(root, "packages", "util");
+  fs.mkdirSync(path.join(root, "src"), { recursive: true });
+  fs.mkdirSync(path.join(packageRoot, "src"), { recursive: true });
+  fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ name: "@example/root" }));
+  fs.writeFileSync(path.join(root, "tsconfig.json"), JSON.stringify({ include: ["src/**/*.ts"] }));
+  fs.writeFileSync(path.join(root, "src", "index.ts"), "export const rootValue = 1;\n");
+  fs.writeFileSync(
+    path.join(packageRoot, "package.json"),
+    JSON.stringify({ name: "@example/util" }),
+  );
+  fs.writeFileSync(path.join(packageRoot, "src", "index.ts"), "export const utilValue = 1;\n");
+
+  const report = runTypeScriptProjectHarness(packageRoot);
+  const snapshot = renderTypeScriptReasoningTree(report);
+
+  assert.equal(report.reasoningTree.configPath, undefined);
+  assert.deepEqual(
+    report.modules.map((moduleReport) => path.relative(packageRoot, moduleReport.path)),
+    ["src/index.ts"],
+  );
+  assert.match(snapshot, /^Modules: source=1 branches=1 findings=1/u);
+  assert.match(snapshot, /src\/index\.ts \[root, facade\] owner=src exports=utilValue -> -/u);
+  assert.doesNotMatch(snapshot, /\.\.\/\.\.\/src/u);
+});
+
 test("project runner routes missing tsconfig policy through reasoning facts", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-project-no-config-"));
   fs.mkdirSync(path.join(root, "src"));

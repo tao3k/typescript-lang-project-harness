@@ -13,6 +13,7 @@ import {
   resolveProjectReferences,
 } from "./package_facts.js";
 import { commonAncestor } from "./path_utils.js";
+import { orphanedSourceFiles, shadowedSourceOwners } from "./source_shape.js";
 
 export function buildTypeScriptReasoningTree(
   scope: TypeScriptProjectHarnessScope,
@@ -29,6 +30,7 @@ export function buildTypeScriptReasoningTree(
         `${right.fromPath}:${right.moduleSpecifier}`,
       ),
     );
+  const ownerDependencyFacts = ownerDependencies(reasoningModuleFacts, edges);
   const tree: TypeScriptReasoningTree = {
     runMode: "project",
     projectRoot: scope.projectRoot,
@@ -52,7 +54,17 @@ export function buildTypeScriptReasoningTree(
     diagnostics: reasoningDiagnostics(scope, modules),
     modules: reasoningModuleFacts,
     ownerBranches: ownerBranches(scope.projectRoot, reasoningModuleFacts, edges),
-    ownerDependencies: ownerDependencies(reasoningModuleFacts, edges),
+    ownerDependencies: ownerDependencyFacts,
+    shadowedSourceOwners: shadowedSourceOwners(
+      scope.projectRoot,
+      reasoningModuleFacts,
+      ownerDependencyFacts,
+    ),
+    orphanedSourceFiles: orphanedSourceFiles(
+      reasoningModuleFacts,
+      ownerDependencyFacts,
+      packageEntryResolutions,
+    ),
     edges,
   };
   return withOptionalProjectFacts(tree, scope);
@@ -91,6 +103,8 @@ export function buildExplicitTypeScriptReasoningTree(
     modules: reasoningModuleFacts,
     ownerBranches: ownerBranches(projectRoot, reasoningModuleFacts, []),
     ownerDependencies: [],
+    shadowedSourceOwners: shadowedSourceOwners(projectRoot, reasoningModuleFacts, []),
+    orphanedSourceFiles: [],
     edges: [],
   };
 }
