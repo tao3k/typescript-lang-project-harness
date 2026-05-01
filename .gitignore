@@ -1,0 +1,9 @@
+/dist
+/node_modules
+/.devenv
+/.cache
+/.run
+
+.DS_Store
+.vscode
+.pre-commit-config.yaml

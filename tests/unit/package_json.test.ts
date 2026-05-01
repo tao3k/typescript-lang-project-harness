@@ -1,0 +1,366 @@
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import test from "node:test";
+
+import {
+  isTypeScriptHarnessClean,
+  renderTypeScriptProjectHarness,
+  renderTypeScriptReasoningTree,
+  runTypeScriptProjectHarness,
+  typeScriptProjectPolicyRules,
+} from "../../src/index.js";
+
+test("project harness reports malformed package json without throwing", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-package-json-"));
+  fs.mkdirSync(path.join(root, "src"));
+  fs.writeFileSync(path.join(root, "tsconfig.json"), JSON.stringify({ include: ["src/**/*.ts"] }));
+  fs.writeFileSync(path.join(root, "package.json"), '{ "name": }\n');
+  fs.writeFileSync(path.join(root, "src", "index.ts"), "export const ok = 1;\n");
+
+  const report = runTypeScriptProjectHarness(root);
+  const rendered = renderTypeScriptProjectHarness(report);
+  const snapshot = renderTypeScriptReasoningTree(report);
+
+  assert.equal(isTypeScriptHarnessClean(report), true);
+  assert.deepEqual(
+    typeScriptProjectPolicyRules().map((rule) => `${rule.ruleId}:${rule.severity}`),
+    ["TS-PROJ-R001:warning", "TS-PROJ-R002:error", "TS-PROJ-R003:info"],
+  );
+  assert.deepEqual(
+    report.findings.map((finding) => `${finding.ruleId}:${finding.severity}`),
+    ["TS-PROJ-R003:info"],
+  );
+  assert.deepEqual(
+    report.reasoningTree.diagnostics.map((diagnostic) => ({
+      phase: diagnostic.phase,
+      ownerPath: path.relative(root, diagnostic.ownerPath),
+    })),
+    [{ phase: "package-json", ownerPath: "package.json" }],
+  );
+  assert.equal(report.projectScope?.packageJson.diagnostics.length, 1);
+  assert.match(rendered, /\[TS-PROJ-R003\] info/u);
+  assert.match(rendered, /package\.json parser diagnostic/u);
+  assert.match(snapshot, /FindingGroups:/u);
+  assert.match(snapshot, /TS-PROJ-R003 x1 first=package\.json/u);
+});
+
+test("project harness reports malformed project reference package json without throwing", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-reference-package-json-"));
+  fs.mkdirSync(path.join(root, "src"));
+  fs.mkdirSync(path.join(root, "packages", "broken"), { recursive: true });
+  fs.writeFileSync(
+    path.join(root, "tsconfig.json"),
+    JSON.stringify({
+      references: [{ path: "./packages/broken" }],
+      include: ["src/**/*.ts"],
+    }),
+  );
+  fs.writeFileSync(
+    path.join(root, "packages", "broken", "tsconfig.json"),
+    JSON.stringify({ include: ["src/**/*.ts"] }),
+  );
+  fs.writeFileSync(path.join(root, "packages", "broken", "package.json"), '{ "name": }\n');
+  fs.writeFileSync(path.join(root, "src", "index.ts"), "export const ok = 1;\n");
+
+  const report = runTypeScriptProjectHarness(root);
+
+  assert.equal(isTypeScriptHarnessClean(report), true);
+  assert.deepEqual(
+    report.findings.map((finding) => `${finding.ruleId}:${finding.severity}`),
+    ["TS-PROJ-R003:info"],
+  );
+  assert.deepEqual(
+    report.projectScope?.config.projectReferencePackages.map((referencePackage) => ({
+      path: path.relative(root, referencePackage.path),
+      diagnostics: referencePackage.diagnostics.length,
+    })),
+    [{ path: "packages/broken", diagnostics: 1 }],
+  );
+  assert.deepEqual(
+    report.reasoningTree.diagnostics.map((diagnostic) => ({
+      phase: diagnostic.phase,
+      ownerPath: path.relative(root, diagnostic.ownerPath),
+    })),
+    [{ phase: "package-json", ownerPath: "packages/broken/package.json" }],
+  );
+});
+
+test("project harness reports malformed workspace package json without throwing", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-workspace-package-json-"));
+  fs.mkdirSync(path.join(root, "src"));
+  fs.mkdirSync(path.join(root, "packages", "broken"), { recursive: true });
+  fs.writeFileSync(
+    path.join(root, "package.json"),
+    JSON.stringify({
+      name: "@example/workspace-root",
+      workspaces: ["packages/*"],
+    }),
+  );
+  fs.writeFileSync(path.join(root, "tsconfig.json"), JSON.stringify({ include: ["src/**/*.ts"] }));
+  fs.writeFileSync(path.join(root, "packages", "broken", "package.json"), '{ "name": }\n');
+  fs.writeFileSync(path.join(root, "src", "index.ts"), "export const ok = 1;\n");
+
+  const report = runTypeScriptProjectHarness(root);
+
+  assert.equal(isTypeScriptHarnessClean(report), true);
+  assert.deepEqual(
+    report.findings.map((finding) => `${finding.ruleId}:${finding.severity}`),
+    ["TS-PROJ-R003:info"],
+  );
+  assert.deepEqual(
+    report.projectScope?.packageJson.workspacePackages.map((workspacePackage) => ({
+      path: path.relative(root, workspacePackage.path),
+      diagnostics: workspacePackage.diagnostics.length,
+    })),
+    [{ path: "packages/broken", diagnostics: 1 }],
+  );
+  assert.deepEqual(
+    report.reasoningTree.diagnostics.map((diagnostic) => ({
+      phase: diagnostic.phase,
+      ownerPath: path.relative(root, diagnostic.ownerPath),
+    })),
+    [{ phase: "package-json", ownerPath: "packages/broken/package.json" }],
+  );
+  const rendered = renderTypeScriptReasoningTree(report);
+  assert.match(rendered, /FindingGroups:/u);
+  assert.match(rendered, /TS-PROJ-R003 x1 first=packages\/broken\/package\.json/u);
+});
+
+test("project harness discovers workspace package facts from package json", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-workspace-packages-"));
+  fs.mkdirSync(path.join(root, "src"));
+  fs.mkdirSync(path.join(root, "packages", "core"), { recursive: true });
+  fs.writeFileSync(
+    path.join(root, "package.json"),
+    JSON.stringify({
+      name: "@example/workspace-root",
+      type: "module",
+      workspaces: {
+        packages: ["packages/*"],
+      },
+    }),
+  );
+  fs.writeFileSync(
+    path.join(root, "packages", "core", "package.json"),
+    JSON.stringify({
+      name: "@example/core",
+      type: "module",
+    }),
+  );
+  fs.writeFileSync(
+    path.join(root, "packages", "core", "tsconfig.json"),
+    JSON.stringify({ include: ["src/**/*.ts"] }),
+  );
+  fs.writeFileSync(
+    path.join(root, "tsconfig.json"),
+    JSON.stringify({
+      compilerOptions: {
+        module: "NodeNext",
+        moduleResolution: "NodeNext",
+      },
+      include: ["src/**/*.ts"],
+    }),
+  );
+  fs.writeFileSync(
+    path.join(root, "src", "index.ts"),
+    'import type { Core } from "@example/core";\nexport const ok = 1;\n',
+  );
+
+  const report = runTypeScriptProjectHarness(root);
+  const packageJson = report.projectScope?.packageJson;
+  assert.ok(packageJson !== undefined);
+  assert.deepEqual(
+    packageJson.workspacePackages.map((workspacePackage) => ({
+      name: workspacePackage.name,
+      path: path.relative(root, workspacePackage.path),
+      pattern: workspacePackage.pattern,
+      configPath: path.relative(root, workspacePackage.configPath ?? ""),
+      locationLine: workspacePackage.location.line,
+    })),
+    [
+      {
+        name: "@example/core",
+        path: "packages/core",
+        pattern: "packages/*",
+        configPath: "packages/core/tsconfig.json",
+        locationLine: 1,
+      },
+    ],
+  );
+  assert.deepEqual(
+    report.reasoningTree.packageImportOwners.map((owner) => ({
+      fromPath: path.relative(root, owner.fromPath),
+      moduleSpecifier: owner.moduleSpecifier,
+      packageName: owner.packageName,
+      packagePath: path.relative(root, owner.packagePath),
+      ownerKind: owner.ownerKind,
+      via: owner.via,
+    })),
+    [
+      {
+        fromPath: "src/index.ts",
+        moduleSpecifier: "@example/core",
+        packageName: "@example/core",
+        packagePath: "packages/core",
+        ownerKind: "workspace",
+        via: "package-name",
+      },
+    ],
+  );
+  const rendered = renderTypeScriptReasoningTree(report);
+  assert.match(rendered, /^Modules: source=1 branches=1 deps=1 workspaces=1 findings=1/u);
+  assert.match(
+    rendered,
+    /src\/index\.ts --package-name\/type-import--> packages\/core owner=workspace/u,
+  );
+});
+
+test("project harness keeps package entry source locations from the TypeScript JSON AST", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-package-json-locations-"));
+  fs.mkdirSync(path.join(root, "src"));
+  fs.writeFileSync(path.join(root, "tsconfig.json"), JSON.stringify({ include: ["src/**/*.ts"] }));
+  fs.writeFileSync(path.join(root, "src", "index.ts"), "export const ok = 1;\n");
+  fs.writeFileSync(path.join(root, "src", "internal.ts"), "export const internal = 1;\n");
+  fs.writeFileSync(
+    path.join(root, "package.json"),
+    [
+      "{",
+      '  "name": "@example/package-locations",',
+      '  "main": "./dist/index.js",',
+      '  "exports": {',
+      '    ".": "./dist/index.js",',
+      '    "./feature": "./dist/feature.js"',
+      "  },",
+      '  "imports": {',
+      '    "#internal": "./src/internal.ts"',
+      "  },",
+      '  "bin": {',
+      '    "tool": "./dist/cli.js"',
+      "  },",
+      '  "scripts": {',
+      '    "build": "tsc -p tsconfig.json"',
+      "  },",
+      '  "workspaces": {',
+      '    "packages": ["packages/*"]',
+      "  }",
+      "}",
+    ].join("\n"),
+  );
+
+  const report = runTypeScriptProjectHarness(root);
+  const packageJson = report.projectScope?.packageJson;
+  assert.ok(packageJson !== undefined);
+  assert.deepEqual(
+    [
+      ...packageJson.entrypoints.map((entry) => `field:${entry.subpath}:${entry.location.line}`),
+      ...packageJson.exports.map((entry) => `exports:${entry.subpath}:${entry.location.line}`),
+      ...packageJson.imports.map((entry) => `imports:${entry.subpath}:${entry.location.line}`),
+      ...packageJson.bins.map((entry) => `bin:${entry.subpath}:${entry.location.line}`),
+      ...packageJson.scripts.map((script) => `script:${script.name}:${script.location.line}`),
+      ...packageJson.workspaces.map(
+        (workspace) => `workspace:${workspace.pattern}:${workspace.location.line}`,
+      ),
+    ],
+    [
+      "field:main:3",
+      "exports:.:5",
+      "exports:./feature:6",
+      "imports:#internal:9",
+      "bin:tool:12",
+      "script:build:15",
+      "workspace:packages/*:18",
+    ],
+  );
+  assert.deepEqual(
+    report.findings
+      .filter((finding) => finding.ruleId === "TS-AGENT-R002")
+      .map((finding) => `${finding.location.line}:${finding.label}`),
+    ["5:unresolved package entry target", "6:unresolved package entry target"],
+  );
+});
+
+test("project harness preserves conditional package targets from the TypeScript JSON AST", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-package-json-conditions-"));
+  fs.mkdirSync(path.join(root, "src"));
+  fs.writeFileSync(path.join(root, "tsconfig.json"), JSON.stringify({ include: ["src/**/*.ts"] }));
+  fs.writeFileSync(path.join(root, "src", "index.ts"), "export const ok = 1;\n");
+  fs.writeFileSync(path.join(root, "src", "internal.ts"), "export const internal = 1;\n");
+  fs.writeFileSync(
+    path.join(root, "package.json"),
+    [
+      "{",
+      '  "name": "@example/package-conditions",',
+      '  "exports": {',
+      '    ".": {',
+      '      "types": "./dist/index.d.ts",',
+      '      "import": "./dist/index.js",',
+      '      "node": {',
+      '        "default": "./dist/index.node.js"',
+      "      },",
+      '      "default": "./dist/index.cjs"',
+      "    },",
+      '    "./feature": [',
+      '      { "types": "./dist/feature.d.ts" },',
+      '      "./dist/feature.js"',
+      "    ]",
+      "  },",
+      '  "imports": {',
+      '    "#internal": {',
+      '      "types": "./src/internal.d.ts",',
+      '      "default": "./src/internal.ts"',
+      "    }",
+      "  }",
+      "}",
+    ].join("\n"),
+  );
+
+  const report = runTypeScriptProjectHarness(root);
+  const packageJson = report.projectScope?.packageJson;
+  assert.ok(packageJson !== undefined);
+
+  const rootExport = packageJson.exports.find((entry) => entry.subpath === ".");
+  assert.ok(rootExport !== undefined);
+  assert.deepEqual(
+    rootExport.targetDetails.map(
+      (targetDetail) =>
+        `${targetDetail.conditions.join("/")}:${targetDetail.target}:${targetDetail.location.line}`,
+    ),
+    [
+      "types:./dist/index.d.ts:5",
+      "import:./dist/index.js:6",
+      "node/default:./dist/index.node.js:8",
+      "default:./dist/index.cjs:10",
+    ],
+  );
+
+  const featureExport = packageJson.exports.find((entry) => entry.subpath === "./feature");
+  assert.ok(featureExport !== undefined);
+  assert.deepEqual(
+    featureExport.targetDetails.map(
+      (targetDetail) =>
+        `${targetDetail.conditions.join("/") || "<none>"}:${targetDetail.target}:${targetDetail.location.line}`,
+    ),
+    ["types:./dist/feature.d.ts:13", "<none>:./dist/feature.js:14"],
+  );
+
+  const internalImport = packageJson.imports.find((entry) => entry.subpath === "#internal");
+  assert.ok(internalImport !== undefined);
+  assert.deepEqual(
+    internalImport.targetDetails.map(
+      (targetDetail) =>
+        `${targetDetail.conditions.join("/")}:${targetDetail.target}:${targetDetail.location.line}`,
+    ),
+    ["types:./src/internal.d.ts:19", "default:./src/internal.ts:20"],
+  );
+
+  const rendered = renderTypeScriptReasoningTree(report);
+  assert.match(rendered, /^Modules: source=2 branches=1 deps=8 package-owners=8 findings=1/u);
+  assert.match(rendered, /package exports:\. \[types\] --unresolved--> \.\/dist\/index\.d\.ts/u);
+  assert.match(
+    rendered,
+    /package exports:\. \[node\/default\] --unresolved--> \.\/dist\/index\.node\.js/u,
+  );
+  assert.match(rendered, /package imports:#internal \[default\] --owner--> src\/internal\.ts/u);
+});

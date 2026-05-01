@@ -1,0 +1,80 @@
+/** Public facade for the TypeScript project harness library API. */
+
+export type {
+  PackageJsonFacts,
+  PackageJsonEntryFact,
+  PackageJsonEntryTargetFact,
+  PackageJsonScriptFact,
+  PackageJsonWorkspaceFact,
+  TypeScriptCompilerOptionFacts,
+  RulePackDescriptor,
+  SourceLocation,
+  TypeScriptDiagnosticSeverity,
+  TypeScriptExportFact,
+  TypeScriptHarnessConfig,
+  TypeScriptHarnessFinding,
+  TypeScriptHarnessReport,
+  TypeScriptHarnessRule,
+  TypeScriptHarnessRunMode,
+  TypeScriptImportFact,
+  TypeScriptImportEdgeFact,
+  TypeScriptModuleLayer,
+  TypeScriptModuleReport,
+  TypeScriptModuleRole,
+  TypeScriptNativeDiagnostic,
+  TypeScriptNativeDiagnosticRelatedInformation,
+  TypeScriptNativeImportResolutionFact,
+  TypeScriptPackageImportOwnerFact,
+  TypeScriptPackageEntryResolutionFact,
+  TypeScriptPathAliasFact,
+  TypeScriptProjectConfigFacts,
+  TypeScriptProjectHarnessScope,
+  TypeScriptProjectReferencePackageFact,
+  TypeScriptProjectReferenceResolutionFact,
+  TypeScriptReasoningDiagnosticFact,
+  TypeScriptReasoningImportSummaryFact,
+  TypeScriptReasoningModule,
+  TypeScriptReasoningOwnerBranchFact,
+  TypeScriptReasoningOwnerBranchRole,
+  TypeScriptReasoningOwnerDependencyFact,
+  TypeScriptReasoningTree,
+  TypeScriptWorkspacePackageFact,
+} from "./model.js";
+export {
+  advisoryFindings,
+  blockingFindings,
+  fileCount,
+  isTypeScriptHarnessClean,
+  parsedCount,
+} from "./model.js";
+export {
+  DEFAULT_IGNORED_DIR_NAMES,
+  discoverTypeScriptFiles,
+  parseTypeScriptProjectFiles,
+  parseTypeScriptSourceFile,
+  readProjectScope,
+} from "./parser.js";
+export {
+  renderAssertionMessage,
+  renderTypeScriptProjectHarness,
+  renderTypeScriptProjectHarnessAdvice,
+  renderTypeScriptProjectHarnessJson,
+  renderTypeScriptReasoningTree,
+} from "./render.js";
+export type { TypeScriptRenderOptions } from "./render.js";
+export {
+  assertTypeScriptLangHarnessClean,
+  assertTypeScriptProjectHarnessClean,
+  defaultTypeScriptHarnessConfig,
+  runTypeScriptLangHarness,
+  runTypeScriptProjectHarness,
+} from "./runner.js";
+export {
+  typeScriptAgentPolicyRules,
+  typeScriptModularityRules,
+  typeScriptProjectPolicyRules,
+  typeScriptRulePackDescriptors,
+  typeScriptSemanticRules,
+  typeScriptSyntaxRules,
+  typeScriptTestLayoutRules,
+} from "./rules.js";

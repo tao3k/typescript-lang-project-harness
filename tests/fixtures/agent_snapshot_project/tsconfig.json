@@ -1,0 +1,20 @@
+{
+  "references": [
+    { "path": "./packages/core" }
+  ],
+  "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "target": "ES2023",
+    "baseUrl": ".",
+    "rootDir": ".",
+    "rootDirs": ["src", "generated"],
+    "outDir": "dist",
+    "paths": {
+      "@app/*": ["src/*.ts"],
+      "@fixture/util": ["packages/util/src/index.ts"]
+    },
+    "declaration": true
+  },
+  "include": ["src/**/*.ts", "generated/**/*.ts", "tests/**/*.ts"]
+}

@@ -1,0 +1,22 @@
+{
+  "name": "@fixture/snapshot-app",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/src/index.js"
+    }
+  },
+  "imports": {
+    "#domain": "./src/domain.ts"
+  },
+  "bin": {
+    "snapshot-app": "./dist/src/cli.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "workspaces": [
+    "packages/*"
+  ]
+}
