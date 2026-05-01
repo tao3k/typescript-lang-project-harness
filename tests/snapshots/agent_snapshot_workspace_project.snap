@@ -1,0 +1,24 @@
+pkg .
+Modules: source=4 roots=2 branches=2 deps=10 paths=2 refs=1 workspaces=2 package-owners=4
+OwnerBranches:
+ - src/cli.ts [root, entrypoint] owner=src/cli imports=relative:1,package-import:1 exports=run -> -
+ - src/index.ts [root, facade] owner=src imports=path-alias:2 exports=type:Domain,domain -> export:src/domain.ts, type-export:src/domain.ts
+OwnerDependencies:
+ - package bin:snapshot-app --owner--> src/cli.ts
+ - package exports:. [import] --owner--> src/index.ts
+ - package exports:. [types] --owner--> src/index.ts
+ - package imports:#domain --owner--> src/domain.ts
+ - src/cli.ts --package-import/import--> src/domain.ts
+ - src/cli.ts --relative/import--> generated/generated.ts
+ - src/domain.ts --package-name/type-import--> packages/util owner=workspace
+ - src/domain.ts --path-alias/type-import--> @fixture/util
+ - src/index.ts --path-alias/export--> src/domain.ts
+ - src/index.ts --path-alias/type-export--> src/domain.ts
+pkg packages/core
+Modules: source=1 branches=1
+OwnerBranches:
+ - src/index.ts [root, facade] owner=src exports=core -> -
+pkg packages/util
+Modules: source=1 branches=1
+OwnerBranches:
+ - src/index.ts [root, facade] owner=src exports=type:Util -> -

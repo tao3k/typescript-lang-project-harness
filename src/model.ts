@@ -1,0 +1,425 @@
+export type TypeScriptDiagnosticSeverity = "info" | "warning" | "error";
+
+export type TypeScriptHarnessRunMode = "project" | "explicit";
+
+export interface RulePackDescriptor {
+  readonly id: string;
+  readonly version: string;
+  readonly domains: readonly string[];
+  readonly defaultMode: "blocking" | "advisory";
+}
+
+export interface TypeScriptHarnessRule {
+  readonly ruleId: string;
+  readonly packId: string;
+  readonly severity: TypeScriptDiagnosticSeverity;
+  readonly title: string;
+  readonly requirement: string;
+  readonly labels: Readonly<Record<string, string>>;
+}
+
+export interface SourceLocation {
+  readonly path?: string;
+  readonly line: number;
+  readonly column: number;
+}
+
+export interface TypeScriptHarnessFinding {
+  readonly ruleId: string;
+  readonly packId: string;
+  readonly severity: TypeScriptDiagnosticSeverity;
+  readonly title: string;
+  readonly summary: string;
+  readonly location: SourceLocation;
+  readonly requirement: string;
+  readonly sourceLine?: string;
+  readonly label: string;
+  readonly labels: Readonly<Record<string, string>>;
+}
+
+export interface TypeScriptImportFact {
+  readonly moduleSpecifier: string;
+  readonly kind: "import" | "export" | "dynamic-import";
+  readonly isTypeOnly: boolean;
+  readonly location: SourceLocation;
+}
+
+export interface TypeScriptNativeImportResolutionFact {
+  readonly moduleSpecifier: string;
+  readonly kind: TypeScriptImportFact["kind"];
+  readonly isTypeOnly: boolean;
+  readonly location: SourceLocation;
+  readonly resolution: "relative" | "path-alias" | "package-import" | "external" | "unresolved";
+  readonly resolvedPath?: string;
+}
+
+export interface TypeScriptExportFact {
+  readonly name: string;
+  readonly kind:
+    | "default"
+    | "export-assignment"
+    | "function"
+    | "class"
+    | "interface"
+    | "type"
+    | "enum"
+    | "variable"
+    | "namespace"
+    | "global-namespace"
+    | "export-list"
+    | "reexport"
+    | "namespace-reexport"
+    | "star";
+  readonly isTypeOnly: boolean;
+  readonly location: SourceLocation;
+}
+
+export interface TypeScriptNativeDiagnosticRelatedInformation {
+  readonly code: number;
+  readonly source?: string;
+  readonly message: string;
+  readonly category: TypeScriptDiagnosticSeverity;
+  readonly location: SourceLocation;
+  readonly sourceLine?: string;
+}
+
+export interface TypeScriptNativeDiagnostic extends TypeScriptNativeDiagnosticRelatedInformation {
+  readonly relatedInformation: readonly TypeScriptNativeDiagnosticRelatedInformation[];
+}
+
+export interface TypeScriptModuleReport {
+  readonly path: string;
+  readonly isValid: boolean;
+  readonly scriptKind: "ts" | "tsx" | "mts" | "cts" | "js" | "jsx" | "mjs" | "cjs" | "unknown";
+  readonly isDeclarationFile: boolean;
+  readonly hasIntentDoc: boolean;
+  readonly lineCount: number;
+  readonly diagnostics: readonly TypeScriptNativeDiagnostic[];
+  readonly semanticDiagnostics: readonly TypeScriptNativeDiagnostic[];
+  readonly imports: readonly TypeScriptImportFact[];
+  readonly importResolutions: readonly TypeScriptNativeImportResolutionFact[];
+  readonly exports: readonly TypeScriptExportFact[];
+}
+
+export interface TypeScriptPathAliasFact {
+  readonly pattern: string;
+  readonly targets: readonly string[];
+  readonly baseUrl?: string;
+}
+
+export interface TypeScriptCompilerOptionFacts {
+  readonly module?: string;
+  readonly moduleResolution?: string;
+  readonly target?: string;
+  readonly rootDir?: string;
+  readonly rootDirs: readonly string[];
+  readonly outDir?: string;
+  readonly jsx?: string;
+  readonly allowJs: boolean;
+  readonly checkJs: boolean;
+  readonly noEmit: boolean;
+  readonly composite: boolean;
+  readonly declaration: boolean;
+  readonly emitDeclarationOnly: boolean;
+  readonly declarationMap: boolean;
+  readonly sourceMap: boolean;
+}
+
+export interface TypeScriptProjectConfigFacts {
+  readonly configPath?: string;
+  readonly fileNames: readonly string[];
+  readonly projectReferences: readonly string[];
+  readonly projectReferencePackages: readonly TypeScriptProjectReferencePackageFact[];
+  readonly pathAliases: readonly TypeScriptPathAliasFact[];
+  readonly baseUrl?: string;
+  readonly compilerOptions: TypeScriptCompilerOptionFacts;
+  readonly diagnostics: readonly TypeScriptNativeDiagnostic[];
+}
+
+export interface PackageJsonEntryTargetFact {
+  readonly target: string;
+  readonly conditions: readonly string[];
+  readonly location: SourceLocation;
+}
+
+export interface PackageJsonEntryFact {
+  readonly subpath: string;
+  readonly targets: readonly string[];
+  readonly targetDetails: readonly PackageJsonEntryTargetFact[];
+  readonly location: SourceLocation;
+}
+
+export interface PackageJsonScriptFact {
+  readonly name: string;
+  readonly command: string;
+  readonly location: SourceLocation;
+}
+
+export interface PackageJsonWorkspaceFact {
+  readonly pattern: string;
+  readonly location: SourceLocation;
+}
+
+export interface TypeScriptWorkspacePackageFact {
+  readonly path: string;
+  readonly packageJsonPath: string;
+  readonly pattern: string;
+  readonly location: SourceLocation;
+  readonly name?: string;
+  readonly packageType?: string;
+  readonly configPath?: string;
+  readonly diagnostics: readonly TypeScriptNativeDiagnostic[];
+}
+
+export interface TypeScriptProjectReferencePackageFact {
+  readonly path: string;
+  readonly packageJsonPath: string;
+  readonly name?: string;
+  readonly packageType?: string;
+  readonly configPath?: string;
+  readonly compilerOptions?: TypeScriptCompilerOptionFacts;
+  readonly diagnostics: readonly TypeScriptNativeDiagnostic[];
+}
+
+export interface PackageJsonFacts {
+  readonly path?: string;
+  readonly name?: string;
+  readonly packageType?: string;
+  readonly hasExports: boolean;
+  readonly hasImports: boolean;
+  readonly entrypoints: readonly PackageJsonEntryFact[];
+  readonly exports: readonly PackageJsonEntryFact[];
+  readonly imports: readonly PackageJsonEntryFact[];
+  readonly bins: readonly PackageJsonEntryFact[];
+  readonly scripts: readonly PackageJsonScriptFact[];
+  readonly workspaces: readonly PackageJsonWorkspaceFact[];
+  readonly workspacePackages: readonly TypeScriptWorkspacePackageFact[];
+  readonly scriptNames: readonly string[];
+  readonly workspacePatterns: readonly string[];
+  readonly diagnostics: readonly TypeScriptNativeDiagnostic[];
+}
+
+export interface TypeScriptProjectHarnessScope {
+  readonly projectRoot: string;
+  readonly sourcePaths: readonly string[];
+  readonly testPaths: readonly string[];
+  readonly config: TypeScriptProjectConfigFacts;
+  readonly packageJson: PackageJsonFacts;
+}
+
+export interface TypeScriptHarnessConfig {
+  readonly ignoredDirNames: readonly string[];
+  readonly includeTests: boolean;
+  readonly sourceDirNames: readonly string[];
+  readonly testDirNames: readonly string[];
+  readonly blockingSeverities: readonly TypeScriptDiagnosticSeverity[];
+  readonly disabledRuleIds: readonly string[];
+  readonly blockingRuleIds: readonly string[];
+}
+
+export type TypeScriptModuleRole =
+  | "source"
+  | "test"
+  | "config"
+  | "declaration"
+  | "facade"
+  | "entrypoint"
+  | "unknown";
+
+export type TypeScriptModuleLayer =
+  | "parser"
+  | "reasoning"
+  | "policy"
+  | "render"
+  | "model"
+  | "harness"
+  | "test"
+  | "config"
+  | "unknown";
+
+export interface TypeScriptImportEdgeFact {
+  readonly fromPath: string;
+  readonly moduleSpecifier: string;
+  readonly kind: TypeScriptImportFact["kind"];
+  readonly isTypeOnly: boolean;
+  readonly location: SourceLocation;
+  readonly resolution: TypeScriptNativeImportResolutionFact["resolution"];
+  readonly toPath?: string;
+}
+
+export interface TypeScriptReasoningModule {
+  readonly path: string;
+  readonly role: TypeScriptModuleRole;
+  readonly layer: TypeScriptModuleLayer;
+  readonly isValid: boolean;
+  readonly hasIntentDoc: boolean;
+  readonly lineCount: number;
+  readonly syntaxDiagnosticCount: number;
+  readonly semanticDiagnosticCount: number;
+  readonly exportNames: readonly string[];
+  readonly typeOnlyExportNames: readonly string[];
+  readonly importSpecifiers: readonly string[];
+}
+
+export interface TypeScriptReasoningDiagnosticFact {
+  readonly ownerPath: string;
+  readonly phase: "syntax" | "semantic" | "config" | "package-json";
+  readonly code: number;
+  readonly source?: string;
+  readonly category: TypeScriptDiagnosticSeverity;
+  readonly message: string;
+  readonly location: SourceLocation;
+  readonly sourceLine?: string;
+  readonly relatedInformation: readonly TypeScriptNativeDiagnosticRelatedInformation[];
+}
+
+export interface TypeScriptReasoningImportSummaryFact {
+  readonly totalImports: number;
+  readonly relativeImports: number;
+  readonly pathAliasImports: number;
+  readonly packageImportImports: number;
+  readonly externalImports: number;
+  readonly unresolvedImports: number;
+}
+
+export type TypeScriptReasoningOwnerBranchRole = "root" | TypeScriptModuleRole;
+
+export interface TypeScriptReasoningOwnerBranchFact {
+  readonly path: string;
+  readonly ownerNamespace: string;
+  readonly roles: readonly TypeScriptReasoningOwnerBranchRole[];
+  readonly hasIntentDoc: boolean;
+  readonly importSummary: TypeScriptReasoningImportSummaryFact;
+  readonly exportNames: readonly string[];
+  readonly typeOnlyExportNames: readonly string[];
+  readonly childEdges: readonly TypeScriptImportEdgeFact[];
+}
+
+export interface TypeScriptReasoningOwnerDependencyFact {
+  readonly fromPath: string;
+  readonly fromRole: TypeScriptModuleRole;
+  readonly moduleSpecifier: string;
+  readonly kind: TypeScriptImportFact["kind"];
+  readonly isTypeOnly: boolean;
+  readonly isTestContext: boolean;
+  readonly location: SourceLocation;
+  readonly resolution: Exclude<TypeScriptNativeImportResolutionFact["resolution"], "external">;
+  readonly toPath?: string;
+  readonly toRole?: TypeScriptModuleRole;
+}
+
+export interface TypeScriptReasoningSourceShadowFact {
+  readonly ownerNamespace: string;
+  readonly paths: readonly string[];
+}
+
+export interface TypeScriptPackageEntryResolutionFact {
+  readonly kind: "exports" | "imports" | "bin" | "field";
+  readonly subpath: string;
+  readonly target: string;
+  readonly conditions: readonly string[];
+  readonly resolution: "parser-visible" | "external" | "unresolved";
+  readonly location: SourceLocation;
+  readonly toPath?: string;
+}
+
+export interface TypeScriptProjectReferenceResolutionFact {
+  readonly referencePath: string;
+  readonly resolution: "referenced-package" | "external";
+  readonly packagePath?: string;
+  readonly packageName?: string;
+  readonly configPath?: string;
+}
+
+export interface TypeScriptPackageImportOwnerFact {
+  readonly fromPath: string;
+  readonly moduleSpecifier: string;
+  readonly kind: TypeScriptImportFact["kind"];
+  readonly isTypeOnly: boolean;
+  readonly location: SourceLocation;
+  readonly packagePath: string;
+  readonly packageName: string;
+  readonly ownerKind: "project-reference" | "workspace";
+  readonly via: "package-name" | "package-subpath";
+}
+
+export interface TypeScriptReasoningTree {
+  readonly runMode: TypeScriptHarnessRunMode;
+  readonly projectRoot: string;
+  readonly packageName?: string;
+  readonly configPath?: string;
+  readonly compilerOptions: TypeScriptCompilerOptionFacts;
+  readonly projectReferences: readonly string[];
+  readonly projectReferenceResolutions: readonly TypeScriptProjectReferenceResolutionFact[];
+  readonly sourceRoots: readonly string[];
+  readonly testRoots: readonly string[];
+  readonly pathAliases: readonly TypeScriptPathAliasFact[];
+  readonly packageEntrypoints: readonly PackageJsonEntryFact[];
+  readonly packageExports: readonly PackageJsonEntryFact[];
+  readonly packageImports: readonly PackageJsonEntryFact[];
+  readonly packageBins: readonly PackageJsonEntryFact[];
+  readonly packageScripts: readonly PackageJsonScriptFact[];
+  readonly packageWorkspaces: readonly PackageJsonWorkspaceFact[];
+  readonly workspacePackages: readonly TypeScriptWorkspacePackageFact[];
+  readonly workspacePatterns: readonly string[];
+  readonly projectReferencePackages: readonly TypeScriptProjectReferencePackageFact[];
+  readonly packageImportOwners: readonly TypeScriptPackageImportOwnerFact[];
+  readonly packageEntryResolutions: readonly TypeScriptPackageEntryResolutionFact[];
+  readonly diagnostics: readonly TypeScriptReasoningDiagnosticFact[];
+  readonly modules: readonly TypeScriptReasoningModule[];
+  readonly ownerBranches: readonly TypeScriptReasoningOwnerBranchFact[];
+  readonly ownerDependencies: readonly TypeScriptReasoningOwnerDependencyFact[];
+  readonly shadowedSourceOwners: readonly TypeScriptReasoningSourceShadowFact[];
+  readonly orphanedSourceFiles: readonly string[];
+  readonly edges: readonly TypeScriptImportEdgeFact[];
+}
+
+export interface TypeScriptHarnessReport {
+  readonly runMode: TypeScriptHarnessRunMode;
+  readonly modules: readonly TypeScriptModuleReport[];
+  readonly findings: readonly TypeScriptHarnessFinding[];
+  readonly rootPaths: readonly string[];
+  readonly blockingSeverities: readonly TypeScriptDiagnosticSeverity[];
+  readonly blockingRuleIds: readonly string[];
+  readonly projectScope?: TypeScriptProjectHarnessScope;
+  readonly reasoningTree: TypeScriptReasoningTree;
+}
+
+export interface TypeScriptProjectHarnessAgentSnapshotPackage {
+  readonly packageRoot: string;
+  readonly packagePath: string;
+  readonly report: TypeScriptHarnessReport;
+}
+
+export interface TypeScriptProjectHarnessAgentSnapshot {
+  readonly projectRoot: string;
+  readonly packages: readonly TypeScriptProjectHarnessAgentSnapshotPackage[];
+}
+
+export function blockingFindings(
+  report: TypeScriptHarnessReport,
+): readonly TypeScriptHarnessFinding[] {
+  const severities = new Set(report.blockingSeverities);
+  const ruleIds = new Set(report.blockingRuleIds);
+  return report.findings.filter(
+    (finding) => severities.has(finding.severity) || ruleIds.has(finding.ruleId),
+  );
+}
+
+export function advisoryFindings(
+  report: TypeScriptHarnessReport,
+): readonly TypeScriptHarnessFinding[] {
+  return report.findings.filter((finding) => finding.severity === "info");
+}
+
+export function isTypeScriptHarnessClean(report: TypeScriptHarnessReport): boolean {
+  return blockingFindings(report).length === 0;
+}
+
+export function fileCount(report: TypeScriptHarnessReport): number {
+  return report.reasoningTree.modules.length;
+}
+
+export function parsedCount(report: TypeScriptHarnessReport): number {
+  return report.reasoningTree.modules.filter((moduleReport) => moduleReport.isValid).length;
+}

@@ -1,0 +1,175 @@
+import type {
+  TypeScriptHarnessFinding,
+  TypeScriptHarnessRule,
+  TypeScriptReasoningTree,
+} from "../model.js";
+import { diagnosticFinding, relativeToProject } from "./common.js";
+
+const TS_PROJ_R001: TypeScriptHarnessRule = {
+  ruleId: "TS-PROJ-R001",
+  packId: "typescript.project_policy",
+  severity: "warning",
+  title: "Project should declare tsconfig",
+  requirement:
+    "Project runs should declare tsconfig.json so the harness sees TypeScript's source set.",
+  labels: { surface: "project", parser: "tsconfig" },
+};
+
+const TS_PROJ_R002: TypeScriptHarnessRule = {
+  ruleId: "TS-PROJ-R002",
+  packId: "typescript.project_policy",
+  severity: "error",
+  title: "tsconfig must parse",
+  requirement: "tsconfig.json must parse through TypeScript's native config parser.",
+  labels: { surface: "project", parser: "tsconfig" },
+};
+
+const TS_PROJ_R003: TypeScriptHarnessRule = {
+  ruleId: "TS-PROJ-R003",
+  packId: "typescript.project_policy",
+  severity: "info",
+  title: "package.json should parse",
+  requirement:
+    "package.json should parse so package entry fields, exports, imports, bins, scripts, and workspaces are visible.",
+  labels: { surface: "project", parser: "package-json" },
+};
+
+const TS_PROJ_R004: TypeScriptHarnessRule = {
+  ruleId: "TS-PROJ-R004",
+  packId: "typescript.project_policy",
+  severity: "info",
+  title: "Project references should be composite",
+  requirement:
+    "TypeScript project references should point to local configs with composite and declaration enabled.",
+  labels: { surface: "project-reference", parser: "tsconfig" },
+};
+
+const TS_PROJ_R005: TypeScriptHarnessRule = {
+  ruleId: "TS-PROJ-R005",
+  packId: "typescript.project_policy",
+  severity: "info",
+  title: "Package entries need modern module resolution",
+  requirement:
+    "Projects using package.json exports or imports should use node16, nodenext, or bundler moduleResolution so TypeScript follows modern package entry semantics.",
+  labels: { surface: "project", parser: "tsconfig" },
+};
+
+export function typeScriptProjectPolicyRules(): readonly TypeScriptHarnessRule[] {
+  return [TS_PROJ_R001, TS_PROJ_R002, TS_PROJ_R003, TS_PROJ_R004, TS_PROJ_R005];
+}
+
+export function evaluateProjectPolicyRules(
+  reasoningTree: TypeScriptReasoningTree,
+): TypeScriptHarnessFinding[] {
+  const findings: TypeScriptHarnessFinding[] = [];
+  if (reasoningTree.runMode === "project" && reasoningTree.configPath === undefined) {
+    findings.push({
+      ruleId: TS_PROJ_R001.ruleId,
+      packId: TS_PROJ_R001.packId,
+      severity: TS_PROJ_R001.severity,
+      title: TS_PROJ_R001.title,
+      summary: "No tsconfig.json was found for this project run.",
+      location: { path: reasoningTree.projectRoot, line: 1, column: 0 },
+      requirement: TS_PROJ_R001.requirement,
+      label: "missing tsconfig.json",
+      labels: TS_PROJ_R001.labels,
+    });
+  }
+  findings.push(
+    ...reasoningTree.diagnostics
+      .filter((diagnostic) => diagnostic.phase === "config")
+      .map((diagnostic) =>
+        diagnosticFinding(TS_PROJ_R002, diagnostic, "TypeScript config parser diagnostic"),
+      ),
+    ...reasoningTree.diagnostics
+      .filter((diagnostic) => diagnostic.phase === "package-json")
+      .map((diagnostic) =>
+        diagnosticFinding(TS_PROJ_R003, diagnostic, "package.json parser diagnostic"),
+      ),
+    ...evaluateProjectReferenceConfigAdvice(reasoningTree),
+    ...evaluatePackageEntryResolutionModeAdvice(reasoningTree),
+  );
+  return findings;
+}
+
+function evaluateProjectReferenceConfigAdvice(
+  reasoningTree: TypeScriptReasoningTree,
+): TypeScriptHarnessFinding[] {
+  return reasoningTree.projectReferencePackages.flatMap((referencePackage) => {
+    if (referencePackage.configPath === undefined) {
+      return [
+        {
+          ruleId: TS_PROJ_R004.ruleId,
+          packId: TS_PROJ_R004.packId,
+          severity: TS_PROJ_R004.severity,
+          title: TS_PROJ_R004.title,
+          summary: `Project reference package '${referencePackage.name ?? relativeToProject(reasoningTree, referencePackage.path)}' has no local tsconfig.json.`,
+          location: { path: referencePackage.packageJsonPath, line: 1, column: 0 },
+          requirement: TS_PROJ_R004.requirement,
+          label: "missing referenced project config",
+          labels: TS_PROJ_R004.labels,
+        },
+      ];
+    }
+    const compilerOptions = referencePackage.compilerOptions;
+    if (compilerOptions === undefined) {
+      return [];
+    }
+    const missingOptions = [
+      compilerOptions.composite ? undefined : "composite",
+      compilerOptions.declaration ? undefined : "declaration",
+    ].filter((option): option is string => option !== undefined);
+    if (missingOptions.length === 0) {
+      return [];
+    }
+    return [
+      {
+        ruleId: TS_PROJ_R004.ruleId,
+        packId: TS_PROJ_R004.packId,
+        severity: TS_PROJ_R004.severity,
+        title: TS_PROJ_R004.title,
+        summary: `Project reference package '${referencePackage.name ?? relativeToProject(reasoningTree, referencePackage.path)}' should enable ${missingOptions.join(" and ")} in its local tsconfig.json.`,
+        location: { path: referencePackage.configPath, line: 1, column: 0 },
+        requirement: TS_PROJ_R004.requirement,
+        label: "referenced project config",
+        labels: TS_PROJ_R004.labels,
+      },
+    ];
+  });
+}
+
+function evaluatePackageEntryResolutionModeAdvice(
+  reasoningTree: TypeScriptReasoningTree,
+): TypeScriptHarnessFinding[] {
+  if (
+    reasoningTree.configPath === undefined ||
+    (!reasoningTree.packageExports.length && !reasoningTree.packageImports.length)
+  ) {
+    return [];
+  }
+  const moduleResolution = reasoningTree.compilerOptions.moduleResolution?.toLowerCase();
+  if (
+    moduleResolution === "node16" ||
+    moduleResolution === "nodenext" ||
+    moduleResolution === "bundler"
+  ) {
+    return [];
+  }
+  const packageEntryKinds = [
+    reasoningTree.packageExports.length > 0 ? "exports" : undefined,
+    reasoningTree.packageImports.length > 0 ? "imports" : undefined,
+  ].filter((kind): kind is string => kind !== undefined);
+  return [
+    {
+      ruleId: TS_PROJ_R005.ruleId,
+      packId: TS_PROJ_R005.packId,
+      severity: TS_PROJ_R005.severity,
+      title: TS_PROJ_R005.title,
+      summary: `package.json ${packageEntryKinds.join("/")} is present, but tsconfig moduleResolution is ${moduleResolution ?? "not declared"}.`,
+      location: { path: reasoningTree.configPath, line: 1, column: 0 },
+      requirement: TS_PROJ_R005.requirement,
+      label: "package entry module resolution",
+      labels: TS_PROJ_R005.labels,
+    },
+  ];
+}
