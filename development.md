@@ -76,17 +76,19 @@ is a facade, not the policy implementation body.
 
 ## Verification Policy Boundary
 
-The M5 verification planner is downstream of the harness report. It may consume
-`TypeScriptHarnessReport.reasoningTree`, profile hints, receipts, waivers, and
-configured skill contracts, but it must not import parser helpers, import
-`typescript`, or reconstruct TypeScript module resolution. If verification
-needs a new owner fact, add it to the parser/reasoning chain first.
+The M5/M6 verification surface is downstream of the harness report. It may
+consume `TypeScriptHarnessReport.reasoningTree`, profile hints, receipts,
+waivers, configured skill contracts, and profile-index candidates, but it must
+not import parser helpers, import `typescript`, or reconstruct TypeScript module
+resolution. If verification needs a new owner fact, add it to the
+parser/reasoning chain first.
 
 Verification policy is a planner, not an executor. Keep subprocess execution,
-profile-index discovery, report bundles, and external skill lifecycle outside
-M5 unless a later milestone explicitly owns them. Compact verification output
-should stay a reminder surface: active pending or failed tasks first, expanded
-skill contracts only when a task references a configured skill.
+report bundles, and external skill lifecycle outside M6 unless a later
+milestone explicitly owns them. Compact verification output should stay a
+reminder surface: active pending or failed tasks first, expanded skill
+contracts only when a task references a configured skill, and profile-index
+blocks only while profile hints are missing or drifting.
 
 ## Self-Applied Policy
 
@@ -95,7 +97,7 @@ Those tests call the project runner against the repository root, so the package
 must stay clean under the same default policy downstream TypeScript projects
 will consume. Self-apply means zero default findings, including `info` advice,
 not merely zero blocking findings.
-M5 semantic diagnostics, modularity advice, test-layout advice, package
+M6 semantic diagnostics, modularity advice, test-layout advice, package
 metadata diagnostics, and agent advice are rendered by default but remain
 `info`; do not promote advisory findings to blocking without an explicit policy
 decision.
@@ -120,11 +122,11 @@ empty child-edge placeholders.
 
 ## Public API Contract
 
-The package root is the supported M5 import surface. Tests in
+The package root is the supported M6 import surface. Tests in
 `tests/unit/public_api.test.ts` lock the runtime facade, type exports, and public
 agent snapshot behavior. Do not export internal reasoning builders, rule-pack
-evaluators, or verification planner internals unless they become an intentional
-library contract.
+evaluators, or verification internals unless they become an intentional library
+contract.
 The agent snapshot compact format is also locked by the golden fixture in
 `tests/fixtures/agent_snapshot_project` and
 `tests/snapshots/agent_snapshot_project.snap`; update them together only when

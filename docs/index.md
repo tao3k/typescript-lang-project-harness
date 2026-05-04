@@ -22,6 +22,9 @@ entrypoint into a catch-all reference page.
 - [Verification Policy M5 Plan](02_plans/203_verification_policy_m5_plan.md):
   stacked milestone for parser-fact-driven verification task planning,
   compact reminders, receipts, waivers, and external skill contracts.
+- [Verification Profile Index M6 Plan](02_plans/204_verification_profile_index_m6_plan.md):
+  stacked milestone for parser-fact-driven profile candidate drafts and
+  low-noise profile config advice.
 
 ## 03_features: Functional Ledger
 
@@ -36,5 +39,5 @@ entrypoint into a catch-all reference page.
   compact text design, section order, line shapes, non-goals, and golden
   contract.
 - [Verification Policy](03_features/205_verification_policy.md): profile hints,
-  task contracts, receipts, waivers, skill bindings, and compact verification
-  rendering.
+  profile indexes, task contracts, receipts, waivers, skill bindings, and
+  compact verification rendering.
