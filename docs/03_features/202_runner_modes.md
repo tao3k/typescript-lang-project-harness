@@ -57,9 +57,10 @@ orientation facts, not package-manager policy.
 
 `verificationPolicy` is also part of `TypeScriptHarnessConfig`. It owns
 profile hints, receipts, waivers, task contract overrides, responsibility task
-mapping, skill bindings, and skill descriptors for the M5 verification
-planner. These settings do not affect default rule-pack findings; they are
-consumed by `planTypeScriptProjectVerification*()` after a report exists.
+mapping, skill bindings, and skill descriptors for the M5/M6 verification
+surface. These settings do not affect default rule-pack findings; they are
+consumed by `buildTypeScriptVerificationProfileIndex*()` and
+`planTypeScriptProjectVerification*()` after a report exists.
 
 The package facade exposes immutable helpers for common policy changes:
 `withDisabledTypeScriptRule()`, `withDisabledTypeScriptRules()`,
@@ -112,10 +113,11 @@ findings.
 
 ## Public Facade
 
-Consumers should import from the package root. The root facade exposes the M5
+Consumers should import from the package root. The root facade exposes the M6
 contract: parser entrypoints, project/explicit runners, project snapshot
 helpers, assertion helpers, compact/JSON/reasoning renderers, rule catalog
-functions, policy config helpers, verification planners/renderers, and model
-types, including `TypeScriptHarnessRunMode`, `TypeScriptRulePack`, and
-verification policy/task model types. Reasoning builders, rule evaluators, and
-verification planner internals remain internal implementation details.
+functions, policy config helpers, verification profile-index builders/renderers,
+verification planners/renderers, and model types, including
+`TypeScriptHarnessRunMode`, `TypeScriptRulePack`, and verification policy/task
+model types. Reasoning builders, rule evaluators, and verification internals
+remain internal implementation details.

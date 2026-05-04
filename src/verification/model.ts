@@ -130,3 +130,25 @@ export interface TypeScriptVerificationPlan {
   readonly tasks: readonly TypeScriptVerificationTask[];
   readonly skillDescriptors: readonly TypeScriptVerificationSkillDescriptor[];
 }
+
+export type TypeScriptVerificationProfileCandidateState =
+  | "missing_profile"
+  | "profile_drift"
+  | "configured";
+
+export interface TypeScriptVerificationProfileCandidate {
+  readonly packageRoot: string;
+  readonly ownerPath: string;
+  readonly hintPath: string;
+  readonly ownerNamespace: string;
+  readonly state: TypeScriptVerificationProfileCandidateState;
+  readonly suggestedResponsibilities: readonly TypeScriptOwnerResponsibility[];
+  readonly configuredResponsibilities: readonly TypeScriptOwnerResponsibility[];
+  readonly suggestedTaskKinds: readonly TypeScriptVerificationTaskKind[];
+  readonly evidence: readonly TypeScriptVerificationEvidence[];
+}
+
+export interface TypeScriptVerificationProfileIndex {
+  readonly projectRoot: string;
+  readonly candidates: readonly TypeScriptVerificationProfileCandidate[];
+}

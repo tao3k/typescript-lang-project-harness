@@ -1,8 +1,8 @@
 # Verification Policy
 
-Verification policy is the M5 bridge between parser-owned TypeScript structure
-and external validation skills. It plans what must be verified; it does not run
-the verifier.
+Verification policy is the M5/M6 bridge between parser-owned TypeScript
+structure and external validation skills. It drafts owner profiles, plans what
+must be verified, and renders compact contracts; it does not run the verifier.
 
 ## Authority Chain
 
@@ -41,7 +41,7 @@ Use the package facade helpers instead of mutating config objects in place:
 
 ## Task Mapping
 
-M5 supports these task kinds:
+The verification planner supports these task kinds:
 
 - `stress`
 - `performance`
@@ -113,3 +113,51 @@ contract surface:
 Structured consumers can use `renderTypeScriptVerificationPlanJson(plan)`.
 Agents should read the compact task output first and expand skill contracts only
 when a task references a skill.
+
+## Profile Index
+
+M6 adds a profile index that helps Agents draft `profileHints` before external
+verification tasks are planned:
+
+```ts
+import {
+  activeTypeScriptVerificationProfileHints,
+  buildTypeScriptVerificationProfileIndex,
+  renderTypeScriptVerificationProfileIndex,
+} from "typescript-lang-project-harness";
+
+const index = buildTypeScriptVerificationProfileIndex(".");
+console.log(renderTypeScriptVerificationProfileIndex(index));
+const suggestedHints = activeTypeScriptVerificationProfileHints(index);
+```
+
+The profile index is not a project audit. It renders only missing or drifting
+profile candidates, and it goes quiet once matching hints cover the suggested
+responsibilities.
+For drifting profiles, `activeTypeScriptVerificationProfileHints()` preserves
+already configured responsibilities while adding parser-suggested ones.
+
+```text
+[verify-profile] src/index.ts
+   |owner: src
+   |state: missing_profile
+   |suggest: external_dependency,public_api
+   |tasks: chaos,stress
+   |fact: module=role=facade layer=harness
+   |fact: imports=external=1 package_import=0 unresolved=0
+```
+
+Profile candidates are derived from reasoning-tree facts:
+
+- module role and layer
+- parser-visible export count
+- owner dependency count
+- TypeScript-native import-resolution counts
+- package entry targets that resolve to parser-visible owners
+
+M6 intentionally keeps responsibility inference small. It suggests `public_api`
+for entrypoints, facades, exported owners, and parser-visible package entry
+owners. It suggests `external_dependency` when parser facts show external or
+`#` package-import boundaries. It does not infer latency, security,
+persistence, or availability responsibilities from package names or manifest
+dependency declarations.

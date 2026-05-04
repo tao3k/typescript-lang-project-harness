@@ -103,12 +103,20 @@ export {
   typeScriptTestLayoutRules,
 } from "./rules.js";
 export {
+  activeTypeScriptVerificationProfileCandidates,
+  activeTypeScriptVerificationProfileHints,
+  buildTypeScriptVerificationProfileIndex,
+  buildTypeScriptVerificationProfileIndexForReport,
+  buildTypeScriptVerificationProfileIndexWithConfig,
   planTypeScriptProjectVerification,
   planTypeScriptProjectVerificationForReport,
   planTypeScriptProjectVerificationWithConfig,
   renderTypeScriptVerificationPlan,
+  renderTypeScriptVerificationProfileIndex,
+  renderTypeScriptVerificationProfileIndexJson,
   renderTypeScriptVerificationPlanJson,
   renderTypeScriptVerificationSkillContracts,
+  typeScriptVerificationProfileIndexIsClear,
 } from "./verification.js";
 export type {
   TypeScriptOwnerResponsibility,
@@ -116,7 +124,10 @@ export type {
   TypeScriptVerificationPhase,
   TypeScriptVerificationPlan,
   TypeScriptVerificationPolicy,
+  TypeScriptVerificationProfileCandidate,
+  TypeScriptVerificationProfileCandidateState,
   TypeScriptVerificationProfileHint,
+  TypeScriptVerificationProfileIndex,
   TypeScriptVerificationReceipt,
   TypeScriptVerificationReceiptStatus,
   TypeScriptVerificationRequirement,

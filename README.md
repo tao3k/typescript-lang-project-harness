@@ -54,7 +54,7 @@ Default project execution runs these packs in descriptor order:
 5. `typescript.test_layout`
 6. `typescript.agent_policy`
 
-The current M5 surface implements the native parser boundary, source syntax
+The current M6 surface implements the native parser boundary, source syntax
 diagnostics, native TypeScript `Program` semantic diagnostics with TypeScript
 diagnostic codes, parseable `tsconfig.json` policy, TypeScript JSON AST-backed
 package/config facts, reasoning-tree snapshots, project-level workspace
@@ -134,27 +134,30 @@ queries before the reasoning tree renders them as compact edges.
 
 ## Verification Policy
 
-M5 adds a Rust-aligned verification planning surface for external skills. A
-caller can attach `verificationPolicy` profile hints to parser-visible owners,
-then ask the library to produce compact tasks for `stress`, `performance`,
-`chaos`, `security`, `regression`, or `responsibility_review`.
+M5 adds a Rust-aligned verification planning surface for external skills, and
+M6 adds a profile index that drafts missing or drifting owner profile hints
+from parser-visible reasoning facts. A caller can attach `verificationPolicy`
+profile hints to parser-visible owners, then ask the library to produce compact
+tasks for `stress`, `performance`, `chaos`, `security`, `regression`, or
+`responsibility_review`.
 
 Verification policy consumes harness reports and reasoning-tree facts. It does
 not run tools, add CLI flags, inspect TypeScript ASTs, or turn manifest
 dependencies into project gates. Passed receipts and complete waivers hide
 resolved tasks; failed receipts and incomplete waivers stay visible in compact
-output.
+output. The profile index renders only missing/drifting profile candidates and
+goes quiet once matching hints cover the suggested responsibilities.
 
 ## Public API Contract
 
-The package facade exports the M5 library surface: runners, project agent
+The package facade exports the M6 library surface: runners, project agent
 snapshot helpers, assertion helpers, parser entrypoints,
 compact/JSON/reasoning renderers, rule catalog functions, policy config helper
-functions, verification policy helpers, verification planners/renderers, and
-report model types. Internals such as reasoning-tree builders, rule-pack
-evaluators, and verification planner internals stay private so downstream tools
-depend on parser-owned facts and stable rendered output instead of
-implementation modules.
+functions, verification policy helpers, profile-index builders/renderers,
+verification planners/renderers, and report model types. Internals such as
+reasoning-tree builders, rule-pack evaluators, and verification internals stay
+private so downstream tools depend on parser-owned facts and stable rendered
+output instead of implementation modules.
 
 ## CI
 
