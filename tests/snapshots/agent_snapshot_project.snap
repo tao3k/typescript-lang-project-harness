@@ -1,6 +1,6 @@
 Modules: source=4 roots=2 branches=2 deps=10 paths=2 refs=1 workspaces=2 package-owners=4
 OwnerBranches:
- - src/cli.ts [root, entrypoint] owner=src/cli imports=relative:1,package-import:1 exports=run -> -
+ - src/cli.ts [root, entrypoint] owner=src/cli imports=relative:1,package-import:1 exports=run
  - src/index.ts [root, facade] owner=src imports=path-alias:2 exports=type:Domain,domain -> export:src/domain.ts, type-export:src/domain.ts
 OwnerDependencies:
  - package bin:snapshot-app --owner--> src/cli.ts

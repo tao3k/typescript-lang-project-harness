@@ -2,8 +2,8 @@ import type {
   TypeScriptHarnessFinding,
   TypeScriptHarnessRule,
   TypeScriptReasoningTree,
-} from "../model.js";
-import { diagnosticFinding, relativeToProject } from "./common.js";
+} from "../../model.js";
+import { diagnosticFinding, relativeToProject } from "../common.js";
 
 const TS_PROJ_R001: TypeScriptHarnessRule = {
   ruleId: "TS-PROJ-R001",

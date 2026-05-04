@@ -95,6 +95,11 @@ Agent-facing modularity and repair rules use reasoning-tree owner facts such
 as `ownerBranches` and `ownerDependencies` before falling back to lower-level
 edge facts. Snapshot rendering filters test-context owner dependencies the same
 way Rust's agent snapshot hides test-context dependency rows.
+M4 rule execution is split into catalog, engine, and pack modules. Policy
+configuration is applied after pack evaluation: disabled single rules and
+disabled built-in packs remove findings, rule-pack severity overrides apply,
+and single-rule severity overrides win last. This keeps project-local policy
+configuration outside parser facts while preserving deterministic rule output.
 Compact file and parsed counts are computed from reasoning-tree module
 validity, not directly from parser module reports. Compact finding locations
 are rendered relative to the reasoning tree root, so explicit-path output does
@@ -135,6 +140,9 @@ owners. It also carries source-shape counters such as shadowed owner
 namespaces and orphaned source files as compact orientation metrics, not
 blocking policy. It groups findings by rule instead of rendering full
 diagnostic cards.
+Long branch surfaces and child-edge lists are capped. Empty child-edge
+placeholders are omitted, and repeated owner dependencies can be rendered as
+fan-out or fan-in groups.
 This is the preferred first read when an agent needs to choose which TypeScript
 owner, facade, entrypoint, or package surface to edit. Full diagnostic detail
 stays in the default compact renderer and JSON output.
@@ -162,3 +170,7 @@ The first standalone version does not replace `tsc`, ESLint, Prettier,
 framework compilers, bundlers, or package-manager audits. The harness should
 avoid rules those tools already own and focus on project facts that help agents
 choose the correct owner, entrypoint, facade, and edit surface.
+M4 also does not implement the Rust verification/profile/report-bundle
+subsystem. That remains future work; dependency facts and package metadata stay
+orientation inputs unless a later project-owned policy explicitly promotes
+them.

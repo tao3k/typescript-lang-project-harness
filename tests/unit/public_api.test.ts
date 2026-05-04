@@ -21,6 +21,7 @@ import type {
   TypeScriptHarnessReport,
   TypeScriptHarnessRule,
   TypeScriptHarnessRunMode,
+  TypeScriptRulePack,
   TypeScriptImportEdgeFact,
   TypeScriptImportFact,
   TypeScriptModuleLayer,
@@ -66,6 +67,7 @@ type PublicModelContract = readonly [
   TypeScriptHarnessReport,
   TypeScriptHarnessRule,
   TypeScriptHarnessRunMode,
+  TypeScriptRulePack,
   TypeScriptImportFact,
   TypeScriptImportEdgeFact,
   TypeScriptModuleLayer,
@@ -97,7 +99,7 @@ type PublicModelContract = readonly [
 
 const publicModelContract: PublicModelContract | undefined = undefined;
 
-test("public facade exposes the stable M3 runtime surface", () => {
+test("public facade exposes the stable M4 runtime surface", () => {
   assert.deepEqual(Object.keys(api).sort(), [
     "DEFAULT_IGNORED_DIR_NAMES",
     "advisoryFindings",
@@ -126,9 +128,16 @@ test("public facade exposes the stable M3 runtime surface", () => {
     "typeScriptModularityRules",
     "typeScriptProjectPolicyRules",
     "typeScriptRulePackDescriptors",
+    "typeScriptRulePackRuleIds",
     "typeScriptSemanticRules",
     "typeScriptSyntaxRules",
     "typeScriptTestLayoutRules",
+    "withDisabledTypeScriptRule",
+    "withDisabledTypeScriptRulePack",
+    "withDisabledTypeScriptRules",
+    "withTypeScriptBlockingSeverities",
+    "withTypeScriptRulePackSeverity",
+    "withTypeScriptRuleSeverity",
   ]);
   assert.equal("buildTypeScriptReasoningTree" in api, false);
   assert.equal("evaluateDefaultRulePacks" in api, false);

@@ -9,6 +9,14 @@ export interface RulePackDescriptor {
   readonly defaultMode: "blocking" | "advisory";
 }
 
+export type TypeScriptRulePack =
+  | "syntax"
+  | "semantic"
+  | "project_policy"
+  | "modularity"
+  | "test_layout"
+  | "agent_policy";
+
 export interface TypeScriptHarnessRule {
   readonly ruleId: string;
   readonly packId: string;
@@ -214,6 +222,11 @@ export interface TypeScriptHarnessConfig {
   readonly testDirNames: readonly string[];
   readonly blockingSeverities: readonly TypeScriptDiagnosticSeverity[];
   readonly disabledRuleIds: readonly string[];
+  readonly disabledRulePacks: readonly TypeScriptRulePack[];
+  readonly ruleSeverityOverrides: Readonly<Partial<Record<string, TypeScriptDiagnosticSeverity>>>;
+  readonly rulePackSeverityOverrides: Readonly<
+    Partial<Record<TypeScriptRulePack, TypeScriptDiagnosticSeverity>>
+  >;
   readonly blockingRuleIds: readonly string[];
 }
 

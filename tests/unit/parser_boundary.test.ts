@@ -44,6 +44,14 @@ test("TypeScript semantics stay in the parser layer", () => {
     .join("\n");
   assert.doesNotMatch(
     rulesSource,
+    /from "\.\.\/parser|from "\.\/parser|parseTypeScript(ProjectFiles|SourceFile)|readProjectScope|projectFileNames/u,
+  );
+  assert.doesNotMatch(
+    rulesSource,
+    /resolveModuleName|resolvePathAlias|resolveRelativeModule|resolvePackageImport/u,
+  );
+  assert.doesNotMatch(
+    rulesSource,
     /TypeScriptModuleReport|TypeScriptProjectHarnessScope|TypeScriptHarnessRunMode/u,
   );
   assert.doesNotMatch(

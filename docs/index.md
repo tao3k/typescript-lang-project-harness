@@ -16,6 +16,9 @@ entrypoint into a catch-all reference page.
 - [Native Parser Alignment Plan](02_plans/201_native_parser_alignment_plan.md):
   M2 parser-first workplan from native facts to reasoning tree, low-noise
   policy, compact output, and self-apply validation.
+- [Rust Alignment M4 Plan](02_plans/202_rust_alignment_m4_plan.md):
+  stacked milestone for policy config, rule-pack engine boundaries, compact
+  agent snapshot alignment, and parser-boundary contract hardening.
 
 ## 03_features: Functional Ledger
 

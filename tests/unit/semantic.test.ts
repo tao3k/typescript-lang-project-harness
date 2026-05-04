@@ -67,7 +67,7 @@ test("project parser exposes native TypeScript semantic diagnostics as non-block
   assert.match(rendered, /TS2322: Type 'number' is not assignable to type 'string'/u);
   assert.match(snapshot, /^Modules: source=1 branches=1 findings=1/u);
   assert.match(snapshot, /OwnerBranches:/u);
-  assert.match(snapshot, /src\/index\.ts \[root, facade\] owner=src exports=value -> -/u);
+  assert.match(snapshot, /src\/index\.ts \[root, facade\] owner=src exports=value/u);
   assert.match(snapshot, /FindingGroups:/u);
   assert.match(snapshot, /TS-SEM-R001/u);
 });

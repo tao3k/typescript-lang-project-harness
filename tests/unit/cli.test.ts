@@ -32,7 +32,7 @@ test("CLI supports compact, JSON, and agent snapshot output modes", () => {
   assert.match(snapshot.stdout, /^Modules: source=1 branches=1/u);
   assert.match(
     snapshot.stdout,
-    /OwnerBranches:\n - src\/index\.ts \[root, facade\] owner=src exports=ok -> -/u,
+    /OwnerBranches:\n - src\/index\.ts \[root, facade\] owner=src exports=ok/u,
   );
 
   const invalid = runCliCapture(["--json", "--agent-snapshot", "."], root);

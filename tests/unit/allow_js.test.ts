@@ -75,8 +75,8 @@ test("project runner preserves tsconfig allowJs native file selection", () => {
     rendered,
     /src\/index\.js \[root, facade\] owner=src imports=relative:1 exports=value -> export:src\/plain\.js/u,
   );
-  assert.match(rendered, /src\/main\.mjs \[root, entrypoint\] owner=src\/main exports=run -> -/u);
+  assert.match(rendered, /src\/main\.mjs \[root, entrypoint\] owner=src\/main exports=run/u);
   assert.match(rendered, /src\/view\.jsx --relative\/import--> src\/plain\.js/u);
-  assert.match(rendered, /vite\.config\.mjs \[config\] owner=vite\.config exports=default -> -/u);
+  assert.match(rendered, /vite\.config\.mjs \[config\] owner=vite\.config exports=default/u);
   assert.doesNotMatch(rendered, /src\/view\.test\.jsx/u);
 });
