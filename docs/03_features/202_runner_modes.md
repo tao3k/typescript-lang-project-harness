@@ -43,14 +43,23 @@ const config = {
 
 `ignoredDirNames` controls recursive fallback discovery. `blockingSeverities`
 keeps assertion behavior independent from rule emission. `disabledRuleIds`
-suppresses selected findings, and `blockingRuleIds` lets a project promote
-specific advisory rules without changing catalog severities. Semantic
+and `disabledRulePacks` suppress selected findings, while
+`ruleSeverityOverrides` and `rulePackSeverityOverrides` tune severity after
+rule evaluation. Single-rule severity overrides win over rule-pack overrides.
+`blockingRuleIds` lets a project promote specific advisory rules without
+changing catalog severities. Semantic
 diagnostics, project-shape advice, modularity and test-layout rules, plus
 malformed `package.json` metadata diagnostics, are rendered as `info` advice by
 default. Package metadata diagnostics include root, TypeScript
 project-reference, and workspace package files and are produced through
 TypeScript's JSON parser. Package scripts and workspaces are parser-owned
 orientation facts, not package-manager policy.
+
+The package facade exposes immutable helpers for common policy changes:
+`withDisabledTypeScriptRule()`, `withDisabledTypeScriptRules()`,
+`withDisabledTypeScriptRulePack()`, `withTypeScriptRuleSeverity()`,
+`withTypeScriptRulePackSeverity()`, and
+`withTypeScriptBlockingSeverities()`.
 
 ## Explicit-Path Runner
 
@@ -90,8 +99,9 @@ findings.
 
 ## Public Facade
 
-Consumers should import from the package root. The root facade exposes the M3
+Consumers should import from the package root. The root facade exposes the M4
 contract: parser entrypoints, project/explicit runners, project snapshot
 helpers, assertion helpers, compact/JSON/reasoning renderers, rule catalog
-functions, and model types, including `TypeScriptHarnessRunMode`. Reasoning
-builders and rule evaluators remain internal implementation details.
+functions, policy config helpers, and model types, including
+`TypeScriptHarnessRunMode` and `TypeScriptRulePack`. Reasoning builders and
+rule evaluators remain internal implementation details.

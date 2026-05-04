@@ -16,6 +16,7 @@ export type {
   TypeScriptHarnessReport,
   TypeScriptHarnessRule,
   TypeScriptHarnessRunMode,
+  TypeScriptRulePack,
   TypeScriptImportFact,
   TypeScriptImportEdgeFact,
   TypeScriptModuleLayer,
@@ -51,6 +52,15 @@ export {
   parsedCount,
 } from "./model.js";
 export {
+  defaultTypeScriptHarnessConfig,
+  withDisabledTypeScriptRule,
+  withDisabledTypeScriptRulePack,
+  withDisabledTypeScriptRules,
+  withTypeScriptBlockingSeverities,
+  withTypeScriptRulePackSeverity,
+  withTypeScriptRuleSeverity,
+} from "./config.js";
+export {
   DEFAULT_IGNORED_DIR_NAMES,
   discoverTypeScriptFiles,
   parseTypeScriptProjectFiles,
@@ -70,7 +80,6 @@ export {
   assertTypeScriptLangHarnessClean,
   assertTypeScriptProjectHarnessClean,
   buildTypeScriptProjectHarnessAgentSnapshot,
-  defaultTypeScriptHarnessConfig,
   runTypeScriptLangHarness,
   runTypeScriptProjectHarnessAgentSnapshot,
   runTypeScriptProjectHarness,
@@ -80,6 +89,7 @@ export {
   typeScriptModularityRules,
   typeScriptProjectPolicyRules,
   typeScriptRulePackDescriptors,
+  typeScriptRulePackRuleIds,
   typeScriptSemanticRules,
   typeScriptSyntaxRules,
   typeScriptTestLayoutRules,

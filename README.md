@@ -54,13 +54,16 @@ Default project execution runs these packs in descriptor order:
 5. `typescript.test_layout`
 6. `typescript.agent_policy`
 
-M3 implements the native parser boundary, source syntax diagnostics, native
+M4 implements the native parser boundary, source syntax diagnostics, native
 TypeScript `Program` semantic diagnostics with TypeScript diagnostic codes,
 parseable `tsconfig.json` policy, TypeScript JSON AST-backed package/config
 facts, reasoning-tree snapshots, project-level workspace package snapshots,
 Rust-style source-shape counters for shadowed/orphaned source owners,
 non-blocking package metadata diagnostics,
 modularity/test-layout advice, and the first non-blocking agent advice rules.
+It also adds Rust-aligned policy configuration for disabling single rules,
+disabling built-in rule packs, overriding single-rule severities, overriding
+rule-pack severities, and promoting advisory rules by `blockingRuleIds`.
 `TS-SEM-*`, `TS-PROJ-R003`, `TS-PROJ-R004`, `TS-PROJ-R005`, `TS-MOD-*`,
 `TS-TEST-*`, and `TS-AGENT-*` findings are shown to agents without failing the
 default gate. Package metadata diagnostics cover both the project root package
@@ -84,11 +87,15 @@ and `ownerDependencies` rather than rediscovering owner structure from raw
 source or raw import edges.
 Owner branches summarize module roles, exports, type-only re-exports,
 TypeScript-native import-resolution counts, and parser-owned re-export
-structure. Owner dependencies summarize relative/path-alias/package-import
+structure. Branch lines cap long package surfaces and omit empty child-edge
+placeholders instead of rendering `-> -`. Owner dependencies summarize
+relative/path-alias/package-import
 owner routing, package-name import owners with `project-reference` or
 `workspace` provenance, and package entry ownership for fields,
 exports/imports, and bins. External package imports stay as branch counters
 instead of becoming owner-dependency rows.
+High fan-out and fan-in owner dependency surfaces are grouped deterministically
+so agents get a compact edit map before they inspect JSON.
 `shadowed=` and `orphaned=` source-shape counters are rendered only when
 non-zero and remain orientation facts, not style gates.
 Full TypeScript diagnostic codes, source lines, related information, compiler
@@ -127,12 +134,13 @@ queries before the reasoning tree renders them as compact edges.
 
 ## Public API Contract
 
-The package facade exports the M3 library surface: runners, project agent
+The package facade exports the M4 library surface: runners, project agent
 snapshot helpers, assertion helpers, parser entrypoints,
-compact/JSON/reasoning renderers, rule catalog functions, and report model
-types. Internals such as reasoning-tree builders and rule-pack evaluators stay
-private so downstream tools depend on parser-owned facts and stable rendered
-output instead of implementation modules.
+compact/JSON/reasoning renderers, rule catalog functions, policy config helper
+functions, and report model types. Internals such as reasoning-tree builders
+and rule-pack evaluators stay private so downstream tools depend on
+parser-owned facts and stable rendered output instead of implementation
+modules.
 
 ## CI
 

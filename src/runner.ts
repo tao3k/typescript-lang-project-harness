@@ -2,7 +2,6 @@ import fs from "node:fs";
 import path from "node:path";
 
 import {
-  DEFAULT_IGNORED_DIR_NAMES,
   discoverTypeScriptFiles,
   parseTypeScriptProjectFiles,
   parseTypeScriptSourceFile,
@@ -10,6 +9,7 @@ import {
   projectFileNames,
   readProjectScope,
 } from "./parser.js";
+import { defaultTypeScriptHarnessConfig } from "./config.js";
 import { buildExplicitTypeScriptReasoningTree, buildTypeScriptReasoningTree } from "./reasoning.js";
 import { evaluateDefaultRulePacks } from "./rules.js";
 import { renderAssertionMessage } from "./render.js";
@@ -20,18 +20,6 @@ import {
   type TypeScriptProjectHarnessAgentSnapshot,
   type TypeScriptProjectHarnessAgentSnapshotPackage,
 } from "./model.js";
-
-export function defaultTypeScriptHarnessConfig(): TypeScriptHarnessConfig {
-  return {
-    ignoredDirNames: [...DEFAULT_IGNORED_DIR_NAMES],
-    includeTests: true,
-    sourceDirNames: ["src"],
-    testDirNames: ["tests"],
-    blockingSeverities: ["warning", "error"],
-    disabledRuleIds: [],
-    blockingRuleIds: [],
-  };
-}
 
 export function runTypeScriptProjectHarness(
   projectRootInput: string | URL,

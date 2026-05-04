@@ -15,6 +15,9 @@ import {
   type TypeScriptReasoningTree,
 } from "./model.js";
 
+const MAX_AGENT_SNAPSHOT_BRANCH_LINES = 24;
+const MAX_AGENT_SNAPSHOT_CHILD_EDGES = 8;
+
 export interface TypeScriptRenderOptions {
   readonly includeAdvice?: boolean;
 }
@@ -43,15 +46,19 @@ export function renderTypeScriptReasoningTree(report: TypeScriptHarnessReport): 
   if (sourceModules.length === 0 && report.findings.length === 0) {
     return "";
   }
-  const branchLines = tree.ownerBranches.map((branch) => renderOwnerBranch(tree, branch));
+  const branchLines = compactLines(
+    tree.ownerBranches.map((branch) => renderOwnerBranch(tree, branch)),
+    MAX_AGENT_SNAPSHOT_BRANCH_LINES,
+    "owner branches",
+  );
   const ownerDependencyLines = renderOwnerDependencyLines(tree);
   const findingGroupLines = renderFindingGroups(tree, report.findings);
   const lines = [
     renderModuleSummary(
       tree,
       sourceModules.length,
-      branchLines.length,
-      ownerDependencyLines.length,
+      tree.ownerBranches.length,
+      ownerDependencyCount(tree),
       findingGroupLines.length,
     ),
   ];
@@ -186,12 +193,13 @@ function renderOwnerBranch(
 ): string {
   const exportsLabel =
     branch.exportNames.length === 0 ? "" : ` exports=${renderExportNameList(branch)}`;
+  const childEdgesLabel =
+    branch.childEdges.length === 0 ? "" : ` -> ${displayChildEdges(tree, branch.childEdges)}`;
   return ` - ${relativeToTree(tree, branch.path)} [${branch.roles.join(
     ", ",
-  )}] owner=${branch.ownerNamespace}${displayImportSummary(branch.importSummary)}${exportsLabel} -> ${displayChildEdges(
-    tree,
-    branch.childEdges,
-  )}`;
+  )}] owner=${branch.ownerNamespace}${displayImportSummary(
+    branch.importSummary,
+  )}${exportsLabel}${childEdgesLabel}`;
 }
 
 function displayImportSummary(summary: TypeScriptReasoningImportSummaryFact): string {
@@ -216,11 +224,14 @@ function displayChildEdges(
   tree: TypeScriptReasoningTree,
   edges: readonly TypeScriptImportEdgeFact[],
 ): string {
-  if (edges.length === 0) {
-    return "-";
+  const labels = [
+    ...new Set(edges.map((edge) => `${renderImportKind(edge)}:${edgeTarget(tree, edge)}`)),
+  ];
+  const visibleLabels = labels.slice(0, MAX_AGENT_SNAPSHOT_CHILD_EDGES);
+  if (labels.length > MAX_AGENT_SNAPSHOT_CHILD_EDGES) {
+    visibleLabels.push(`... +${labels.length - MAX_AGENT_SNAPSHOT_CHILD_EDGES} children`);
   }
-  const labels = edges.map((edge) => `${renderImportKind(edge)}:${edgeTarget(tree, edge)}`);
-  return [...new Set(labels)].join(", ");
+  return visibleLabels.join(", ");
 }
 
 function edgeTarget(
@@ -231,14 +242,10 @@ function edgeTarget(
 }
 
 function renderOwnerDependencyLines(tree: TypeScriptReasoningTree): string[] {
-  const edgeLines = tree.ownerDependencies
-    .filter((edge) => !edge.isTestContext)
-    .map(
-      (edge) =>
-        ` - ${relativeToTree(tree, edge.fromPath)} --${edge.resolution}/${renderImportKind(
-          edge,
-        )}--> ${edgeTarget(tree, edge)}`,
-    );
+  const edgeLines = displayOwnerDependencyLines(
+    tree,
+    tree.ownerDependencies.filter((edge) => !edge.isTestContext),
+  );
   const packageImportOwnerLines = tree.packageImportOwners.map(
     (owner) =>
       ` - ${relativeToTree(tree, owner.fromPath)} --${owner.via}/${renderImportKind(
@@ -252,6 +259,83 @@ function renderOwnerDependencyLines(tree: TypeScriptReasoningTree): string[] {
     return ` - ${source} --${edgeLabel}--> ${target}`;
   });
   return [...new Set([...edgeLines, ...packageImportOwnerLines, ...packageEntryLines])].sort();
+}
+
+function displayOwnerDependencyLines(
+  tree: TypeScriptReasoningTree,
+  dependencies: readonly TypeScriptReasoningOwnerDependencyFact[],
+): string[] {
+  const fanOutGroups = ownerDependencyGroups(tree, dependencies, "fan-out");
+  const fanInGroups = ownerDependencyGroups(tree, dependencies, "fan-in");
+  if (fanInGroups.length < dependencies.length && fanInGroups.length < fanOutGroups.length) {
+    return fanInGroups.map(
+      (group) => ` - ${group.owner} <--${group.edgeLabel}-- ${group.peers.join(", ")}`,
+    );
+  }
+  if (fanOutGroups.length === dependencies.length) {
+    return dependencies
+      .map(
+        (edge) =>
+          ` - ${relativeToTree(tree, edge.fromPath)} --${edge.resolution}/${renderImportKind(
+            edge,
+          )}--> ${edgeTarget(tree, edge)}`,
+      )
+      .sort();
+  }
+  return fanOutGroups.map(
+    (group) => ` - ${group.owner} --${group.edgeLabel}--> ${group.peers.join(", ")}`,
+  );
+}
+
+type OwnerDependencyDirection = "fan-out" | "fan-in";
+
+interface OwnerDependencyGroup {
+  readonly owner: string;
+  readonly edgeLabel: string;
+  readonly peers: readonly string[];
+}
+
+function ownerDependencyGroups(
+  tree: TypeScriptReasoningTree,
+  dependencies: readonly TypeScriptReasoningOwnerDependencyFact[],
+  direction: OwnerDependencyDirection,
+): OwnerDependencyGroup[] {
+  const groups = new Map<string, { owner: string; edgeLabel: string; peers: Set<string> }>();
+  for (const dependency of dependencies) {
+    const edgeLabel = `${dependency.resolution}/${renderImportKind(dependency)}`;
+    const owner =
+      direction === "fan-out"
+        ? relativeToTree(tree, dependency.fromPath)
+        : edgeTarget(tree, dependency);
+    const peer =
+      direction === "fan-out"
+        ? edgeTarget(tree, dependency)
+        : relativeToTree(tree, dependency.fromPath);
+    const key = `${owner}\0${edgeLabel}`;
+    const group = groups.get(key);
+    if (group === undefined) {
+      groups.set(key, { owner, edgeLabel, peers: new Set([peer]) });
+      continue;
+    }
+    group.peers.add(peer);
+  }
+  return [...groups.values()]
+    .map((group) => ({
+      owner: group.owner,
+      edgeLabel: group.edgeLabel,
+      peers: [...group.peers].sort((left, right) => left.localeCompare(right)),
+    }))
+    .sort((left, right) =>
+      `${left.owner}\0${left.edgeLabel}`.localeCompare(`${right.owner}\0${right.edgeLabel}`),
+    );
+}
+
+function ownerDependencyCount(tree: TypeScriptReasoningTree): number {
+  return (
+    tree.ownerDependencies.filter((edge) => !edge.isTestContext).length +
+    tree.packageImportOwners.length +
+    tree.packageEntryResolutions.length
+  );
 }
 
 function renderFindingGroups(
@@ -289,6 +373,13 @@ function relativeToTree(tree: TypeScriptReasoningTree, pathValue: string): strin
 
 function packageConditionsLabel(conditions: readonly string[]): string {
   return conditions.length === 0 ? "" : ` [${conditions.join("/")}]`;
+}
+
+function compactLines(lines: readonly string[], maxLines: number, label: string): string[] {
+  if (lines.length <= maxLines) {
+    return [...lines];
+  }
+  return [...lines.slice(0, maxLines), ` - ... +${lines.length - maxLines} ${label}`];
 }
 
 export function renderAssertionMessage(report: TypeScriptHarnessReport): string {

@@ -29,6 +29,8 @@ OwnerBranches:
  - <path> [<roles>] owner=<owner> imports=<resolution:count,...> exports=<names> -> <edge-kind:path,...>
 OwnerDependencies:
  - <path> --<resolution>/<import-kind>--> <path-or-specifier>
+ - <path> --<resolution>/<import-kind>--> <path-or-specifier>, <path-or-specifier>
+ - <path-or-specifier> <--<resolution>/<import-kind>-- <path>, <path>
  - package <kind>:<subpath> --<owner|unresolved|external>--> <path-or-target>
 FindingGroups:
  - <severity> <rule-id> x<count> first=<path> <title>
@@ -54,9 +56,12 @@ boilerplate is omitted.
   `tsconfig.json`; root package config is not inherited across package anchors.
 - `OwnerBranches:` lists source owners that are roots, facades, entrypoints,
   configs, or modules with parser-owned re-export structure edges. Ordinary
-  imports stay in `OwnerDependencies:`.
+  imports stay in `OwnerDependencies:`. The `->` child-edge suffix is emitted
+  only when a branch has child edges.
 - `OwnerDependencies:` lists import/export edges, package-name import owner
-  facts, and package entry owner facts in one compact routing surface.
+  facts, and package entry owner facts in one compact routing surface. Repeated
+  owner dependencies are grouped by fan-out or fan-in when that lowers line
+  count without losing parser-owned routing facts.
 - External package imports stay as `imports=external:<n>` counters on owner
   branches. They are not expanded as owner-dependency rows because they are not
   parser-visible TypeScript owners.
@@ -84,6 +89,9 @@ boilerplate is omitted.
   policy.
 - Compact renderers normalize project-root absolute path mentions in diagnostic
   summaries to relative paths before rendering.
+- Branch lines are capped at 24 lines with a compact remainder line. Child
+  edges are capped at 8 rendered labels with a compact remainder label.
+- Do not render empty child-edge placeholders such as `-> -`.
 
 ## Golden Contract
 

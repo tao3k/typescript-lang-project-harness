@@ -56,7 +56,7 @@ test("project runner anchors project scope at nearest package json", () => {
     ["src/index.ts"],
   );
   assert.match(snapshot, /^Modules: source=1 branches=1/u);
-  assert.match(snapshot, /src\/index\.ts \[root, facade\] owner=src exports=ok -> -/u);
+  assert.match(snapshot, /src\/index\.ts \[root, facade\] owner=src exports=ok/u);
 });
 
 test("project runner does not inherit parent tsconfig across a package json anchor", () => {
@@ -82,7 +82,7 @@ test("project runner does not inherit parent tsconfig across a package json anch
     ["src/index.ts"],
   );
   assert.match(snapshot, /^Modules: source=1 branches=1 findings=1/u);
-  assert.match(snapshot, /src\/index\.ts \[root, facade\] owner=src exports=utilValue -> -/u);
+  assert.match(snapshot, /src\/index\.ts \[root, facade\] owner=src exports=utilValue/u);
   assert.doesNotMatch(snapshot, /\.\.\/\.\.\/src/u);
 });
 

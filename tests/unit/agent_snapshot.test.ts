@@ -11,6 +11,9 @@ import {
   runTypeScriptProjectHarnessAgentSnapshot,
   runTypeScriptProjectHarness,
   type TypeScriptHarnessReport,
+  type TypeScriptImportEdgeFact,
+  type TypeScriptReasoningOwnerBranchFact,
+  type TypeScriptReasoningOwnerDependencyFact,
 } from "../../src/index.js";
 import { runCli } from "../../src/cli.js";
 
@@ -86,11 +89,228 @@ test("compact renderers normalize diagnostic messages to the reasoning root", ()
   assert.match(compact, /src\/index\.ts/u);
 });
 
+test("agent snapshot omits empty child-edge placeholders", () => {
+  const root = path.join(projectRoot, "tmp", "empty-child-edge-root");
+  const report = snapshotReport(root, [
+    ownerBranch(root, "src/index.ts", {
+      roles: ["root", "facade"],
+      exportNames: ["value"],
+    }),
+  ]);
+
+  const snapshot = renderTypeScriptReasoningTree(report);
+
+  assert.match(snapshot, /OwnerBranches:/u);
+  assert.match(snapshot, /src\/index\.ts \[root, facade\] owner=src/u);
+  assert.doesNotMatch(snapshot, /-> -/u);
+});
+
+test("agent snapshot caps branch lines and child edges", () => {
+  const root = path.join(projectRoot, "tmp", "branch-cap-root");
+  const branchReport = snapshotReport(
+    root,
+    Array.from({ length: 26 }, (_, index) =>
+      ownerBranch(root, `src/owner-${index}/index.ts`, { roles: ["root", "facade"] }),
+    ),
+  );
+  const childEdgeReport = snapshotReport(root, [
+    ownerBranch(root, "src/index.ts", {
+      roles: ["root", "facade"],
+      childEdges: Array.from({ length: 10 }, (_, index) =>
+        importEdge(root, "src/index.ts", `src/child-${index}.ts`),
+      ),
+    }),
+  ]);
+
+  assert.match(renderTypeScriptReasoningTree(branchReport), / - \.\.\. \+2 owner branches/u);
+  assert.match(renderTypeScriptReasoningTree(childEdgeReport), /\.\.\. \+2 children/u);
+});
+
+test("agent snapshot groups owner dependencies by fan-out or fan-in", () => {
+  const fanOutRoot = path.join(projectRoot, "tmp", "fan-out-root");
+  const fanOutReport = snapshotReport(
+    fanOutRoot,
+    [ownerBranch(fanOutRoot, "src/index.ts", { roles: ["root", "facade"] })],
+    [
+      ownerDependency(fanOutRoot, "src/index.ts", "src/a.ts"),
+      ownerDependency(fanOutRoot, "src/index.ts", "src/b.ts"),
+    ],
+  );
+  const fanInRoot = path.join(projectRoot, "tmp", "fan-in-root");
+  const fanInReport = snapshotReport(
+    fanInRoot,
+    [
+      ownerBranch(fanInRoot, "src/a.ts"),
+      ownerBranch(fanInRoot, "src/b.ts"),
+      ownerBranch(fanInRoot, "src/c.ts"),
+    ],
+    [
+      ownerDependency(fanInRoot, "src/a.ts", "src/shared.ts"),
+      ownerDependency(fanInRoot, "src/b.ts", "src/shared.ts"),
+      ownerDependency(fanInRoot, "src/c.ts", "src/shared.ts"),
+    ],
+  );
+
+  assert.match(
+    renderTypeScriptReasoningTree(fanOutReport),
+    /src\/index\.ts --relative\/import--> src\/a\.ts, src\/b\.ts/u,
+  );
+  assert.match(
+    renderTypeScriptReasoningTree(fanInReport),
+    /src\/shared\.ts <--relative\/import-- src\/a\.ts, src\/b\.ts, src\/c\.ts/u,
+  );
+});
+
 function goldenSnapshot(): string {
   return fs.readFileSync(
     path.join(projectRoot, "tests", "snapshots", "agent_snapshot_project.snap"),
     "utf8",
   );
+}
+
+function snapshotReport(
+  root: string,
+  ownerBranches: readonly TypeScriptReasoningOwnerBranchFact[],
+  ownerDependencies: readonly TypeScriptReasoningOwnerDependencyFact[] = [],
+): TypeScriptHarnessReport {
+  const modulePaths = [
+    ...new Set(
+      [
+        ...ownerBranches.map((branch) => branch.path),
+        ...ownerDependencies.flatMap((dependency) =>
+          dependency.toPath === undefined
+            ? [dependency.fromPath]
+            : [dependency.fromPath, dependency.toPath],
+        ),
+      ].sort((left, right) => left.localeCompare(right)),
+    ),
+  ];
+  return {
+    runMode: "project",
+    modules: [],
+    findings: [],
+    rootPaths: [root],
+    blockingSeverities: ["warning", "error"],
+    blockingRuleIds: [],
+    reasoningTree: {
+      runMode: "project",
+      projectRoot: root,
+      compilerOptions: {
+        rootDirs: [],
+        allowJs: false,
+        checkJs: false,
+        noEmit: false,
+        composite: false,
+        declaration: false,
+        emitDeclarationOnly: false,
+        declarationMap: false,
+        sourceMap: false,
+      },
+      projectReferences: [],
+      projectReferenceResolutions: [],
+      sourceRoots: [path.join(root, "src")],
+      testRoots: [],
+      pathAliases: [],
+      packageEntrypoints: [],
+      packageExports: [],
+      packageImports: [],
+      packageBins: [],
+      packageScripts: [],
+      packageWorkspaces: [],
+      workspacePackages: [],
+      workspacePatterns: [],
+      projectReferencePackages: [],
+      packageImportOwners: [],
+      packageEntryResolutions: [],
+      diagnostics: [],
+      modules: modulePaths.map((modulePath) => ({
+        path: modulePath,
+        role: "source",
+        layer: "harness",
+        isValid: true,
+        hasIntentDoc: false,
+        lineCount: 1,
+        syntaxDiagnosticCount: 0,
+        semanticDiagnosticCount: 0,
+        exportNames: [],
+        typeOnlyExportNames: [],
+        importSpecifiers: [],
+      })),
+      ownerBranches,
+      ownerDependencies,
+      shadowedSourceOwners: [],
+      orphanedSourceFiles: [],
+      edges: [],
+    },
+  };
+}
+
+function ownerBranch(
+  root: string,
+  relativePath: string,
+  options: Partial<TypeScriptReasoningOwnerBranchFact> = {},
+): TypeScriptReasoningOwnerBranchFact {
+  const absolutePath = path.join(root, relativePath);
+  return {
+    path: absolutePath,
+    ownerNamespace: ownerNamespace(relativePath),
+    roles: ["source"],
+    hasIntentDoc: false,
+    importSummary: {
+      totalImports: 0,
+      relativeImports: 0,
+      pathAliasImports: 0,
+      packageImportImports: 0,
+      externalImports: 0,
+      unresolvedImports: 0,
+    },
+    exportNames: [],
+    typeOnlyExportNames: [],
+    childEdges: [],
+    ...options,
+  };
+}
+
+function importEdge(
+  root: string,
+  fromRelativePath: string,
+  toRelativePath: string,
+): TypeScriptImportEdgeFact {
+  return {
+    fromPath: path.join(root, fromRelativePath),
+    moduleSpecifier: `./${path.basename(toRelativePath)}`,
+    kind: "import",
+    isTypeOnly: false,
+    location: { path: path.join(root, fromRelativePath), line: 1, column: 0 },
+    resolution: "relative",
+    toPath: path.join(root, toRelativePath),
+  };
+}
+
+function ownerDependency(
+  root: string,
+  fromRelativePath: string,
+  toRelativePath: string,
+): TypeScriptReasoningOwnerDependencyFact {
+  return {
+    fromPath: path.join(root, fromRelativePath),
+    fromRole: "source",
+    moduleSpecifier: `./${path.basename(toRelativePath)}`,
+    kind: "import",
+    isTypeOnly: false,
+    isTestContext: false,
+    location: { path: path.join(root, fromRelativePath), line: 1, column: 0 },
+    resolution: "relative",
+    toPath: path.join(root, toRelativePath),
+    toRole: "source",
+  };
+}
+
+function ownerNamespace(relativePath: string): string {
+  if (relativePath.endsWith("/index.ts")) {
+    return relativePath.slice(0, -"/index.ts".length);
+  }
+  return relativePath.endsWith(".ts") ? relativePath.slice(0, -".ts".length) : relativePath;
 }
 
 function workspaceGoldenSnapshot(): string {

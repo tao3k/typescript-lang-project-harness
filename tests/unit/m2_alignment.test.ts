@@ -45,8 +45,14 @@ test("M2 runner, rule, and render layers stay downstream of the reasoning tree",
     "const reasoningTree = buildExplicitTypeScriptReasoningTree(roots, modules);",
   );
 
-  const rules = readProjectFile("src/rules.ts");
-  assertIncludes(rules, "evaluateDefaultRulePacks(\n  reasoningTree: TypeScriptReasoningTree");
+  const rules = readAll(sourceFiles(path.join(projectRoot, "src", "rules")));
+  const rulesFacade = readProjectFile("src/rules.ts");
+  const rulesEngine = readProjectFile("src/rules/engine.ts");
+  assertIncludes(rulesFacade, 'export { evaluateDefaultRulePacks } from "./rules/engine.js";');
+  assertIncludes(
+    rulesEngine,
+    "evaluateDefaultRulePacks(\n  reasoningTree: TypeScriptReasoningTree",
+  );
   assertIncludes(rules, "reasoningTree.");
   assertNoAny(
     rules,
@@ -59,7 +65,7 @@ test("M2 runner, rule, and render layers stay downstream of the reasoning tree",
       "semanticDiagnostics",
       "packageJsonDiagnostics",
     ],
-    "src/rules.ts",
+    "src/rules",
   );
 
   const render = readProjectFile("src/render.ts");
@@ -86,7 +92,7 @@ test("M2 runner, rule, and render layers stay downstream of the reasoning tree",
 
   assertIncludes(rules, "reasoningTree.ownerDependencies");
   assertIncludes(rules, "reasoningTree.ownerBranches");
-  assertNoAny(rules, ["reasoningTree.edges"], "src/rules.ts");
+  assertNoAny(rules, ["reasoningTree.edges"], "src/rules");
 });
 
 test("M2 source and snapshot model exclude manifest dependency policy", () => {

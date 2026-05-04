@@ -70,6 +70,9 @@ supported module script kinds instead of dynamic regular-expression helpers.
 The whole package project is modularity-governed: large parser, reasoning,
 policy, render, model, and harness modules should be split by concern before
 they exceed their layer line budgets.
+Rule packs should stay in the `src/rules/` pack structure: catalog metadata,
+the engine, and individual pack modules are separate concerns. `src/rules.ts`
+is a facade, not the policy implementation body.
 
 ## Self-Applied Policy
 
@@ -78,10 +81,13 @@ Those tests call the project runner against the repository root, so the package
 must stay clean under the same default policy downstream TypeScript projects
 will consume. Self-apply means zero default findings, including `info` advice,
 not merely zero blocking findings.
-M2 semantic diagnostics, modularity advice, test-layout advice, package
+M4 semantic diagnostics, modularity advice, test-layout advice, package
 metadata diagnostics, and agent advice are rendered by default but remain
 `info`; do not promote advisory findings to blocking without an explicit policy
 decision.
+Policy config helpers may disable rules, disable built-in packs, override
+severities, or adjust blocking severities for callers. The repository default
+self-apply surface should still stay at zero findings.
 
 ## Renderer Contract
 
@@ -94,10 +100,13 @@ before changing renderer output.
 Compact renderers must normalize diagnostic message path mentions under the
 reasoning-tree project root, because TypeScript diagnostic text can include
 host absolute paths even when diagnostic locations are already structured.
+Snapshot rendering should stay Rust-aligned: cap long branch and child-edge
+surfaces, group owner dependency fan-in/fan-out when useful, and do not render
+empty child-edge placeholders.
 
 ## Public API Contract
 
-The package root is the supported M2 import surface. Tests in
+The package root is the supported M4 import surface. Tests in
 `tests/unit/public_api.test.ts` lock the runtime facade, type exports, and public
 agent snapshot behavior. Do not export internal reasoning builders or rule-pack
 evaluators unless they become an intentional library contract.

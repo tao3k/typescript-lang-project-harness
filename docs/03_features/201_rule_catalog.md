@@ -10,6 +10,7 @@ functions:
 - `typeScriptModularityRules()`
 - `typeScriptTestLayoutRules()`
 - `typeScriptAgentPolicyRules()`
+- `typeScriptRulePackRuleIds()`
 
 ## Default Rule Packs
 
@@ -27,6 +28,21 @@ surfaces native semantic diagnostics, module-graph, test-layout, and
 agent-repair advice as non-blocking findings from parser-owned facts. New rules
 should be added only after the parser layer exposes the native facts they
 require.
+
+## Policy Configuration
+
+M4 exposes Rust-aligned policy configuration without exporting the rule engine.
+Callers can use `TypeScriptRulePack` and the helper functions
+`withDisabledTypeScriptRule()`, `withDisabledTypeScriptRules()`,
+`withDisabledTypeScriptRulePack()`, `withTypeScriptRuleSeverity()`,
+`withTypeScriptRulePackSeverity()`, and
+`withTypeScriptBlockingSeverities()` from the package facade.
+
+Policy is applied after all default packs evaluate over the reasoning tree.
+The order is deterministic: disabled rules and disabled packs remove findings
+first, rule-pack severity overrides apply next, and single-rule severity
+overrides win last. `blockingRuleIds` remains a report-time promotion mechanism
+for advisory rules; it does not mutate catalog severity.
 
 ## Blocking Rules
 
