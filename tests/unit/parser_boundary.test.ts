@@ -60,6 +60,23 @@ test("TypeScript semantics stay in the parser layer", () => {
   );
   assert.match(rulesSource, /reasoningTree\.runMode/u);
 
+  const verificationSource = sourceFiles(path.join(projectRoot, "src"))
+    .filter(isVerificationLayerSource)
+    .map((sourcePath) => fs.readFileSync(sourcePath, "utf8"))
+    .join("\n");
+  assert.doesNotMatch(
+    verificationSource,
+    /from "\.\.\/parser|from "\.\/parser|parseTypeScript(ProjectFiles|SourceFile)|readProjectScope|projectFileNames/u,
+  );
+  assert.doesNotMatch(
+    verificationSource,
+    /createSourceFile|parseJsonConfigFileContent|resolveModuleName/u,
+  );
+  assert.doesNotMatch(
+    verificationSource,
+    /resolvePathAlias|resolveRelativeModule|resolvePackageImport|escapeRegExp|new RegExp/u,
+  );
+
   const renderSource = fs.readFileSync(path.join(projectRoot, "src", "render.ts"), "utf8");
   assert.doesNotMatch(renderSource, /report\.(modules|projectScope|rootPaths)/u);
   assert.match(renderSource, /report\.reasoningTree\.projectRoot/u);
@@ -87,6 +104,11 @@ function isReasoningLayerSource(sourcePath: string): boolean {
 function isRulesLayerSource(sourcePath: string): boolean {
   const relativePath = path.relative(path.join(projectRoot, "src"), sourcePath);
   return relativePath === "rules.ts" || relativePath.startsWith(`rules${path.sep}`);
+}
+
+function isVerificationLayerSource(sourcePath: string): boolean {
+  const relativePath = path.relative(path.join(projectRoot, "src"), sourcePath);
+  return relativePath === "verification.ts" || relativePath.startsWith(`verification${path.sep}`);
 }
 
 function sourceFiles(root: string): string[] {

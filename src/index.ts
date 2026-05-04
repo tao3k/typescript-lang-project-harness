@@ -53,12 +53,20 @@ export {
 } from "./model.js";
 export {
   defaultTypeScriptHarnessConfig,
+  defaultTypeScriptVerificationPolicy,
   withDisabledTypeScriptRule,
   withDisabledTypeScriptRulePack,
   withDisabledTypeScriptRules,
   withTypeScriptBlockingSeverities,
   withTypeScriptRulePackSeverity,
   withTypeScriptRuleSeverity,
+  withTypeScriptVerificationProfileHint,
+  withTypeScriptVerificationReceipt,
+  withTypeScriptVerificationResponsibilityTaskKinds,
+  withTypeScriptVerificationSkillBinding,
+  withTypeScriptVerificationSkillDescriptor,
+  withTypeScriptVerificationTaskContract,
+  withTypeScriptVerificationWaiver,
 } from "./config.js";
 export {
   DEFAULT_IGNORED_DIR_NAMES,
@@ -94,3 +102,30 @@ export {
   typeScriptSyntaxRules,
   typeScriptTestLayoutRules,
 } from "./rules.js";
+export {
+  planTypeScriptProjectVerification,
+  planTypeScriptProjectVerificationForReport,
+  planTypeScriptProjectVerificationWithConfig,
+  renderTypeScriptVerificationPlan,
+  renderTypeScriptVerificationPlanJson,
+  renderTypeScriptVerificationSkillContracts,
+} from "./verification.js";
+export type {
+  TypeScriptOwnerResponsibility,
+  TypeScriptVerificationEvidence,
+  TypeScriptVerificationPhase,
+  TypeScriptVerificationPlan,
+  TypeScriptVerificationPolicy,
+  TypeScriptVerificationProfileHint,
+  TypeScriptVerificationReceipt,
+  TypeScriptVerificationReceiptStatus,
+  TypeScriptVerificationRequirement,
+  TypeScriptVerificationResolutionNote,
+  TypeScriptVerificationSkillBinding,
+  TypeScriptVerificationSkillDescriptor,
+  TypeScriptVerificationTask,
+  TypeScriptVerificationTaskContract,
+  TypeScriptVerificationTaskKind,
+  TypeScriptVerificationTaskState,
+  TypeScriptVerificationWaiver,
+} from "./verification.js";
