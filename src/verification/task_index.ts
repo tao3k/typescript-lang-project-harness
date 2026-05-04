@@ -9,7 +9,7 @@ export function buildTypeScriptVerificationTaskIndex(plan: {
   readonly tasks: readonly TypeScriptVerificationTask[];
 }): TypeScriptVerificationTaskIndex {
   const records = plan.tasks
-    .filter((task) => task.skillBinding !== undefined)
+    .filter((task) => task.skillBinding !== undefined && isActiveTask(task))
     .map(taskRecord)
     .sort(
       (left, right) =>
@@ -27,6 +27,10 @@ export function renderTypeScriptVerificationTaskIndexJson(
   index: TypeScriptVerificationTaskIndex,
 ): string {
   return `${JSON.stringify(index, null, 2)}\n`;
+}
+
+function isActiveTask(task: TypeScriptVerificationTask): boolean {
+  return task.state === "pending" || task.state === "failed";
 }
 
 function taskRecord(task: TypeScriptVerificationTask): TypeScriptVerificationTaskRecord {

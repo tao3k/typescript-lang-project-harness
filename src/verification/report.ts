@@ -23,12 +23,12 @@ export function defaultTypeScriptVerificationReportOptions(): TypeScriptVerifica
       verification_plan_json: {
         templateId: "verification-plan",
         schemaVersion: "1",
-        requiredSections: ["tasks", "reportObligations", "receipts", "waivers"],
+        requiredSections: ["tasks", "reportObligations", "skillDescriptors"],
       },
       task_index_json: {
         templateId: "verification-task-index",
         schemaVersion: "1",
-        requiredSections: ["kind", "state", "skill", "required_evidence_keys", "task_evidence"],
+        requiredSections: ["kind", "state", "skill", "requiredEvidenceKeys", "taskEvidence"],
       },
     },
     artifactPersistence: {

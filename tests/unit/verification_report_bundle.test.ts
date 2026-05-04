@@ -65,6 +65,18 @@ test("verification report bundle renders active plan and configured task index a
       },
     ],
   );
+  assert.deepEqual(pendingBundle.artifacts[0]?.template?.requiredSections, [
+    "tasks",
+    "reportObligations",
+    "skillDescriptors",
+  ]);
+  assert.deepEqual(pendingBundle.artifacts[1]?.template?.requiredSections, [
+    "kind",
+    "state",
+    "skill",
+    "requiredEvidenceKeys",
+    "taskEvidence",
+  ]);
   assert.deepEqual(
     pendingIndex.records.map((record) => ({
       kind: record.kind,
@@ -167,6 +179,7 @@ test("verification report bundle stays quiet when receipts satisfy all tasks", (
   assert.equal(renderTypeScriptVerificationPlan(satisfiedPlan), "");
   assert.deepEqual(satisfiedPlan.reportObligations, []);
   assert.deepEqual(buildTypeScriptVerificationReportBundle(satisfiedPlan).artifacts, []);
+  assert.deepEqual(buildTypeScriptVerificationTaskIndex(satisfiedPlan).records, []);
 });
 
 function writeReportBundleProject(label: string, source: string): string {
