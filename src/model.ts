@@ -1,3 +1,5 @@
+import type { TypeScriptVerificationPolicy } from "./verification/model.js";
+
 export type TypeScriptDiagnosticSeverity = "info" | "warning" | "error";
 
 export type TypeScriptHarnessRunMode = "project" | "explicit";
@@ -228,6 +230,7 @@ export interface TypeScriptHarnessConfig {
     Partial<Record<TypeScriptRulePack, TypeScriptDiagnosticSeverity>>
   >;
   readonly blockingRuleIds: readonly string[];
+  readonly verificationPolicy: TypeScriptVerificationPolicy;
 }
 
 export type TypeScriptModuleRole =

@@ -4,6 +4,16 @@ import type {
   TypeScriptHarnessConfig,
   TypeScriptRulePack,
 } from "./model.js";
+import type {
+  TypeScriptOwnerResponsibility,
+  TypeScriptVerificationProfileHint,
+  TypeScriptVerificationReceipt,
+  TypeScriptVerificationSkillBinding,
+  TypeScriptVerificationSkillDescriptor,
+  TypeScriptVerificationTaskContract,
+  TypeScriptVerificationTaskKind,
+  TypeScriptVerificationWaiver,
+} from "./verification/model.js";
 
 export function defaultTypeScriptHarnessConfig(): TypeScriptHarnessConfig {
   return {
@@ -17,6 +27,19 @@ export function defaultTypeScriptHarnessConfig(): TypeScriptHarnessConfig {
     ruleSeverityOverrides: {},
     rulePackSeverityOverrides: {},
     blockingRuleIds: [],
+    verificationPolicy: defaultTypeScriptVerificationPolicy(),
+  };
+}
+
+export function defaultTypeScriptVerificationPolicy(): TypeScriptHarnessConfig["verificationPolicy"] {
+  return {
+    profileHints: [],
+    receipts: [],
+    waivers: [],
+    responsibilityTaskOverrides: {},
+    taskContractOverrides: {},
+    skillBindings: {},
+    skillDescriptors: [],
   };
 }
 
@@ -76,6 +99,107 @@ export function withTypeScriptBlockingSeverities(
   });
 }
 
+export function withTypeScriptVerificationProfileHint(
+  config: TypeScriptHarnessConfig,
+  hint: TypeScriptVerificationProfileHint,
+): TypeScriptHarnessConfig {
+  return cloneTypeScriptHarnessConfig(config, {
+    verificationPolicy: {
+      ...config.verificationPolicy,
+      profileHints: [...config.verificationPolicy.profileHints, cloneProfileHint(hint)],
+    },
+  });
+}
+
+export function withTypeScriptVerificationReceipt(
+  config: TypeScriptHarnessConfig,
+  receipt: TypeScriptVerificationReceipt,
+): TypeScriptHarnessConfig {
+  return cloneTypeScriptHarnessConfig(config, {
+    verificationPolicy: {
+      ...config.verificationPolicy,
+      receipts: [...config.verificationPolicy.receipts, cloneVerificationReceipt(receipt)],
+    },
+  });
+}
+
+export function withTypeScriptVerificationWaiver(
+  config: TypeScriptHarnessConfig,
+  waiver: TypeScriptVerificationWaiver,
+): TypeScriptHarnessConfig {
+  return cloneTypeScriptHarnessConfig(config, {
+    verificationPolicy: {
+      ...config.verificationPolicy,
+      waivers: [...config.verificationPolicy.waivers, { ...waiver }],
+    },
+  });
+}
+
+export function withTypeScriptVerificationTaskContract(
+  config: TypeScriptHarnessConfig,
+  kind: TypeScriptVerificationTaskKind,
+  contract: TypeScriptVerificationTaskContract,
+): TypeScriptHarnessConfig {
+  return cloneTypeScriptHarnessConfig(config, {
+    verificationPolicy: {
+      ...config.verificationPolicy,
+      taskContractOverrides: {
+        ...config.verificationPolicy.taskContractOverrides,
+        [kind]: cloneTaskContract(contract),
+      },
+    },
+  });
+}
+
+export function withTypeScriptVerificationResponsibilityTaskKinds(
+  config: TypeScriptHarnessConfig,
+  responsibility: TypeScriptOwnerResponsibility,
+  taskKinds: readonly TypeScriptVerificationTaskKind[],
+): TypeScriptHarnessConfig {
+  return cloneTypeScriptHarnessConfig(config, {
+    verificationPolicy: {
+      ...config.verificationPolicy,
+      responsibilityTaskOverrides: {
+        ...config.verificationPolicy.responsibilityTaskOverrides,
+        [responsibility]: [...taskKinds],
+      },
+    },
+  });
+}
+
+export function withTypeScriptVerificationSkillBinding(
+  config: TypeScriptHarnessConfig,
+  kind: TypeScriptVerificationTaskKind,
+  binding: TypeScriptVerificationSkillBinding,
+): TypeScriptHarnessConfig {
+  return cloneTypeScriptHarnessConfig(config, {
+    verificationPolicy: {
+      ...config.verificationPolicy,
+      skillBindings: {
+        ...config.verificationPolicy.skillBindings,
+        [kind]: { ...binding },
+      },
+    },
+  });
+}
+
+export function withTypeScriptVerificationSkillDescriptor(
+  config: TypeScriptHarnessConfig,
+  descriptor: TypeScriptVerificationSkillDescriptor,
+): TypeScriptHarnessConfig {
+  return cloneTypeScriptHarnessConfig(config, {
+    verificationPolicy: {
+      ...config.verificationPolicy,
+      skillDescriptors: [
+        ...config.verificationPolicy.skillDescriptors.filter(
+          (candidate) => skillBindingLabel(candidate) !== skillBindingLabel(descriptor),
+        ),
+        cloneSkillDescriptor(descriptor),
+      ],
+    },
+  });
+}
+
 function cloneTypeScriptHarnessConfig(
   config: TypeScriptHarnessConfig,
   overrides: Partial<TypeScriptHarnessConfig> = {},
@@ -95,6 +219,9 @@ function cloneTypeScriptHarnessConfig(
       ...(overrides.rulePackSeverityOverrides ?? config.rulePackSeverityOverrides),
     },
     blockingRuleIds: [...(overrides.blockingRuleIds ?? config.blockingRuleIds)],
+    verificationPolicy: cloneVerificationPolicy(
+      overrides.verificationPolicy ?? config.verificationPolicy,
+    ),
   };
 }
 
@@ -110,4 +237,94 @@ function appendUniqueMany<T>(values: readonly T[], newValues: readonly T[]): rea
     }
   }
   return merged;
+}
+
+function cloneVerificationPolicy(
+  policy: TypeScriptHarnessConfig["verificationPolicy"],
+): TypeScriptHarnessConfig["verificationPolicy"] {
+  return {
+    profileHints: policy.profileHints.map(cloneProfileHint),
+    receipts: policy.receipts.map(cloneVerificationReceipt),
+    waivers: policy.waivers.map((waiver) => ({ ...waiver })),
+    responsibilityTaskOverrides: Object.fromEntries(
+      Object.entries(policy.responsibilityTaskOverrides).map(([responsibility, taskKinds]) => [
+        responsibility,
+        [...(taskKinds ?? [])],
+      ]),
+    ),
+    taskContractOverrides: Object.fromEntries(
+      Object.entries(policy.taskContractOverrides).map(([kind, contract]) => [
+        kind,
+        contract === undefined ? undefined : cloneTaskContract(contract),
+      ]),
+    ),
+    skillBindings: Object.fromEntries(
+      Object.entries(policy.skillBindings).map(([kind, binding]) => [
+        kind,
+        binding === undefined ? undefined : { ...binding },
+      ]),
+    ),
+    skillDescriptors: policy.skillDescriptors.map(cloneSkillDescriptor),
+  };
+}
+
+function cloneProfileHint(
+  hint: TypeScriptVerificationProfileHint,
+): TypeScriptVerificationProfileHint {
+  const cloned: TypeScriptVerificationProfileHint = {
+    ownerPath: hint.ownerPath,
+    responsibilities: [...hint.responsibilities],
+    taskContractOverrides: Object.fromEntries(
+      Object.entries(hint.taskContractOverrides).map(([kind, contract]) => [
+        kind,
+        contract === undefined ? undefined : cloneTaskContract(contract),
+      ]),
+    ),
+  };
+  const taskKinds = hint.taskKinds === undefined ? {} : { taskKinds: [...hint.taskKinds] };
+  const rationale = hint.rationale === undefined ? {} : { rationale: hint.rationale };
+  return { ...cloned, ...taskKinds, ...rationale };
+}
+
+function cloneVerificationReceipt(
+  receipt: TypeScriptVerificationReceipt,
+): TypeScriptVerificationReceipt {
+  const summary = receipt.summary === undefined ? {} : { summary: receipt.summary };
+  return { ...receipt, ...summary, evidence: receipt.evidence.map((fact) => ({ ...fact })) };
+}
+
+function cloneTaskContract(
+  contract: TypeScriptVerificationTaskContract,
+): TypeScriptVerificationTaskContract {
+  return {
+    phase: contract.phase,
+    requiredReceipt: contract.requiredReceipt,
+    requiredEvidence: contract.requiredEvidence.map((requirement) => ({ ...requirement })),
+  };
+}
+
+function cloneSkillDescriptor(
+  descriptor: TypeScriptVerificationSkillDescriptor,
+): TypeScriptVerificationSkillDescriptor {
+  const adapter = descriptor.adapter === undefined ? {} : { adapter: descriptor.adapter };
+  return {
+    skillId: descriptor.skillId,
+    ...adapter,
+    tool: descriptor.tool,
+    command: descriptor.command,
+    standard: descriptor.standard,
+    requiredInputs: [...descriptor.requiredInputs],
+    passCriteria: [...descriptor.passCriteria],
+    receiptFields: [...descriptor.receiptFields],
+  };
+}
+
+function skillBindingLabel(binding: {
+  readonly skillId: string;
+  readonly adapter?: string;
+}): string {
+  const adapter = binding.adapter?.trim();
+  return adapter === undefined || adapter.length === 0
+    ? binding.skillId
+    : `${binding.skillId}@${adapter}`;
 }

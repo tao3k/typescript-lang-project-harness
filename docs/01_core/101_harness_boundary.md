@@ -95,7 +95,7 @@ Agent-facing modularity and repair rules use reasoning-tree owner facts such
 as `ownerBranches` and `ownerDependencies` before falling back to lower-level
 edge facts. Snapshot rendering filters test-context owner dependencies the same
 way Rust's agent snapshot hides test-context dependency rows.
-M4 rule execution is split into catalog, engine, and pack modules. Policy
+Rule execution is split into catalog, engine, and pack modules. Policy
 configuration is applied after pack evaluation: disabled single rules and
 disabled built-in packs remove findings, rule-pack severity overrides apply,
 and single-rule severity overrides win last. This keeps project-local policy
@@ -147,6 +147,21 @@ This is the preferred first read when an agent needs to choose which TypeScript
 owner, facade, entrypoint, or package surface to edit. Full diagnostic detail
 stays in the default compact renderer and JSON output.
 
+## Verification Policy
+
+M5 adds a verification planner downstream of the same reasoning tree. It maps
+configured owner profile hints to external task contracts such as `stress`,
+`performance`, `chaos`, `security`, `regression`, and
+`responsibility_review`. The planner consumes parser-owned module roles,
+layers, import summaries, owner dependencies, receipts, waivers, and configured
+skill descriptors; it does not call TypeScript parser APIs or parser helper
+functions.
+
+Verification output is a compact reminder surface for agents. It hides tasks
+with matching passed receipts or complete waivers, keeps failed receipts and
+incomplete waivers visible, and renders expandable skill contracts separately
+from first-read task lines.
+
 ## Blocking And Advice
 
 `warning` and `error` findings block assertions by default. `info` findings are
@@ -170,7 +185,9 @@ The first standalone version does not replace `tsc`, ESLint, Prettier,
 framework compilers, bundlers, or package-manager audits. The harness should
 avoid rules those tools already own and focus on project facts that help agents
 choose the correct owner, entrypoint, facade, and edit surface.
-M4 also does not implement the Rust verification/profile/report-bundle
-subsystem. That remains future work; dependency facts and package metadata stay
-orientation inputs unless a later project-owned policy explicitly promotes
-them.
+M5 does not implement the full Rust verification/profile/report-bundle
+subsystem. It plans verification tasks and contracts only. Running external
+skills, discovering profile indexes, collecting report bundles, and managing
+long-lived verification receipts remain future work. Dependency facts and
+package metadata stay orientation inputs unless a later project-owned policy
+explicitly promotes them.

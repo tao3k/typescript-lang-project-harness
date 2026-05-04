@@ -19,6 +19,9 @@ entrypoint into a catch-all reference page.
 - [Rust Alignment M4 Plan](02_plans/202_rust_alignment_m4_plan.md):
   stacked milestone for policy config, rule-pack engine boundaries, compact
   agent snapshot alignment, and parser-boundary contract hardening.
+- [Verification Policy M5 Plan](02_plans/203_verification_policy_m5_plan.md):
+  stacked milestone for parser-fact-driven verification task planning,
+  compact reminders, receipts, waivers, and external skill contracts.
 
 ## 03_features: Functional Ledger
 
@@ -32,3 +35,6 @@ entrypoint into a catch-all reference page.
 - [Compact Agent Snapshot](03_features/204_compact_agent_snapshot.md):
   compact text design, section order, line shapes, non-goals, and golden
   contract.
+- [Verification Policy](03_features/205_verification_policy.md): profile hints,
+  task contracts, receipts, waivers, skill bindings, and compact verification
+  rendering.
