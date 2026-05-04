@@ -32,6 +32,7 @@ import {
   taskKindLabels,
   taskKindsForProfile,
 } from "./profile.js";
+import { verificationReportObligationsForTasks } from "./report_obligations.js";
 
 interface VerificationTaskSpec {
   readonly kind: TypeScriptVerificationTaskKind;
@@ -95,6 +96,7 @@ export function planTypeScriptProjectVerificationForReport(
     projectRoot: report.reasoningTree.projectRoot,
     tasks: taskValues,
     skillDescriptors: activeSkillDescriptors(policy, taskValues.filter(isActiveTask)),
+    reportObligations: verificationReportObligationsForTasks(taskValues),
   };
 }
 
@@ -294,6 +296,7 @@ function newTask(
     requiredEvidence: spec.contract.requiredEvidence,
     ...skillFields,
     ...receiptSummary,
+    receiptEvidence: resolution.receiptEvidence,
     resolutionNotes: resolution.notes,
   };
 }
@@ -307,28 +310,39 @@ function taskResolution(
 ): {
   readonly state: TypeScriptVerificationTaskState;
   readonly receiptSummary?: string;
+  readonly receiptEvidence: readonly TypeScriptVerificationEvidence[];
   readonly notes: readonly TypeScriptVerificationResolutionNote[];
 } {
   const receipt = matchingReceipt(report, policy.receipts, kind, ownerPath, fingerprint);
   if (receipt !== undefined) {
     const receiptSummary = receipt.summary ?? `${kind}=${receipt.status}`;
     if (receipt.status === "passed") {
-      return { state: "satisfied", receiptSummary, notes: [] };
+      return {
+        state: "satisfied",
+        receiptSummary,
+        receiptEvidence: receipt.evidence,
+        notes: [],
+      };
     }
-    return { state: "failed", receiptSummary, notes: [] };
+    return { state: "failed", receiptSummary, receiptEvidence: receipt.evidence, notes: [] };
   }
   const waiver = matchingWaiver(report, policy.waivers, kind, ownerPath, fingerprint);
   if (waiver !== undefined) {
     const missingFields = waiverMissingFields(waiver);
     if (missingFields.length === 0) {
-      return { state: "waived", notes: [{ label: "waiver", detail: waiver.reason ?? "waived" }] };
+      return {
+        state: "waived",
+        receiptEvidence: [],
+        notes: [{ label: "waiver", detail: waiver.reason ?? "waived" }],
+      };
     }
     return {
       state: "pending",
+      receiptEvidence: [],
       notes: [{ label: "waiver", detail: `incomplete: missing ${missingFields.join(", ")}` }],
     };
   }
-  return { state: "pending", notes: [] };
+  return { state: "pending", receiptEvidence: [], notes: [] };
 }
 
 function matchingReceipt(

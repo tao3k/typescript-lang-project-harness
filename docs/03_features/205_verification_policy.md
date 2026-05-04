@@ -1,8 +1,9 @@
 # Verification Policy
 
-Verification policy is the M5/M6 bridge between parser-owned TypeScript
+Verification policy is the M5/M6/M7 bridge between parser-owned TypeScript
 structure and external validation skills. It drafts owner profiles, plans what
-must be verified, and renders compact contracts; it does not run the verifier.
+must be verified, and renders compact contracts and report artifacts; it does
+not run the verifier.
 
 ## Authority Chain
 
@@ -113,6 +114,47 @@ contract surface:
 Structured consumers can use `renderTypeScriptVerificationPlanJson(plan)`.
 Agents should read the compact task output first and expand skill contracts only
 when a task references a skill.
+
+## Report Bundle
+
+M7 adds report obligations to the verification plan. The planner adds
+`verification_plan_json` whenever active pending or failed tasks remain, and it
+adds `task_index_json` when any active task has a configured skill binding.
+The compact renderer appends the required artifacts without expanding the JSON:
+
+```text
+[verify-report]
+   |bundle: renderer=renderTypeScriptVerificationReportBundleJson artifact=verification_report_bundle.json artifacts=2
+   |required: verification_plan_json renderer=renderTypeScriptVerificationPlanJson artifact=verification_plan.json tasks=1 kinds=performance
+   |required: task_index_json renderer=buildTypeScriptVerificationTaskIndex + renderTypeScriptVerificationTaskIndexJson artifact=task_index.json tasks=1 kinds=performance
+```
+
+The task index is a compact structured artifact for configured external skills:
+
+```ts
+import {
+  buildTypeScriptVerificationTaskIndex,
+  buildTypeScriptVerificationReportBundle,
+  renderTypeScriptVerificationReportArtifactJson,
+} from "typescript-lang-project-harness";
+
+const index = buildTypeScriptVerificationTaskIndex(plan);
+const bundle = buildTypeScriptVerificationReportBundle(plan);
+const taskIndexJson = renderTypeScriptVerificationReportArtifactJson(plan, "task_index_json");
+```
+
+Task-index records include task kind, state, phase, owner path, skill label,
+contract reference, required evidence keys, task evidence, receipt evidence,
+and missing receipt evidence keys. Failed receipts remain visible and preserve
+their receipt evidence so a caller can compare the failed artifact against the
+required evidence contract.
+
+The report bundle is a manifest, not an executor. It names artifact renderers,
+persistence intent, templates, trace defaults, task kinds, and task
+fingerprints. The default persistence is `runtime_cache` for
+`verification_plan_json` and `source_baseline` for `task_index_json`. Callers
+decide where to store the rendered JSON. M7 does not write files, add CLI
+flags, start subprocesses, or manage external skill lifecycle.
 
 ## Profile Index
 

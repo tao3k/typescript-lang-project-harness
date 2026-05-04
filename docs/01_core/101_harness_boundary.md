@@ -153,17 +153,19 @@ M5 adds a verification planner downstream of the same reasoning tree. It maps
 configured owner profile hints to external task contracts such as `stress`,
 `performance`, `chaos`, `security`, `regression`, and
 `responsibility_review`. M6 adds a profile index that drafts missing or drifting
-profile hints from parser-owned owner facts. Both surfaces consume
-parser-owned module roles, layers, import summaries, owner dependencies,
-receipts, waivers, and configured skill descriptors; neither calls TypeScript
-parser APIs or parser helper functions.
+profile hints from parser-owned owner facts. M7 adds report obligations,
+configured-skill task indexes, and report-bundle JSON renderers. These surfaces
+consume parser-owned module roles, layers, import summaries, owner
+dependencies, receipts, waivers, configured skill descriptors, and planned task
+facts; none calls TypeScript parser APIs or parser helper functions.
 
 Verification output is a compact reminder surface for agents. It hides tasks
 with matching passed receipts or complete waivers, keeps failed receipts and
 incomplete waivers visible, and renders expandable skill contracts separately
-from first-read task lines. Profile-index output renders only missing or
-drifting profile candidates and goes quiet once config covers the suggested
-responsibilities.
+from first-read task lines. When active tasks require artifacts, it adds a
+compact `[verify-report]` block naming the report bundle and required JSON
+artifacts. Profile-index output renders only missing or drifting profile
+candidates and goes quiet once config covers the suggested responsibilities.
 
 ## Blocking And Advice
 
@@ -188,9 +190,9 @@ The first standalone version does not replace `tsc`, ESLint, Prettier,
 framework compilers, bundlers, or package-manager audits. The harness should
 avoid rules those tools already own and focus on project facts that help agents
 choose the correct owner, entrypoint, facade, and edit surface.
-M6 does not implement the full Rust verification report-bundle subsystem. It
-plans verification tasks and drafts profile candidates only. Running external
-skills, collecting report bundles, and managing long-lived verification
-receipts remain future work. Dependency facts and package metadata stay
-orientation inputs unless a later project-owned policy explicitly promotes
-them.
+M7 does not implement the full Rust verification execution subsystem. It plans
+verification tasks, drafts profile candidates, and renders report bundle
+contracts only. Running external skills, writing artifacts, and managing
+long-lived verification receipts remain future work. Dependency facts and
+package metadata stay orientation inputs unless a later project-owned policy
+explicitly promotes them.

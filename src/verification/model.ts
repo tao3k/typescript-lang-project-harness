@@ -122,13 +122,24 @@ export interface TypeScriptVerificationTask {
   readonly skillBinding?: TypeScriptVerificationSkillBinding;
   readonly skillContractRef?: string;
   readonly receiptSummary?: string;
+  readonly receiptEvidence: readonly TypeScriptVerificationEvidence[];
   readonly resolutionNotes: readonly TypeScriptVerificationResolutionNote[];
+}
+
+export interface TypeScriptVerificationReportObligation {
+  readonly key: string;
+  readonly renderer: string;
+  readonly suggestedArtifactName: string;
+  readonly reason: string;
+  readonly taskKinds: readonly TypeScriptVerificationTaskKind[];
+  readonly taskFingerprints: readonly string[];
 }
 
 export interface TypeScriptVerificationPlan {
   readonly projectRoot: string;
   readonly tasks: readonly TypeScriptVerificationTask[];
   readonly skillDescriptors: readonly TypeScriptVerificationSkillDescriptor[];
+  readonly reportObligations: readonly TypeScriptVerificationReportObligation[];
 }
 
 export type TypeScriptVerificationProfileCandidateState =
@@ -151,4 +162,66 @@ export interface TypeScriptVerificationProfileCandidate {
 export interface TypeScriptVerificationProfileIndex {
   readonly projectRoot: string;
   readonly candidates: readonly TypeScriptVerificationProfileCandidate[];
+}
+
+export interface TypeScriptVerificationTaskRecord {
+  readonly fingerprint: string;
+  readonly kind: TypeScriptVerificationTaskKind;
+  readonly state: TypeScriptVerificationTaskState;
+  readonly phase: TypeScriptVerificationPhase;
+  readonly packageRoot: string;
+  readonly ownerPath: string;
+  readonly ownerNamespace: string;
+  readonly line?: number;
+  readonly skill?: string;
+  readonly contractRef?: string;
+  readonly requiredEvidenceKeys: readonly string[];
+  readonly taskEvidence: readonly TypeScriptVerificationEvidence[];
+  readonly receiptSummary?: string;
+  readonly receiptEvidence: readonly TypeScriptVerificationEvidence[];
+  readonly missingReceiptEvidenceKeys: readonly string[];
+}
+
+export interface TypeScriptVerificationTaskIndex {
+  readonly projectRoot: string;
+  readonly records: readonly TypeScriptVerificationTaskRecord[];
+}
+
+export type TypeScriptVerificationReportPersistence = "runtime_cache" | "source_baseline";
+
+export interface TypeScriptVerificationReportTraceConfig {
+  readonly profile: string;
+  readonly maxSeconds?: number;
+  readonly sampleIntervalMs?: number;
+  readonly includeRawTraces: boolean;
+}
+
+export interface TypeScriptVerificationReportTemplate {
+  readonly templateId: string;
+  readonly schemaVersion: string;
+  readonly requiredSections: readonly string[];
+}
+
+export interface TypeScriptVerificationReportOptions {
+  readonly defaultTrace?: TypeScriptVerificationReportTraceConfig;
+  readonly artifactTraces: Readonly<Record<string, TypeScriptVerificationReportTraceConfig>>;
+  readonly artifactTemplates: Readonly<Record<string, TypeScriptVerificationReportTemplate>>;
+  readonly artifactPersistence: Readonly<Record<string, TypeScriptVerificationReportPersistence>>;
+}
+
+export interface TypeScriptVerificationReportArtifact {
+  readonly key: string;
+  readonly artifactName: string;
+  readonly renderer: string;
+  readonly reason: string;
+  readonly taskKinds: readonly TypeScriptVerificationTaskKind[];
+  readonly taskFingerprints: readonly string[];
+  readonly persistence: TypeScriptVerificationReportPersistence;
+  readonly template?: TypeScriptVerificationReportTemplate;
+  readonly trace?: TypeScriptVerificationReportTraceConfig;
+}
+
+export interface TypeScriptVerificationReportBundle {
+  readonly projectRoot: string;
+  readonly artifacts: readonly TypeScriptVerificationReportArtifact[];
 }

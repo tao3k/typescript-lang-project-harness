@@ -76,19 +76,21 @@ is a facade, not the policy implementation body.
 
 ## Verification Policy Boundary
 
-The M5/M6 verification surface is downstream of the harness report. It may
+The M5/M6/M7 verification surface is downstream of the harness report. It may
 consume `TypeScriptHarnessReport.reasoningTree`, profile hints, receipts,
-waivers, configured skill contracts, and profile-index candidates, but it must
-not import parser helpers, import `typescript`, or reconstruct TypeScript module
-resolution. If verification needs a new owner fact, add it to the
-parser/reasoning chain first.
+waivers, configured skill contracts, profile-index candidates, task indexes,
+and report-bundle manifests, but it must not import parser helpers, import
+`typescript`, or reconstruct TypeScript module resolution. If verification
+needs a new owner fact, add it to the parser/reasoning chain first.
 
 Verification policy is a planner, not an executor. Keep subprocess execution,
-report bundles, and external skill lifecycle outside M6 unless a later
-milestone explicitly owns them. Compact verification output should stay a
-reminder surface: active pending or failed tasks first, expanded skill
-contracts only when a task references a configured skill, and profile-index
-blocks only while profile hints are missing or drifting.
+artifact writes, and external skill lifecycle outside M7 unless a later
+milestone explicitly owns them. M7 may describe report obligations and render
+plan/task-index/bundle JSON, but it must not run the verifier. Compact
+verification output should stay a reminder surface: active pending or failed
+tasks first, report obligations only when artifacts are required, expanded
+skill contracts only when a task references a configured skill, and
+profile-index blocks only while profile hints are missing or drifting.
 
 ## Self-Applied Policy
 
@@ -122,7 +124,7 @@ empty child-edge placeholders.
 
 ## Public API Contract
 
-The package root is the supported M6 import surface. Tests in
+The package root is the supported M7 import surface. Tests in
 `tests/unit/public_api.test.ts` lock the runtime facade, type exports, and public
 agent snapshot behavior. Do not export internal reasoning builders, rule-pack
 evaluators, or verification internals unless they become an intentional library

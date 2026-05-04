@@ -9,6 +9,17 @@ export {
   renderTypeScriptVerificationSkillContracts,
 } from "./verification/render.js";
 export {
+  buildTypeScriptVerificationReportBundle,
+  buildTypeScriptVerificationReportBundleWithOptions,
+  defaultTypeScriptVerificationReportOptions,
+  renderTypeScriptVerificationReportArtifactJson,
+  renderTypeScriptVerificationReportBundleJson,
+} from "./verification/report.js";
+export {
+  buildTypeScriptVerificationTaskIndex,
+  renderTypeScriptVerificationTaskIndexJson,
+} from "./verification/task_index.js";
+export {
   activeTypeScriptVerificationProfileCandidates,
   activeTypeScriptVerificationProfileHints,
   buildTypeScriptVerificationProfileIndex,
@@ -30,13 +41,22 @@ export type {
   TypeScriptVerificationProfileIndex,
   TypeScriptVerificationReceipt,
   TypeScriptVerificationReceiptStatus,
+  TypeScriptVerificationReportArtifact,
+  TypeScriptVerificationReportBundle,
+  TypeScriptVerificationReportObligation,
+  TypeScriptVerificationReportOptions,
+  TypeScriptVerificationReportPersistence,
+  TypeScriptVerificationReportTemplate,
+  TypeScriptVerificationReportTraceConfig,
   TypeScriptVerificationRequirement,
   TypeScriptVerificationResolutionNote,
   TypeScriptVerificationSkillBinding,
   TypeScriptVerificationSkillDescriptor,
   TypeScriptVerificationTask,
   TypeScriptVerificationTaskContract,
+  TypeScriptVerificationTaskIndex,
   TypeScriptVerificationTaskKind,
+  TypeScriptVerificationTaskRecord,
   TypeScriptVerificationTaskState,
   TypeScriptVerificationWaiver,
 } from "./verification/model.js";
