@@ -54,7 +54,7 @@ Default project execution runs these packs in descriptor order:
 5. `typescript.test_layout`
 6. `typescript.agent_policy`
 
-The current M6 surface implements the native parser boundary, source syntax
+The current M7 surface implements the native parser boundary, source syntax
 diagnostics, native TypeScript `Program` semantic diagnostics with TypeScript
 diagnostic codes, parseable `tsconfig.json` policy, TypeScript JSON AST-backed
 package/config facts, reasoning-tree snapshots, project-level workspace
@@ -73,6 +73,10 @@ non-blocking: `TS-PROJ-R004` points out referenced package configs missing
 `composite` or `declaration`, and `TS-PROJ-R005` points out package
 `exports`/`imports` when the effective TypeScript `moduleResolution` is not
 `node16`, `nodenext`, or `bundler`.
+The verification lane now includes M5 task planning, M6 profile-index drafts,
+and M7 report obligations, configured-skill task-index JSON, and report-bundle
+manifest JSON. It still does not execute external skills or add dependency
+policy.
 
 For agent repair loops, `renderTypeScriptReasoningTree(report)` emits a
 single-package Rust-style owner snapshot from reasoning tree facts, while the
@@ -134,11 +138,12 @@ queries before the reasoning tree renders them as compact edges.
 
 ## Verification Policy
 
-M5 adds a Rust-aligned verification planning surface for external skills, and
-M6 adds a profile index that drafts missing or drifting owner profile hints
-from parser-visible reasoning facts. A caller can attach `verificationPolicy`
-profile hints to parser-visible owners, then ask the library to produce compact
-tasks for `stress`, `performance`, `chaos`, `security`, `regression`, or
+M5 adds a Rust-aligned verification planning surface for external skills, M6
+adds a profile index that drafts missing or drifting owner profile hints from
+parser-visible reasoning facts, and M7 adds report-bundle obligations and JSON
+artifact renderers. A caller can attach `verificationPolicy` profile hints to
+parser-visible owners, then ask the library to produce compact tasks for
+`stress`, `performance`, `chaos`, `security`, `regression`, or
 `responsibility_review`.
 
 Verification policy consumes harness reports and reasoning-tree facts. It does
@@ -146,18 +151,21 @@ not run tools, add CLI flags, inspect TypeScript ASTs, or turn manifest
 dependencies into project gates. Passed receipts and complete waivers hide
 resolved tasks; failed receipts and incomplete waivers stay visible in compact
 output. The profile index renders only missing/drifting profile candidates and
-goes quiet once matching hints cover the suggested responsibilities.
+goes quiet once matching hints cover the suggested responsibilities. When
+active tasks remain, `renderTypeScriptVerificationPlan()` also emits a compact
+`[verify-report]` block naming the required bundle artifacts.
 
 ## Public API Contract
 
-The package facade exports the M6 library surface: runners, project agent
+The package facade exports the M7 library surface: runners, project agent
 snapshot helpers, assertion helpers, parser entrypoints,
 compact/JSON/reasoning renderers, rule catalog functions, policy config helper
 functions, verification policy helpers, profile-index builders/renderers,
-verification planners/renderers, and report model types. Internals such as
-reasoning-tree builders, rule-pack evaluators, and verification internals stay
-private so downstream tools depend on parser-owned facts and stable rendered
-output instead of implementation modules.
+verification planners/renderers, task-index builders/renderers, report-bundle
+builders/renderers, and report model types. Internals such as reasoning-tree
+builders, rule-pack evaluators, and verification internals stay private so
+downstream tools depend on parser-owned facts and stable rendered output
+instead of implementation modules.
 
 ## CI
 

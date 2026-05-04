@@ -25,6 +25,9 @@ entrypoint into a catch-all reference page.
 - [Verification Profile Index M6 Plan](02_plans/204_verification_profile_index_m6_plan.md):
   stacked milestone for parser-fact-driven profile candidate drafts and
   low-noise profile config advice.
+- [Verification Report Bundle M7 Plan](02_plans/205_verification_report_bundle_m7_plan.md):
+  stacked milestone for report obligations, configured-skill task indexes, and
+  report bundle JSON renderers.
 
 ## 03_features: Functional Ledger
 
@@ -40,4 +43,4 @@ entrypoint into a catch-all reference page.
   contract.
 - [Verification Policy](03_features/205_verification_policy.md): profile hints,
   profile indexes, task contracts, receipts, waivers, skill bindings, and
-  compact verification rendering.
+  compact verification/report rendering.

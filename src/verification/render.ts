@@ -17,9 +17,12 @@ export function renderTypeScriptVerificationPlan(plan: TypeScriptVerificationPla
     }
     tasks.push(task);
   }
-  return [...groups.values()]
+  const taskBlocks = [...groups.values()]
     .sort((left, right) => taskOwnerSortKey(left[0]).localeCompare(taskOwnerSortKey(right[0])))
     .map((tasks) => renderOwnerGroup(plan, tasks))
+    .filter((rendered) => rendered.length > 0)
+    .join("\n");
+  return [taskBlocks, renderReportObligations(plan)]
     .filter((rendered) => rendered.length > 0)
     .join("\n");
 }
@@ -99,6 +102,22 @@ function renderSkillDescriptor(descriptor: TypeScriptVerificationSkillDescriptor
   pushListLine(lines, "inputs", descriptor.requiredInputs);
   pushListLine(lines, "pass", descriptor.passCriteria);
   pushListLine(lines, "receipt", descriptor.receiptFields);
+  return lines.join("\n");
+}
+
+function renderReportObligations(plan: TypeScriptVerificationPlan): string {
+  if (plan.reportObligations.length === 0) {
+    return "";
+  }
+  const lines = [
+    "[verify-report]",
+    `   |bundle: renderer=renderTypeScriptVerificationReportBundleJson artifact=verification_report_bundle.json artifacts=${plan.reportObligations.length}`,
+  ];
+  for (const obligation of plan.reportObligations) {
+    lines.push(
+      `   |required: ${obligation.key} renderer=${obligation.renderer} artifact=${obligation.suggestedArtifactName} tasks=${obligation.taskFingerprints.length} kinds=${obligation.taskKinds.join(",")}`,
+    );
+  }
   return lines.join("\n");
 }
 
