@@ -22,6 +22,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "check": "tsc -p tsconfig.json --noEmit",
+    "prepare": "npm run build",
     "lint": "oxlint",
     "test": "npm run build && node --test \"dist/tests/**/*.test.js\"",
     "harness": "npm run build && node dist/src/bin/typescript-project-harness.js ."
