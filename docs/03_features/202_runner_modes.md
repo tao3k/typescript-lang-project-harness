@@ -55,6 +55,13 @@ project-reference, and workspace package files and are produced through
 TypeScript's JSON parser. Package scripts and workspaces are parser-owned
 orientation facts, not package-manager policy.
 
+`assertTypeScriptProjectHarnessClean()` follows the same blocking-only
+semantics. `assertTypeScriptProjectHarnessAgentClean()` is the test-gate variant
+for agent repair loops: it first enforces configured-blocking findings, then
+fails with the compact advice renderer when visible `info` advice remains. It
+does not bypass policy config; disabled rules, disabled packs, and severity
+overrides are applied before the test-gate assertion sees findings.
+
 `verificationPolicy` is also part of `TypeScriptHarnessConfig`. It owns
 profile hints, receipts, waivers, task contract overrides, responsibility task
 mapping, skill bindings, and skill descriptors for the M5/M6/M7 verification
@@ -115,7 +122,7 @@ findings.
 
 ## Public Facade
 
-Consumers should import from the package root. The root facade exposes the M9
+Consumers should import from the package root. The root facade exposes the M10
 contract: parser entrypoints, project/explicit runners, project snapshot
 helpers, assertion helpers, compact/JSON/reasoning renderers, rule catalog
 functions, policy config helpers, verification profile-index builders/renderers,

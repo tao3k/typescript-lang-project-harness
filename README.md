@@ -42,6 +42,10 @@ Project runs anchor at the nearest `package.json` above the requested path.
 Running from a package subdirectory still evaluates the whole package project,
 including `tsconfig`, package metadata, roots, modules, and edges relative to
 that package root.
+Use `assertTypeScriptProjectHarnessAgentClean()` inside downstream test suites
+when agent-facing advice should fail the test gate. The default
+`assertTypeScriptProjectHarnessClean()` and CLI exit code remain blocking-only
+so `info` advice stays visible without becoming a default policy failure.
 
 ## Current Rule Packs
 
@@ -82,6 +86,11 @@ flag parameters, broad positional parameter lists, anonymous primitive tuple
 APIs, deeply nested public algorithms, and broad linear public algorithms.
 The exported primitive data-field facts are available to downstream tooling and
 future policies, but M9 does not enable a public DTO/data-shape gate by default.
+M10 adds a Rust-aligned agent test-gate assertion:
+`assertTypeScriptProjectHarnessAgentClean()` fails when configured-blocking
+findings or visible `info` advice remain. It respects the same policy config
+pass, so disabling `agent_policy` or a single advice rule also suppresses that
+test-gate feedback.
 The verification lane now includes M5 task planning, M6 profile-index drafts,
 M7 report obligations, and M8 Rust VAS-aligned artifact surfaces: configured
 skill task-index JSON, performance-index JSON, report-bundle manifest JSON, a
@@ -175,7 +184,7 @@ block naming the required bundle artifacts.
 
 ## Public API Contract
 
-The package facade exports the M9 library surface: runners, project agent
+The package facade exports the M10 library surface: runners, project agent
 snapshot helpers, assertion helpers, parser entrypoints,
 compact/JSON/reasoning renderers, rule catalog functions, policy config helper
 functions, verification policy helpers, profile-index builders/renderers,

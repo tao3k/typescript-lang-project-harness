@@ -175,7 +175,7 @@ type PublicModelContract = readonly [
 
 const publicModelContract: PublicModelContract | undefined = undefined;
 
-test("public facade exposes the stable M9 runtime surface", () => {
+test("public facade exposes the stable M10 runtime surface", () => {
   assert.deepEqual(Object.keys(api).sort(), [
     "DEFAULT_IGNORED_DIR_NAMES",
     "TypeScriptVerificationReportWriteError",
@@ -183,6 +183,7 @@ test("public facade exposes the stable M9 runtime surface", () => {
     "activeTypeScriptVerificationProfileHints",
     "advisoryFindings",
     "assertTypeScriptLangHarnessClean",
+    "assertTypeScriptProjectHarnessAgentClean",
     "assertTypeScriptProjectHarnessClean",
     "blockingFindings",
     "buildTypeScriptProjectHarnessAgentSnapshot",
@@ -315,3 +316,52 @@ test("public runner renders compact agent snapshots from parser-native facts", (
   assert.doesNotMatch(snapshot, /^\{/u);
   assert.doesNotMatch(snapshot, /"modules":/u);
 });
+
+test("public agent-clean assertion surfaces advisory findings as test-gate feedback", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-agent-clean-"));
+  writeAdviceOnlyProject(root);
+
+  const blockingOnlyReport = api.assertTypeScriptProjectHarnessClean(root);
+  assert.equal(api.isTypeScriptHarnessClean(blockingOnlyReport), true);
+  assert.ok(blockingOnlyReport.findings.some((finding) => finding.ruleId === "TS-AGENT-R004"));
+
+  assert.throws(
+    () => api.assertTypeScriptProjectHarnessAgentClean(root),
+    (error: unknown) => {
+      assert.ok(error instanceof Error);
+      assert.match(error.message, /\[TS-AGENT-R004\] info/u);
+      assert.match(error.message, /\[TS-AGENT-R005\] info/u);
+      assert.match(error.message, /Help:/u);
+      assert.match(error.message, /Contract:/u);
+      assert.doesNotMatch(error.message, /^\[ok\]/u);
+      return true;
+    },
+  );
+
+  const config = api.withDisabledTypeScriptRulePack(
+    api.defaultTypeScriptHarnessConfig(),
+    "agent_policy",
+  );
+  api.assertTypeScriptProjectHarnessAgentClean(root, config);
+});
+
+function writeAdviceOnlyProject(root: string): void {
+  fs.mkdirSync(path.join(root, "src"));
+  fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ type: "module" }));
+  fs.writeFileSync(path.join(root, "tsconfig.json"), JSON.stringify({ include: ["src/**/*.ts"] }));
+  fs.writeFileSync(
+    path.join(root, "src", "api.ts"),
+    [
+      "export function configure(",
+      "  ownerId: string,",
+      "  includeDrafts: boolean,",
+      "  forceRefresh: boolean,",
+      "  region: string,",
+      "  timeoutMs: number,",
+      "  traceId: string",
+      "): [string, number] {",
+      "  return [ownerId, timeoutMs];",
+      "}",
+    ].join("\n"),
+  );
+}

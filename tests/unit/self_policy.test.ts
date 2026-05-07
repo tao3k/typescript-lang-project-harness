@@ -4,9 +4,9 @@ import { fileURLToPath } from "node:url";
 import test from "node:test";
 
 import {
+  assertTypeScriptProjectHarnessAgentClean,
   assertTypeScriptProjectHarnessClean,
   renderTypeScriptProjectHarness,
-  runTypeScriptProjectHarness,
 } from "../../src/index.js";
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
@@ -16,7 +16,7 @@ test("repository self-applies the default TypeScript project harness", () => {
 });
 
 test("repository self-applies the default advice surface with zero findings", () => {
-  const report = runTypeScriptProjectHarness(projectRoot);
+  const report = assertTypeScriptProjectHarnessAgentClean(projectRoot);
   const rendered = renderTypeScriptProjectHarness(report);
 
   assert.equal(report.findings.length, 0, rendered);
