@@ -105,6 +105,11 @@ them or uses the agent test-gate helper
   named steps.
 - `TS-AGENT-R008`: broad linear public functions should split algorithm
   responsibilities into small named helpers or pipeline steps.
+- `TS-AGENT-R009`: public source data surfaces should avoid clusters of
+  semantic primitive fields such as identifiers, URLs, paths, byte/time units,
+  or boolean mode fields unless the raw DTO boundary is explicit. Harness
+  model-layer modules, including nested `src/**/model.ts` schema modules, stay
+  outside this advice surface.
 
 ## Reasoning Tree Policy
 
@@ -128,8 +133,10 @@ TypeScript project reference or a workspace package fact, so agents can edit the
 right owner boundary without guessing.
 M9 also carries parser-native public API/data/control-flow facts in each
 reasoning module. Active agent policy uses those facts for public API and
-algorithm-shape repair hints only. Exported primitive data-field facts are
-available as facts but do not create a default data-shape finding in M9.
+algorithm-shape repair hints. M11 adds the first data-shape hint from those
+facts: it reports only source data surfaces with at least three semantic
+primitive fields, and skips the `model` layer so schema/fact definitions do not
+become generic DTO style findings.
 When TypeScript selects JavaScript through `allowJs`, parser-visible `.js`,
 `.jsx`, `.mjs`, and `.cjs` files participate in the same module-role policy as
 TypeScript files.

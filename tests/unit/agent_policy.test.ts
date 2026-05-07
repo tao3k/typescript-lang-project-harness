@@ -50,6 +50,7 @@ test("rule catalog keeps deterministic pack order and agent advice severity", ()
       "TS-AGENT-R006:info",
       "TS-AGENT-R007:info",
       "TS-AGENT-R008:info",
+      "TS-AGENT-R009:info",
     ],
   );
 });
@@ -89,6 +90,7 @@ test("agent policy reports unresolved project imports without blocking", () => {
       "TS-AGENT-R006",
       "TS-AGENT-R007",
       "TS-AGENT-R008",
+      "TS-AGENT-R009",
     ],
   );
   assert.deepEqual(
@@ -239,4 +241,59 @@ test("agent policy reports parser-native algorithm shape advice without blocking
   );
   assert.match(rendered, /hides algorithm shape/u);
   assert.match(rendered, /broadLinearAlgorithm/u);
+});
+
+test("agent policy reports parser-native public data shape advice without blocking", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-data-shape-agent-"));
+  fs.mkdirSync(path.join(root, "src"));
+  fs.writeFileSync(path.join(root, "tsconfig.json"), JSON.stringify({ include: ["src/**/*.ts"] }));
+  fs.writeFileSync(
+    path.join(root, "src", "events.ts"),
+    [
+      "interface Payload { value: unknown }",
+      "export interface OwnerEvent {",
+      "  ownerId: string;",
+      "  requestId: string;",
+      "  callbackUrl: string;",
+      "  timeoutMs: number;",
+      "  enabled: boolean;",
+      "  payload: Payload;",
+      "}",
+    ].join("\n"),
+  );
+
+  const report = runTypeScriptProjectHarness(root);
+  const rendered = renderTypeScriptProjectHarness(report);
+
+  assert.equal(isTypeScriptHarnessClean(report), true);
+  assert.deepEqual(
+    report.findings.map((finding) => finding.ruleId),
+    ["TS-AGENT-R009"],
+  );
+  assert.match(rendered, /OwnerEvent/u);
+  assert.match(rendered, /ownerId: string/u);
+  assert.match(rendered, /callbackUrl: string/u);
+  assert.match(rendered, /enabled: boolean/u);
+});
+
+test("agent policy keeps model schema modules out of public data shape advice", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-data-shape-model-"));
+  fs.mkdirSync(path.join(root, "src", "verification"), { recursive: true });
+  fs.writeFileSync(path.join(root, "tsconfig.json"), JSON.stringify({ include: ["src/**/*.ts"] }));
+  fs.writeFileSync(
+    path.join(root, "src", "verification", "model.ts"),
+    [
+      "export interface SchemaFact {",
+      "  ownerId: string;",
+      "  requestId: string;",
+      "  artifactPath: string;",
+      "  observedAtMs: number;",
+      "}",
+    ].join("\n"),
+  );
+
+  const report = runTypeScriptProjectHarness(root);
+
+  assert.equal(isTypeScriptHarnessClean(report), true);
+  assert.deepEqual(report.findings, []);
 });

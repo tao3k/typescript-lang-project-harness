@@ -91,6 +91,12 @@ M10 adds a Rust-aligned agent test-gate assertion:
 findings or visible `info` advice remain. It respects the same policy config
 pass, so disabling `agent_policy` or a single advice rule also suppresses that
 test-gate feedback.
+M11 turns the already-collected public data-field facts into one conservative
+advice rule, `TS-AGENT-R009`, for public source data surfaces that expose
+clusters of semantic primitive fields such as `ownerId`, `requestUrl`,
+`timeoutMs`, or boolean mode fields. It remains `info` and excludes model
+schema modules so the harness does not mistake its own fact model contracts for
+application DTO drift.
 The verification lane now includes M5 task planning, M6 profile-index drafts,
 M7 report obligations, and M8 Rust VAS-aligned artifact surfaces: configured
 skill task-index JSON, performance-index JSON, report-bundle manifest JSON, a
@@ -184,7 +190,7 @@ block naming the required bundle artifacts.
 
 ## Public API Contract
 
-The package facade exports the M10 library surface: runners, project agent
+The package facade exports the M11 library surface: runners, project agent
 snapshot helpers, assertion helpers, parser entrypoints,
 compact/JSON/reasoning renderers, rule catalog functions, policy config helper
 functions, verification policy helpers, profile-index builders/renderers,
