@@ -73,6 +73,8 @@ export interface TypeScriptVerificationReceipt {
   readonly fingerprint: string;
   readonly status: TypeScriptVerificationReceiptStatus;
   readonly summary?: string;
+  readonly evidenceUri?: string;
+  readonly observedAt?: string;
   readonly evidence: readonly TypeScriptVerificationEvidence[];
 }
 
@@ -90,10 +92,16 @@ export interface TypeScriptVerificationResolutionNote {
   readonly detail: string;
 }
 
+export interface TypeScriptVerificationDependencySignal {
+  readonly dependency: string;
+  readonly responsibilities: readonly TypeScriptOwnerResponsibility[];
+}
+
 export interface TypeScriptVerificationPolicy {
   readonly profileHints: readonly TypeScriptVerificationProfileHint[];
   readonly receipts: readonly TypeScriptVerificationReceipt[];
   readonly waivers: readonly TypeScriptVerificationWaiver[];
+  readonly disabledTaskKinds: readonly TypeScriptVerificationTaskKind[];
   readonly responsibilityTaskOverrides: Readonly<
     Partial<Record<TypeScriptOwnerResponsibility, readonly TypeScriptVerificationTaskKind[]>>
   >;
@@ -104,6 +112,7 @@ export interface TypeScriptVerificationPolicy {
     Partial<Record<TypeScriptVerificationTaskKind, TypeScriptVerificationSkillBinding>>
   >;
   readonly skillDescriptors: readonly TypeScriptVerificationSkillDescriptor[];
+  readonly dependencySignals: readonly TypeScriptVerificationDependencySignal[];
 }
 
 export interface TypeScriptVerificationTask {
@@ -122,6 +131,8 @@ export interface TypeScriptVerificationTask {
   readonly skillBinding?: TypeScriptVerificationSkillBinding;
   readonly skillContractRef?: string;
   readonly receiptSummary?: string;
+  readonly receiptEvidenceUri?: string;
+  readonly receiptObservedAt?: string;
   readonly receiptEvidence: readonly TypeScriptVerificationEvidence[];
   readonly resolutionNotes: readonly TypeScriptVerificationResolutionNote[];
 }
@@ -178,6 +189,8 @@ export interface TypeScriptVerificationTaskRecord {
   readonly requiredEvidenceKeys: readonly string[];
   readonly taskEvidence: readonly TypeScriptVerificationEvidence[];
   readonly receiptSummary?: string;
+  readonly receiptEvidenceUri?: string;
+  readonly receiptObservedAt?: string;
   readonly receiptEvidence: readonly TypeScriptVerificationEvidence[];
   readonly missingReceiptEvidenceKeys: readonly string[];
 }
@@ -185,6 +198,28 @@ export interface TypeScriptVerificationTaskRecord {
 export interface TypeScriptVerificationTaskIndex {
   readonly projectRoot: string;
   readonly records: readonly TypeScriptVerificationTaskRecord[];
+}
+
+export interface TypeScriptVerificationPerformanceRecord {
+  readonly fingerprint: string;
+  readonly state: TypeScriptVerificationTaskState;
+  readonly phase: TypeScriptVerificationPhase;
+  readonly packageRoot: string;
+  readonly ownerPath: string;
+  readonly ownerNamespace: string;
+  readonly skill?: string;
+  readonly contractRef?: string;
+  readonly requiredEvidenceKeys: readonly string[];
+  readonly taskEvidence: readonly TypeScriptVerificationEvidence[];
+  readonly receiptSummary?: string;
+  readonly receiptEvidenceUri?: string;
+  readonly receiptObservedAt?: string;
+  readonly receiptEvidence: readonly TypeScriptVerificationEvidence[];
+}
+
+export interface TypeScriptVerificationPerformanceIndex {
+  readonly projectRoot: string;
+  readonly records: readonly TypeScriptVerificationPerformanceRecord[];
 }
 
 export type TypeScriptVerificationReportPersistence = "runtime_cache" | "source_baseline";
@@ -224,4 +259,16 @@ export interface TypeScriptVerificationReportArtifact {
 export interface TypeScriptVerificationReportBundle {
   readonly projectRoot: string;
   readonly artifacts: readonly TypeScriptVerificationReportArtifact[];
+}
+
+export interface TypeScriptVerificationReportWriteConfig {
+  readonly projectRoot: string;
+  readonly sourceBaselineDir: string;
+  readonly runtimeCacheDir: string;
+  readonly projectRootPlaceholder?: string;
+}
+
+export interface TypeScriptVerificationReportWriteReceipt {
+  readonly sourceBaselinePaths: readonly string[];
+  readonly runtimeCachePaths: readonly string[];
 }

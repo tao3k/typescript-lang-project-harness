@@ -10,9 +10,15 @@ import type {
 export function renderTypeScriptVerificationProfileIndex(
   index: TypeScriptVerificationProfileIndex,
 ): string {
-  return activeTypeScriptVerificationProfileCandidates(index)
+  const activeCandidates = activeTypeScriptVerificationProfileCandidates(index);
+  const candidates = activeCandidates
     .map((candidate) => renderProfileCandidate(index.projectRoot, candidate))
     .join("\n");
+  if (activeCandidates.length === 0) {
+    return candidates;
+  }
+  const reminder = renderProfileConfigurationReminder(activeCandidates.length);
+  return [candidates, reminder].filter((rendered) => rendered.length > 0).join("\n");
 }
 
 export function renderTypeScriptVerificationProfileIndexJson(
@@ -42,9 +48,18 @@ function renderProfileCandidate(
 }
 
 function compactFact(fact: TypeScriptVerificationProfileCandidate["evidence"][number]): boolean {
-  return fact.label !== "exports" || fact.value !== "0";
+  return (fact.label !== "exports" || fact.value !== "0") && fact.label !== "dependency_roots";
 }
 
 function displayProjectPath(projectRoot: string, value: string): string {
   return path.relative(projectRoot, value).replaceAll("\\", "/") || ".";
+}
+
+function renderProfileConfigurationReminder(candidateCount: number): string {
+  return [
+    "[verify-profile] profile_hints",
+    "   |state: missing_profile_config",
+    "   |action: configure TypeScriptVerificationProfileHint entries",
+    `   |candidates: ${candidateCount}`,
+  ].join("\n");
 }

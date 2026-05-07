@@ -49,7 +49,10 @@ import type {
   TypeScriptReasoningTree,
   TypeScriptOwnerResponsibility,
   TypeScriptRenderOptions,
+  TypeScriptVerificationDependencySignal,
   TypeScriptVerificationEvidence,
+  TypeScriptVerificationPerformanceIndex,
+  TypeScriptVerificationPerformanceRecord,
   TypeScriptVerificationPhase,
   TypeScriptVerificationPlan,
   TypeScriptVerificationPolicy,
@@ -66,6 +69,8 @@ import type {
   TypeScriptVerificationReportPersistence,
   TypeScriptVerificationReportTemplate,
   TypeScriptVerificationReportTraceConfig,
+  TypeScriptVerificationReportWriteConfig,
+  TypeScriptVerificationReportWriteReceipt,
   TypeScriptVerificationRequirement,
   TypeScriptVerificationResolutionNote,
   TypeScriptVerificationSkillBinding,
@@ -124,7 +129,10 @@ type PublicModelContract = readonly [
   TypeScriptReasoningTree,
   TypeScriptOwnerResponsibility,
   TypeScriptRenderOptions,
+  TypeScriptVerificationDependencySignal,
   TypeScriptVerificationEvidence,
+  TypeScriptVerificationPerformanceIndex,
+  TypeScriptVerificationPerformanceRecord,
   TypeScriptVerificationPhase,
   TypeScriptVerificationPlan,
   TypeScriptVerificationPolicy,
@@ -141,6 +149,8 @@ type PublicModelContract = readonly [
   TypeScriptVerificationReportPersistence,
   TypeScriptVerificationReportTemplate,
   TypeScriptVerificationReportTraceConfig,
+  TypeScriptVerificationReportWriteConfig,
+  TypeScriptVerificationReportWriteReceipt,
   TypeScriptVerificationRequirement,
   TypeScriptVerificationResolutionNote,
   TypeScriptVerificationSkillBinding,
@@ -157,9 +167,10 @@ type PublicModelContract = readonly [
 
 const publicModelContract: PublicModelContract | undefined = undefined;
 
-test("public facade exposes the stable M7 runtime surface", () => {
+test("public facade exposes the stable M8 runtime surface", () => {
   assert.deepEqual(Object.keys(api).sort(), [
     "DEFAULT_IGNORED_DIR_NAMES",
+    "TypeScriptVerificationReportWriteError",
     "activeTypeScriptVerificationProfileCandidates",
     "activeTypeScriptVerificationProfileHints",
     "advisoryFindings",
@@ -167,6 +178,7 @@ test("public facade exposes the stable M7 runtime surface", () => {
     "assertTypeScriptProjectHarnessClean",
     "blockingFindings",
     "buildTypeScriptProjectHarnessAgentSnapshot",
+    "buildTypeScriptVerificationPerformanceIndex",
     "buildTypeScriptVerificationProfileIndex",
     "buildTypeScriptVerificationProfileIndexForReport",
     "buildTypeScriptVerificationProfileIndexWithConfig",
@@ -192,6 +204,8 @@ test("public facade exposes the stable M7 runtime surface", () => {
     "renderTypeScriptProjectHarnessAgentSnapshot",
     "renderTypeScriptProjectHarnessJson",
     "renderTypeScriptReasoningTree",
+    "renderTypeScriptVerificationPerformanceIndex",
+    "renderTypeScriptVerificationPerformanceIndexJson",
     "renderTypeScriptVerificationPlan",
     "renderTypeScriptVerificationPlanJson",
     "renderTypeScriptVerificationProfileIndex",
@@ -215,9 +229,12 @@ test("public facade exposes the stable M7 runtime surface", () => {
     "withDisabledTypeScriptRule",
     "withDisabledTypeScriptRulePack",
     "withDisabledTypeScriptRules",
+    "withDisabledTypeScriptVerificationTaskKind",
+    "withDisabledTypeScriptVerificationTaskKinds",
     "withTypeScriptBlockingSeverities",
     "withTypeScriptRulePackSeverity",
     "withTypeScriptRuleSeverity",
+    "withTypeScriptVerificationDependencySignal",
     "withTypeScriptVerificationProfileHint",
     "withTypeScriptVerificationReceipt",
     "withTypeScriptVerificationResponsibilityTaskKinds",
@@ -225,6 +242,7 @@ test("public facade exposes the stable M7 runtime surface", () => {
     "withTypeScriptVerificationSkillDescriptor",
     "withTypeScriptVerificationTaskContract",
     "withTypeScriptVerificationWaiver",
+    "writeTypeScriptVerificationReports",
   ]);
   assert.equal("buildTypeScriptReasoningTree" in api, false);
   assert.equal("evaluateDefaultRulePacks" in api, false);

@@ -14,13 +14,9 @@ import type {
   TypeScriptVerificationPlan,
   TypeScriptVerificationPolicy,
   TypeScriptVerificationProfileHint,
-  TypeScriptVerificationReceipt,
-  TypeScriptVerificationResolutionNote,
   TypeScriptVerificationTask,
   TypeScriptVerificationTaskContract,
   TypeScriptVerificationTaskKind,
-  TypeScriptVerificationTaskState,
-  TypeScriptVerificationWaiver,
 } from "./model.js";
 import { runTypeScriptProjectHarness } from "../runner.js";
 import { typeScriptVerificationTaskFingerprint } from "./fingerprint.js";
@@ -33,6 +29,7 @@ import {
   taskKindsForProfile,
 } from "./profile.js";
 import { verificationReportObligationsForTasks } from "./report_obligations.js";
+import { resolveTypeScriptVerificationTask } from "./resolution.js";
 
 interface VerificationTaskSpec {
   readonly kind: TypeScriptVerificationTaskKind;
@@ -119,6 +116,7 @@ function collectProfileConfigTasks(
   }
   if (hint.taskKinds !== undefined && hint.taskKinds.length > 0) {
     const taskKinds = taskKindsForProfile(hint, policy);
+    const disabledTaskKinds = taskKinds.filter((kind) => policy.disabledTaskKinds.includes(kind));
     const rationale = hint.rationale?.trim();
     if (rationale === undefined || rationale.length === 0) {
       pushTask(
@@ -132,6 +130,19 @@ function collectProfileConfigTasks(
               label: "profile",
               value: `responsibilities=${responsibilityLabels(hint.responsibilities)}`,
             },
+          ],
+        }),
+      );
+    }
+    if (disabledTaskKinds.length > 0) {
+      pushTask(
+        tasks,
+        newProfileReviewTask(report, moduleReport, policy, {
+          hint,
+          reason: "owner-local verification override references disabled task kind",
+          evidence: [
+            { label: "configured", value: taskKindLabels(taskKinds) },
+            { label: "disabled", value: taskKindLabels(disabledTaskKinds) },
           ],
         }),
       );
@@ -182,7 +193,7 @@ function collectSkillTasksFromProfile(
   tasks: Map<string, TypeScriptVerificationTask>,
 ): void {
   const taskKinds = taskKindsForProfile(hint, policy).filter(
-    (kind) => kind !== "responsibility_review",
+    (kind) => kind !== "responsibility_review" && !policy.disabledTaskKinds.includes(kind),
   );
   for (const kind of taskKinds) {
     const contract = taskContractForProfile(policy, hint, kind);
@@ -273,7 +284,13 @@ function newTask(
     requiredEvidence: spec.contract.requiredEvidence,
     ...(skillBinding === undefined ? {} : { skillBinding }),
   });
-  const resolution = taskResolution(report, policy, spec.kind, spec.ownerPath, fingerprint);
+  const resolution = resolveTypeScriptVerificationTask(
+    report,
+    policy,
+    spec.kind,
+    spec.ownerPath,
+    fingerprint,
+  );
   const skillFields =
     skillBinding === undefined
       ? {}
@@ -281,6 +298,14 @@ function newTask(
   const line = spec.line === undefined ? {} : { line: spec.line };
   const receiptSummary =
     resolution.receiptSummary === undefined ? {} : { receiptSummary: resolution.receiptSummary };
+  const receiptEvidenceUri =
+    resolution.receiptEvidenceUri === undefined
+      ? {}
+      : { receiptEvidenceUri: resolution.receiptEvidenceUri };
+  const receiptObservedAt =
+    resolution.receiptObservedAt === undefined
+      ? {}
+      : { receiptObservedAt: resolution.receiptObservedAt };
   return {
     kind: spec.kind,
     state: resolution.state,
@@ -296,90 +321,11 @@ function newTask(
     requiredEvidence: spec.contract.requiredEvidence,
     ...skillFields,
     ...receiptSummary,
+    ...receiptEvidenceUri,
+    ...receiptObservedAt,
     receiptEvidence: resolution.receiptEvidence,
     resolutionNotes: resolution.notes,
   };
-}
-
-function taskResolution(
-  report: TypeScriptHarnessReport,
-  policy: TypeScriptVerificationPolicy,
-  kind: TypeScriptVerificationTaskKind,
-  ownerPath: string,
-  fingerprint: string,
-): {
-  readonly state: TypeScriptVerificationTaskState;
-  readonly receiptSummary?: string;
-  readonly receiptEvidence: readonly TypeScriptVerificationEvidence[];
-  readonly notes: readonly TypeScriptVerificationResolutionNote[];
-} {
-  const receipt = matchingReceipt(report, policy.receipts, kind, ownerPath, fingerprint);
-  if (receipt !== undefined) {
-    const receiptSummary = receipt.summary ?? `${kind}=${receipt.status}`;
-    if (receipt.status === "passed") {
-      return {
-        state: "satisfied",
-        receiptSummary,
-        receiptEvidence: receipt.evidence,
-        notes: [],
-      };
-    }
-    return { state: "failed", receiptSummary, receiptEvidence: receipt.evidence, notes: [] };
-  }
-  const waiver = matchingWaiver(report, policy.waivers, kind, ownerPath, fingerprint);
-  if (waiver !== undefined) {
-    const missingFields = waiverMissingFields(waiver);
-    if (missingFields.length === 0) {
-      return {
-        state: "waived",
-        receiptEvidence: [],
-        notes: [{ label: "waiver", detail: waiver.reason ?? "waived" }],
-      };
-    }
-    return {
-      state: "pending",
-      receiptEvidence: [],
-      notes: [{ label: "waiver", detail: `incomplete: missing ${missingFields.join(", ")}` }],
-    };
-  }
-  return { state: "pending", receiptEvidence: [], notes: [] };
-}
-
-function matchingReceipt(
-  report: TypeScriptHarnessReport,
-  receipts: readonly TypeScriptVerificationReceipt[],
-  kind: TypeScriptVerificationTaskKind,
-  ownerPath: string,
-  fingerprint: string,
-): TypeScriptVerificationReceipt | undefined {
-  return receipts.find(
-    (receipt) =>
-      receipt.kind === kind &&
-      receipt.fingerprint === fingerprint &&
-      normalizeHintOwnerPath(report, receipt.ownerPath) === ownerPath,
-  );
-}
-
-function matchingWaiver(
-  report: TypeScriptHarnessReport,
-  waivers: readonly TypeScriptVerificationWaiver[],
-  kind: TypeScriptVerificationTaskKind,
-  ownerPath: string,
-  fingerprint: string,
-): TypeScriptVerificationWaiver | undefined {
-  return waivers.find(
-    (waiver) =>
-      waiver.kind === kind &&
-      waiver.fingerprint === fingerprint &&
-      normalizeHintOwnerPath(report, waiver.ownerPath) === ownerPath,
-  );
-}
-
-function waiverMissingFields(waiver: TypeScriptVerificationWaiver): readonly string[] {
-  return [
-    waiver.owner?.trim() ? undefined : "owner",
-    waiver.reason?.trim() ? undefined : "reason",
-  ].filter((field): field is string => field !== undefined);
 }
 
 function activeSkillDescriptors(

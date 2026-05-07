@@ -5,6 +5,7 @@ import type {
   TypeScriptRulePack,
 } from "./model.js";
 import type {
+  TypeScriptVerificationDependencySignal,
   TypeScriptOwnerResponsibility,
   TypeScriptVerificationProfileHint,
   TypeScriptVerificationReceipt,
@@ -36,10 +37,12 @@ export function defaultTypeScriptVerificationPolicy(): TypeScriptHarnessConfig["
     profileHints: [],
     receipts: [],
     waivers: [],
+    disabledTaskKinds: [],
     responsibilityTaskOverrides: {},
     taskContractOverrides: {},
     skillBindings: {},
     skillDescriptors: [],
+    dependencySignals: [],
   };
 }
 
@@ -135,6 +138,25 @@ export function withTypeScriptVerificationWaiver(
   });
 }
 
+export function withDisabledTypeScriptVerificationTaskKind(
+  config: TypeScriptHarnessConfig,
+  kind: TypeScriptVerificationTaskKind,
+): TypeScriptHarnessConfig {
+  return withDisabledTypeScriptVerificationTaskKinds(config, [kind]);
+}
+
+export function withDisabledTypeScriptVerificationTaskKinds(
+  config: TypeScriptHarnessConfig,
+  kinds: readonly TypeScriptVerificationTaskKind[],
+): TypeScriptHarnessConfig {
+  return cloneTypeScriptHarnessConfig(config, {
+    verificationPolicy: {
+      ...config.verificationPolicy,
+      disabledTaskKinds: appendUniqueMany(config.verificationPolicy.disabledTaskKinds, kinds),
+    },
+  });
+}
+
 export function withTypeScriptVerificationTaskContract(
   config: TypeScriptHarnessConfig,
   kind: TypeScriptVerificationTaskKind,
@@ -200,6 +222,21 @@ export function withTypeScriptVerificationSkillDescriptor(
   });
 }
 
+export function withTypeScriptVerificationDependencySignal(
+  config: TypeScriptHarnessConfig,
+  signal: TypeScriptVerificationDependencySignal,
+): TypeScriptHarnessConfig {
+  return cloneTypeScriptHarnessConfig(config, {
+    verificationPolicy: {
+      ...config.verificationPolicy,
+      dependencySignals: [
+        ...config.verificationPolicy.dependencySignals,
+        cloneDependencySignal(signal),
+      ],
+    },
+  });
+}
+
 function cloneTypeScriptHarnessConfig(
   config: TypeScriptHarnessConfig,
   overrides: Partial<TypeScriptHarnessConfig> = {},
@@ -246,6 +283,7 @@ function cloneVerificationPolicy(
     profileHints: policy.profileHints.map(cloneProfileHint),
     receipts: policy.receipts.map(cloneVerificationReceipt),
     waivers: policy.waivers.map((waiver) => ({ ...waiver })),
+    disabledTaskKinds: [...policy.disabledTaskKinds],
     responsibilityTaskOverrides: Object.fromEntries(
       Object.entries(policy.responsibilityTaskOverrides).map(([responsibility, taskKinds]) => [
         responsibility,
@@ -265,6 +303,7 @@ function cloneVerificationPolicy(
       ]),
     ),
     skillDescriptors: policy.skillDescriptors.map(cloneSkillDescriptor),
+    dependencySignals: policy.dependencySignals.map(cloneDependencySignal),
   };
 }
 
@@ -290,7 +329,15 @@ function cloneVerificationReceipt(
   receipt: TypeScriptVerificationReceipt,
 ): TypeScriptVerificationReceipt {
   const summary = receipt.summary === undefined ? {} : { summary: receipt.summary };
-  return { ...receipt, ...summary, evidence: receipt.evidence.map((fact) => ({ ...fact })) };
+  const evidenceUri = receipt.evidenceUri === undefined ? {} : { evidenceUri: receipt.evidenceUri };
+  const observedAt = receipt.observedAt === undefined ? {} : { observedAt: receipt.observedAt };
+  return {
+    ...receipt,
+    ...summary,
+    ...evidenceUri,
+    ...observedAt,
+    evidence: receipt.evidence.map((fact) => ({ ...fact })),
+  };
 }
 
 function cloneTaskContract(
@@ -316,6 +363,15 @@ function cloneSkillDescriptor(
     requiredInputs: [...descriptor.requiredInputs],
     passCriteria: [...descriptor.passCriteria],
     receiptFields: [...descriptor.receiptFields],
+  };
+}
+
+function cloneDependencySignal(
+  signal: TypeScriptVerificationDependencySignal,
+): TypeScriptVerificationDependencySignal {
+  return {
+    dependency: signal.dependency,
+    responsibilities: [...signal.responsibilities],
   };
 }
 

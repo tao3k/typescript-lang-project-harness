@@ -4,6 +4,7 @@ import { defaultTypeScriptHarnessConfig } from "../../config.js";
 import type {
   TypeScriptHarnessConfig,
   TypeScriptHarnessReport,
+  TypeScriptImportEdgeFact,
   TypeScriptReasoningModule,
   TypeScriptReasoningOwnerBranchFact,
 } from "../../model.js";
@@ -20,10 +21,18 @@ import type {
 } from "../model.js";
 
 interface ProfileSignals {
+  readonly ownerModules: number;
+  readonly childModules: number;
   readonly externalImports: number;
   readonly packageImportImports: number;
   readonly unresolvedImports: number;
   readonly ownerDeps: number;
+  readonly dependencyRoots: readonly string[];
+  readonly configuredDependencyRoots: readonly string[];
+  readonly unconfiguredDependencyRoots: readonly string[];
+  readonly externalRoots: readonly string[];
+  readonly packageImportRoots: readonly string[];
+  readonly signalResponsibilities: readonly TypeScriptOwnerResponsibility[];
   readonly packageEntries: readonly string[];
 }
 
@@ -73,7 +82,7 @@ function profileCandidate(
   moduleReport: TypeScriptReasoningModule,
 ): TypeScriptVerificationProfileCandidate | undefined {
   const branch = ownerBranchForModule(report, moduleReport);
-  const signals = profileSignals(report, moduleReport, branch);
+  const signals = profileSignals(report, policy, moduleReport, branch);
   const responsibilities = suggestedResponsibilities(moduleReport, signals);
   if (responsibilities.length === 0) {
     return undefined;
@@ -108,9 +117,10 @@ function suggestedResponsibilities(
 ): readonly TypeScriptOwnerResponsibility[] {
   return [
     isPublicSurface(moduleReport, signals) ? "public_api" : undefined,
-    signals.externalImports > 0 || signals.packageImportImports > 0
+    signals.externalImports > 0 || signals.packageImportImports > 0 || signals.ownerDeps >= 3
       ? "external_dependency"
       : undefined,
+    ...signals.signalResponsibilities,
   ]
     .filter(
       (responsibility): responsibility is TypeScriptOwnerResponsibility =>
@@ -133,25 +143,72 @@ function isPublicSurface(
 
 function profileSignals(
   report: TypeScriptHarnessReport,
+  policy: TypeScriptVerificationPolicy,
   moduleReport: TypeScriptReasoningModule,
   branch: TypeScriptReasoningOwnerBranchFact | undefined,
 ): ProfileSignals {
-  const branchSummary = branch?.importSummary;
+  const ownerPaths = ownerModulePaths(report, moduleReport, branch);
+  const ownerPathSet = new Set(ownerPaths);
   const ownerDeps = report.reasoningTree.ownerDependencies.filter(
-    (dependency) => dependency.fromPath === moduleReport.path && !dependency.isTestContext,
+    (dependency) => ownerPathSet.has(dependency.fromPath) && !dependency.isTestContext,
   ).length;
   const packageEntries = report.reasoningTree.packageEntryResolutions
-    .filter((entry) => entry.resolution === "parser-visible" && entry.toPath === moduleReport.path)
+    .filter(
+      (entry) =>
+        entry.resolution === "parser-visible" &&
+        entry.toPath !== undefined &&
+        ownerPathSet.has(entry.toPath),
+    )
     .map((entry) => `${entry.kind}:${entry.subpath}`);
+  const edges = report.reasoningTree.edges.filter((edge) => ownerPathSet.has(edge.fromPath));
+  const externalRoots = uniqueSortedStrings(
+    edges
+      .filter((edge) => edge.resolution === "external")
+      .map((edge) => dependencyRoot(edge.moduleSpecifier)),
+  );
+  const packageImportRoots = uniqueSortedStrings(
+    edges
+      .filter((edge) => edge.resolution === "package-import")
+      .map((edge) => packageImportRoot(edge.moduleSpecifier)),
+  );
+  const ownerImportRoots = uniqueSortedStrings(
+    report.reasoningTree.packageImportOwners
+      .filter((owner) => ownerPathSet.has(owner.fromPath))
+      .flatMap((owner) => [
+        dependencyRoot(owner.moduleSpecifier),
+        owner.packageName,
+        owner.packageName.replace(/^@types\//u, ""),
+      ]),
+  );
+  const dependencyRoots = uniqueSortedStrings([
+    ...externalRoots,
+    ...packageImportRoots,
+    ...ownerImportRoots,
+  ]);
+  const configuredDependencyRoots = dependencyRoots.filter(
+    (dependency) => matchingDependencySignals(policy, dependency).length > 0,
+  );
+  const unconfiguredDependencyRoots = dependencyRoots.filter(
+    (dependency) => matchingDependencySignals(policy, dependency).length === 0,
+  );
+  const signalResponsibilities = uniqueSortedResponsibilities(
+    dependencyRoots.flatMap((dependency) =>
+      matchingDependencySignals(policy, dependency).flatMap((signal) => signal.responsibilities),
+    ),
+  );
   return {
-    externalImports:
-      branchSummary?.externalImports ?? countEdges(report, moduleReport.path, "external"),
-    packageImportImports:
-      branchSummary?.packageImportImports ??
-      countEdges(report, moduleReport.path, "package-import"),
-    unresolvedImports:
-      branchSummary?.unresolvedImports ?? countEdges(report, moduleReport.path, "unresolved"),
+    ownerModules: ownerPaths.length,
+    childModules: uniqueSortedStrings(branch?.childEdges.flatMap(ownerPath) ?? []).length,
+    externalImports: countEdges(edges, "external"),
+    packageImportImports: countEdges(edges, "package-import"),
+    unresolvedImports: countEdges(edges, "unresolved"),
     ownerDeps,
+    dependencyRoots,
+    configuredDependencyRoots,
+    unconfiguredDependencyRoots,
+    externalRoots,
+    packageImportRoots,
+    signalResponsibilities,
     packageEntries: [...new Set(packageEntries)].sort(),
   };
 }
@@ -169,10 +226,39 @@ function profileEvidence(
     },
     { label: "owner_deps", value: String(signals.ownerDeps) },
   ];
+  pushCountEvidence(evidence, "owner_modules", signals.ownerModules, 1);
+  pushCountEvidence(evidence, "child_modules", signals.childModules, 0);
+  pushListEvidence(evidence, "external_roots", signals.externalRoots);
+  pushListEvidence(evidence, "package_import_roots", signals.packageImportRoots);
+  pushListEvidence(evidence, "dependency_roots", signals.dependencyRoots);
+  pushListEvidence(evidence, "configured_dependency_roots", signals.configuredDependencyRoots);
+  pushListEvidence(evidence, "unconfigured_dependency_roots", signals.unconfiguredDependencyRoots);
+  pushListEvidence(evidence, "dependency_responsibilities", signals.signalResponsibilities);
   if (signals.packageEntries.length > 0) {
     evidence.push({ label: "package_entries", value: signals.packageEntries.join(",") });
   }
   return evidence;
+}
+
+function pushCountEvidence(
+  evidence: TypeScriptVerificationEvidence[],
+  label: string,
+  value: number,
+  floor: number,
+): void {
+  if (value > floor) {
+    evidence.push({ label, value: String(value) });
+  }
+}
+
+function pushListEvidence(
+  evidence: TypeScriptVerificationEvidence[],
+  label: string,
+  values: readonly string[],
+): void {
+  if (values.length > 0) {
+    evidence.push({ label, value: values.join(",") });
+  }
 }
 
 function profileCandidateState(
@@ -206,13 +292,62 @@ function ownerBranchForModule(
 }
 
 function countEdges(
-  report: TypeScriptHarnessReport,
-  fromPath: string,
+  edges: readonly TypeScriptImportEdgeFact[],
   resolution: TypeScriptHarnessReport["reasoningTree"]["edges"][number]["resolution"],
 ): number {
-  return report.reasoningTree.edges.filter(
-    (edge) => edge.fromPath === fromPath && edge.resolution === resolution,
-  ).length;
+  return edges.filter((edge) => edge.resolution === resolution).length;
+}
+
+function ownerModulePaths(
+  report: TypeScriptHarnessReport,
+  moduleReport: TypeScriptReasoningModule,
+  branch: TypeScriptReasoningOwnerBranchFact | undefined,
+): readonly string[] {
+  const modulePaths = new Set<string>([moduleReport.path]);
+  for (const childPath of branch?.childEdges.flatMap(ownerPath) ?? []) {
+    modulePaths.add(childPath);
+  }
+  return [...modulePaths].sort((left, right) => left.localeCompare(right));
+}
+
+function ownerPath(edge: TypeScriptImportEdgeFact): readonly string[] {
+  return edge.toPath === undefined ? [] : [edge.toPath];
+}
+
+function dependencyRoot(specifier: string): string {
+  if (specifier.startsWith("@")) {
+    const [scope, name] = specifier.split("/");
+    return scope !== undefined && name !== undefined ? `${scope}/${name}` : specifier;
+  }
+  if (specifier.startsWith("node:")) {
+    return specifier;
+  }
+  const [root] = specifier.split("/");
+  return root ?? specifier;
+}
+
+function packageImportRoot(specifier: string): string {
+  const [root] = specifier.split("/");
+  return root ?? specifier;
+}
+
+function matchingDependencySignals(
+  policy: TypeScriptVerificationPolicy,
+  dependency: string,
+): TypeScriptVerificationPolicy["dependencySignals"] {
+  return policy.dependencySignals.filter((signal) => signal.dependency === dependency);
+}
+
+function uniqueSortedResponsibilities(
+  responsibilities: readonly TypeScriptOwnerResponsibility[],
+): readonly TypeScriptOwnerResponsibility[] {
+  return [...new Set(responsibilities)].sort();
+}
+
+function uniqueSortedStrings(values: readonly string[]): readonly string[] {
+  return [...new Set(values.filter((value) => value.length > 0))].sort((left, right) =>
+    left.localeCompare(right),
+  );
 }
 
 function normalizeHintOwnerPath(report: TypeScriptHarnessReport, ownerPath: string): string {
