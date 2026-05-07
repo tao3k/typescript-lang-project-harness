@@ -57,7 +57,8 @@ for advisory rules; it does not mutate catalog severity.
 `TS-SEM-*`, `TS-PROJ-R003`, `TS-PROJ-R004`, `TS-PROJ-R005`, `TS-MOD-*`,
 `TS-TEST-*`, and `TS-AGENT-*` rules are `info` findings. They are rendered by
 default for repair agents but do not fail assertions unless a caller promotes
-them.
+them or uses the agent test-gate helper
+`assertTypeScriptProjectHarnessAgentClean()`.
 
 - `TS-SEM-R001`: TypeScript `Program` semantic diagnostics should be visible
   from parser-native facts, including stable TypeScript diagnostic codes,

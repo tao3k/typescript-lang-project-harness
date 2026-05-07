@@ -112,6 +112,10 @@ Those tests call the project runner against the repository root, so the package
 must stay clean under the same default policy downstream TypeScript projects
 will consume. Self-apply means zero default findings, including `info` advice,
 not merely zero blocking findings.
+Use `assertTypeScriptProjectHarnessAgentClean()` for test-gate self-apply paths
+that should expose advice as repair feedback. Keep
+`assertTypeScriptProjectHarnessClean()` blocking-only so library callers can
+choose when advisory output should fail their tests.
 M6 semantic diagnostics, modularity advice, test-layout advice, package
 metadata diagnostics, and agent advice are rendered by default but remain
 `info`; do not promote advisory findings to blocking without an explicit policy
@@ -137,7 +141,7 @@ empty child-edge placeholders.
 
 ## Public API Contract
 
-The package root is the supported M9 import surface. Tests in
+The package root is the supported M10 import surface. Tests in
 `tests/unit/public_api.test.ts` lock the runtime facade, type exports, and public
 agent snapshot behavior. Do not export internal reasoning builders, rule-pack
 evaluators, or verification internals unless they become an intentional library

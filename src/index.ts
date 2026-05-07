@@ -92,6 +92,7 @@ export {
 } from "./render.js";
 export type { TypeScriptRenderOptions } from "./render.js";
 export {
+  assertTypeScriptProjectHarnessAgentClean,
   assertTypeScriptLangHarnessClean,
   assertTypeScriptProjectHarnessClean,
   buildTypeScriptProjectHarnessAgentSnapshot,

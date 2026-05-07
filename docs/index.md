@@ -35,6 +35,9 @@ entrypoint into a catch-all reference page.
 - [Parser-Native Agent Policy M9 Plan](02_plans/207_parser_native_agent_policy_m9_plan.md):
   stacked milestone for parser-native public API/data/control-flow facts and
   low-noise TypeScript agent policy advice.
+- [Agent Advice Test Gate M10 Plan](02_plans/208_agent_advice_test_gate_m10_plan.md):
+  stacked milestone for surfacing visible agent advice through an explicit
+  test-gate assertion without changing default CLI blocking semantics.
 
 ## 03_features: Functional Ledger
 
