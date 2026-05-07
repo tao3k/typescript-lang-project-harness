@@ -10,7 +10,9 @@ import {
   defaultTypeScriptHarnessConfig,
   renderTypeScriptVerificationProfileIndex,
   renderTypeScriptVerificationProfileIndexJson,
+  runTypeScriptProjectHarness,
   typeScriptVerificationProfileIndexIsClear,
+  withTypeScriptVerificationDependencySignal,
   withTypeScriptVerificationProfileHint,
   type TypeScriptVerificationProfileHint,
 } from "../../src/index.js";
@@ -54,6 +56,9 @@ test("verification profile index suggests missing owner hints from parser facts"
   assert.match(rendered, /\|tasks: chaos,stress/u);
   assert.match(rendered, /\|fact: module=role=facade layer=harness/u);
   assert.match(rendered, /\|fact: imports=external=1 package_import=0 unresolved=0/u);
+  assert.match(rendered, /\|fact: external_roots=node:fs/u);
+  assert.match(rendered, /\[verify-profile\] profile_hints/u);
+  assert.match(rendered, /\|action: configure TypeScriptVerificationProfileHint entries/u);
   assert.deepEqual(
     json.candidates.map((candidate) => candidate.state),
     ["missing_profile"],
@@ -103,6 +108,40 @@ test("verification profile index renders drift and goes quiet when configured", 
   assert.equal(typeScriptVerificationProfileIndexIsClear(configuredIndex), true);
   assert.equal(renderTypeScriptVerificationProfileIndex(configuredIndex), "");
   assert.deepEqual(activeTypeScriptVerificationProfileHints(configuredIndex), []);
+});
+
+test("verification profile dependency signals enrich responsibility inference without findings", () => {
+  const root = writeProfileProject(
+    "dependency-signal",
+    'import { readFileSync } from "node:fs";\nexport const api = readFileSync;\n',
+  );
+  const config = withTypeScriptVerificationDependencySignal(defaultTypeScriptHarnessConfig(), {
+    dependency: "node:fs",
+    responsibilities: ["persistence"],
+  });
+
+  const report = runTypeScriptProjectHarness(root, config);
+  const index = buildTypeScriptVerificationProfileIndexWithConfig(root, config);
+  const rendered = renderTypeScriptVerificationProfileIndex(index);
+
+  assert.deepEqual(
+    index.candidates.map((candidate) => ({
+      responsibilities: candidate.suggestedResponsibilities,
+      taskKinds: candidate.suggestedTaskKinds,
+    })),
+    [
+      {
+        responsibilities: ["external_dependency", "persistence", "public_api"],
+        taskKinds: ["chaos", "stress"],
+      },
+    ],
+  );
+  assert.match(rendered, /\|fact: configured_dependency_roots=node:fs/u);
+  assert.match(rendered, /\|fact: dependency_responsibilities=persistence/u);
+  assert.equal(
+    report.findings.some((finding) => finding.summary.includes("dependency")),
+    false,
+  );
 });
 
 function writeProfileProject(label: string, source: string): string {

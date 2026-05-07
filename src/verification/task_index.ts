@@ -41,6 +41,10 @@ function taskRecord(task: TypeScriptVerificationTask): TypeScriptVerificationTas
   const line = task.line === undefined ? {} : { line: task.line };
   const receiptSummary =
     task.receiptSummary === undefined ? {} : { receiptSummary: task.receiptSummary };
+  const receiptEvidenceUri =
+    task.receiptEvidenceUri === undefined ? {} : { receiptEvidenceUri: task.receiptEvidenceUri };
+  const receiptObservedAt =
+    task.receiptObservedAt === undefined ? {} : { receiptObservedAt: task.receiptObservedAt };
   return {
     fingerprint: task.fingerprint,
     kind: task.kind,
@@ -55,6 +59,8 @@ function taskRecord(task: TypeScriptVerificationTask): TypeScriptVerificationTas
     requiredEvidenceKeys: task.requiredEvidence.map((requirement) => requirement.key),
     taskEvidence: task.evidence,
     ...receiptSummary,
+    ...receiptEvidenceUri,
+    ...receiptObservedAt,
     receiptEvidence: task.receiptEvidence,
     missingReceiptEvidenceKeys: missingReceiptEvidenceKeys(task),
   };

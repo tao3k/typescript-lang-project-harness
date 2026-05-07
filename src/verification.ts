@@ -14,7 +14,14 @@ export {
   defaultTypeScriptVerificationReportOptions,
   renderTypeScriptVerificationReportArtifactJson,
   renderTypeScriptVerificationReportBundleJson,
+  TypeScriptVerificationReportWriteError,
+  writeTypeScriptVerificationReports,
 } from "./verification/report.js";
+export {
+  buildTypeScriptVerificationPerformanceIndex,
+  renderTypeScriptVerificationPerformanceIndex,
+  renderTypeScriptVerificationPerformanceIndexJson,
+} from "./verification/performance.js";
 export {
   buildTypeScriptVerificationTaskIndex,
   renderTypeScriptVerificationTaskIndexJson,
@@ -31,7 +38,10 @@ export {
 } from "./verification/profile_index.js";
 export type {
   TypeScriptOwnerResponsibility,
+  TypeScriptVerificationDependencySignal,
   TypeScriptVerificationEvidence,
+  TypeScriptVerificationPerformanceIndex,
+  TypeScriptVerificationPerformanceRecord,
   TypeScriptVerificationPhase,
   TypeScriptVerificationPlan,
   TypeScriptVerificationPolicy,
@@ -48,6 +58,8 @@ export type {
   TypeScriptVerificationReportPersistence,
   TypeScriptVerificationReportTemplate,
   TypeScriptVerificationReportTraceConfig,
+  TypeScriptVerificationReportWriteConfig,
+  TypeScriptVerificationReportWriteReceipt,
   TypeScriptVerificationRequirement,
   TypeScriptVerificationResolutionNote,
   TypeScriptVerificationSkillBinding,

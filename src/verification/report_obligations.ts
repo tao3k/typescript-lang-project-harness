@@ -35,6 +35,19 @@ export function verificationReportObligationsForTasks(
       taskFingerprints: configuredSkillTasks.map((task) => task.fingerprint),
     });
   }
+  const performanceTasks = activeTasks.filter((task) => task.kind === "performance");
+  if (performanceTasks.length > 0) {
+    obligations.push({
+      key: "performance_index_json",
+      renderer:
+        "buildTypeScriptVerificationPerformanceIndex + renderTypeScriptVerificationPerformanceIndexJson",
+      suggestedArtifactName: "performance_index.json",
+      reason:
+        "persist TypeScript performance state for benchmark, receipt, and missing-evidence metrics",
+      taskKinds: ["performance"],
+      taskFingerprints: performanceTasks.map((task) => task.fingerprint),
+    });
+  }
   return obligations;
 }
 

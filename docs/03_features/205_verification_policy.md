@@ -1,6 +1,6 @@
 # Verification Policy
 
-Verification policy is the M5/M6/M7 bridge between parser-owned TypeScript
+Verification policy is the M5/M6/M7/M8 bridge between parser-owned TypeScript
 structure and external validation skills. It drafts owner profiles, plans what
 must be verified, and renders compact contracts and report artifacts; it does
 not run the verifier.
@@ -24,21 +24,27 @@ verification become a second semantic parser.
 - `profileHints`: owner responsibility declarations.
 - `receipts`: completed verification results keyed by task fingerprint.
 - `waivers`: explicit suppressions keyed by task fingerprint.
+- `disabledTaskKinds`: task kinds suppressed by caller policy.
 - `responsibilityTaskOverrides`: library-level responsibility-to-task mapping.
 - `taskContractOverrides`: library-level task receipt contract overrides.
 - `skillBindings`: mapping from task kind to external skill id/adapter.
 - `skillDescriptors`: expandable command and receipt contracts for configured
   skills.
+- `dependencySignals`: parser-owned import/package dependency classifiers used
+  only for profile responsibility inference.
 
 Use the package facade helpers instead of mutating config objects in place:
 
 - `withTypeScriptVerificationProfileHint()`
 - `withTypeScriptVerificationReceipt()`
 - `withTypeScriptVerificationWaiver()`
+- `withDisabledTypeScriptVerificationTaskKind()`
+- `withDisabledTypeScriptVerificationTaskKinds()`
 - `withTypeScriptVerificationTaskContract()`
 - `withTypeScriptVerificationResponsibilityTaskKinds()`
 - `withTypeScriptVerificationSkillBinding()`
 - `withTypeScriptVerificationSkillDescriptor()`
+- `withTypeScriptVerificationDependencySignal()`
 
 ## Task Mapping
 
@@ -71,9 +77,11 @@ owner path, owner namespace, reason, required evidence, parser/reasoning facts,
 and configured skill binding.
 
 A matching passed receipt marks a task `satisfied`, and the compact renderer
-hides it. A matching failed receipt keeps the task visible as `failed`. A waiver
-hides the task only when it has both an `owner` and a `reason`; incomplete
-waivers remain visible with a `resolution` line.
+hides it. A matching failed receipt keeps the task visible as `failed`.
+Receipts may also carry `evidenceUri` and `observedAt`; task indexes and
+performance indexes preserve those fields for artifact lookup and audit timing.
+A waiver hides the task only when it has `owner`, `reason`, and `expiresAt`;
+incomplete waivers remain visible with a `resolution` line.
 
 ## Rendering
 
@@ -115,32 +123,46 @@ Structured consumers can use `renderTypeScriptVerificationPlanJson(plan)`.
 Agents should read the compact task output first and expand skill contracts only
 when a task references a skill.
 
-## Report Bundle
+## Report Bundle And Writer
 
-M7 adds report obligations to the verification plan. The planner adds
+M7 adds report obligations to the verification plan. M8 extends them with a
+Rust VAS-aligned writer and performance index. The planner adds
 `verification_plan_json` whenever active pending or failed tasks remain, and it
 adds `task_index_json` when any active task has a configured skill binding.
+When any active `performance` task exists, it also adds
+`performance_index_json`.
 The compact renderer appends the required artifacts without expanding the JSON:
 
 ```text
 [verify-report]
-   |bundle: renderer=renderTypeScriptVerificationReportBundleJson artifact=verification_report_bundle.json artifacts=2
+   |bundle: renderer=renderTypeScriptVerificationReportBundleJson artifact=verification_report_bundle.json artifacts=3
    |required: verification_plan_json renderer=renderTypeScriptVerificationPlanJson artifact=verification_plan.json tasks=1 kinds=performance
    |required: task_index_json renderer=buildTypeScriptVerificationTaskIndex + renderTypeScriptVerificationTaskIndexJson artifact=task_index.json tasks=1 kinds=performance
+   |required: performance_index_json renderer=buildTypeScriptVerificationPerformanceIndex + renderTypeScriptVerificationPerformanceIndexJson artifact=performance_index.json tasks=1 kinds=performance
 ```
 
-The task index is a compact structured artifact for configured external skills:
+The task index is a compact structured artifact for configured external skills,
+and the performance index is a compact `[perf-state]` retrieval surface for
+active performance tasks:
 
 ```ts
 import {
+  buildTypeScriptVerificationPerformanceIndex,
   buildTypeScriptVerificationTaskIndex,
   buildTypeScriptVerificationReportBundle,
   renderTypeScriptVerificationReportArtifactJson,
+  writeTypeScriptVerificationReports,
 } from "typescript-lang-project-harness";
 
 const index = buildTypeScriptVerificationTaskIndex(plan);
+const perf = buildTypeScriptVerificationPerformanceIndex(plan);
 const bundle = buildTypeScriptVerificationReportBundle(plan);
 const taskIndexJson = renderTypeScriptVerificationReportArtifactJson(plan, "task_index_json");
+const receipt = writeTypeScriptVerificationReports(plan, {
+  projectRoot: process.cwd(),
+  sourceBaselineDir: ".verification/source",
+  runtimeCacheDir: ".cache/typescript-harness/verification",
+});
 ```
 
 Task-index records include task kind, state, phase, owner path, skill label,
@@ -149,11 +171,21 @@ and missing receipt evidence keys. Failed receipts remain visible and preserve
 their receipt evidence so a caller can compare the failed artifact against the
 required evidence contract.
 
+Performance-index records include task state, phase, owner, skill contract,
+required evidence keys, task evidence, receipt summary, receipt evidence URI,
+receipt observed timestamp, and structured receipt evidence. The compact
+renderer starts each record with `[perf-state]` and prints missing evidence keys
+for active records.
+
 The report bundle is a manifest, not an executor. It names artifact renderers,
 persistence intent, templates, trace defaults, task kinds, and task
 fingerprints. The default persistence is `runtime_cache` for
-`verification_plan_json` and `source_baseline` for `task_index_json`. Callers
-decide where to store the rendered JSON. M7 does not write files, add CLI
+`verification_plan_json` and `source_baseline` for `task_index_json` and
+`performance_index_json`. `writeTypeScriptVerificationReports()` writes
+`verification_report_manifest.json` to both caller-provided directories: the
+source-baseline manifest contains source-controlled artifacts only, while the
+runtime-cache manifest contains the full bundle. Artifact JSON replaces the
+absolute project root with `$PROJECT_ROOT` by default. M8 does not add CLI
 flags, start subprocesses, or manage external skill lifecycle.
 
 ## Profile Index
@@ -178,6 +210,9 @@ profile candidates, and it goes quiet once matching hints cover the suggested
 responsibilities.
 For drifting profiles, `activeTypeScriptVerificationProfileHints()` preserves
 already configured responsibilities while adding parser-suggested ones.
+When active candidates exist, the compact renderer appends a
+`[verify-profile] profile_hints` reminder naming
+`TypeScriptVerificationProfileHint` as the config surface.
 
 ```text
 [verify-profile] src/index.ts
@@ -187,6 +222,10 @@ already configured responsibilities while adding parser-suggested ones.
    |tasks: chaos,stress
    |fact: module=role=facade layer=harness
    |fact: imports=external=1 package_import=0 unresolved=0
+[verify-profile] profile_hints
+   |state: missing_profile_config
+   |action: configure TypeScriptVerificationProfileHint entries
+   |candidates: 1
 ```
 
 Profile candidates are derived from reasoning-tree facts:
@@ -194,12 +233,19 @@ Profile candidates are derived from reasoning-tree facts:
 - module role and layer
 - parser-visible export count
 - owner dependency count
+- owner-module and child-module counts for branch aggregates
 - TypeScript-native import-resolution counts
+- external and package-import roots
+- configured and unconfigured dependency roots from parser-owned import/package
+  facts
 - package entry targets that resolve to parser-visible owners
 
-M6 intentionally keeps responsibility inference small. It suggests `public_api`
+M8 keeps responsibility inference project-controlled. It suggests `public_api`
 for entrypoints, facades, exported owners, and parser-visible package entry
 owners. It suggests `external_dependency` when parser facts show external or
-`#` package-import boundaries. It does not infer latency, security,
-persistence, or availability responsibilities from package names or manifest
-dependency declarations.
+`#` package-import boundaries, or broad owner fan-out. Callers may add
+`TypeScriptVerificationDependencySignal` entries to classify a parser-visible
+dependency root as `persistence`, `security_boundary`, `latency_sensitive`, or
+`availability_critical`. Those signals only enrich profile evidence and
+suggested responsibilities; they do not create dependency findings or manifest
+dependency gates.

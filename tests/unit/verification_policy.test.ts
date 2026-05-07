@@ -10,6 +10,7 @@ import {
   renderTypeScriptVerificationPlan,
   renderTypeScriptVerificationPlanJson,
   renderTypeScriptVerificationSkillContracts,
+  withDisabledTypeScriptVerificationTaskKind,
   withTypeScriptVerificationProfileHint,
   withTypeScriptVerificationReceipt,
   withTypeScriptVerificationSkillBinding,
@@ -96,12 +97,13 @@ test("verification receipts and waivers control active compact reminders", () =>
     kind: "stress",
     ownerPath: "src/index.ts",
     fingerprint: stressTask.fingerprint,
+    owner: "platform",
     reason: "temporary upstream outage",
   });
   const waiverPlan = planTypeScriptProjectVerificationWithConfig(root, incompleteWaiverConfig);
   const waiverRendered = renderTypeScriptVerificationPlan(waiverPlan);
   assert.equal(waiverPlan.tasks[0]?.state, "pending");
-  assert.match(waiverRendered, /resolution: stress\.waiver=incomplete: missing owner/u);
+  assert.match(waiverRendered, /resolution: stress\.waiver=incomplete: missing expiresAt/u);
 
   const completeWaiverConfig = withTypeScriptVerificationWaiver(baseConfig, {
     kind: "stress",
@@ -109,6 +111,7 @@ test("verification receipts and waivers control active compact reminders", () =>
     fingerprint: stressTask.fingerprint,
     owner: "platform",
     reason: "accepted for bootstrap",
+    expiresAt: "2026-06-01",
   });
   const completeWaiverPlan = planTypeScriptProjectVerificationWithConfig(
     root,
@@ -116,6 +119,40 @@ test("verification receipts and waivers control active compact reminders", () =>
   );
   assert.equal(completeWaiverPlan.tasks[0]?.state, "waived");
   assert.equal(renderTypeScriptVerificationPlan(completeWaiverPlan), "");
+});
+
+test("verification policy disables external task kinds but reviews owner-local disabled overrides", () => {
+  const root = writeVerificationProject("disabled-kind", "export const api = 1;\n");
+  const disabledConfig = withDisabledTypeScriptVerificationTaskKind(
+    withTypeScriptVerificationProfileHint(
+      defaultTypeScriptHarnessConfig(),
+      profileHint("src/index.ts", ["latency_sensitive"]),
+    ),
+    "performance",
+  );
+
+  const disabledPlan = planTypeScriptProjectVerificationWithConfig(root, disabledConfig);
+  assert.deepEqual(disabledPlan.tasks, []);
+
+  const ownerOverrideConfig = withDisabledTypeScriptVerificationTaskKind(
+    withTypeScriptVerificationProfileHint(defaultTypeScriptHarnessConfig(), {
+      ownerPath: "src/index.ts",
+      responsibilities: ["public_api"],
+      taskKinds: ["performance"],
+      taskContractOverrides: {},
+      rationale: "bootstrap local performance task migration",
+    }),
+    "performance",
+  );
+  const ownerOverridePlan = planTypeScriptProjectVerificationWithConfig(root, ownerOverrideConfig);
+  const rendered = renderTypeScriptVerificationPlan(ownerOverridePlan);
+
+  assert.deepEqual(
+    ownerOverridePlan.tasks.map((task) => `${task.kind}:${task.state}`),
+    ["responsibility_review:pending"],
+  );
+  assert.match(rendered, /owner-local verification override references disabled task kind/u);
+  assert.match(rendered, /\|fact: responsibility_review\.disabled=performance/u);
 });
 
 test("configured verification skill binding keeps compact output quiet and expandable", () => {

@@ -28,6 +28,10 @@ entrypoint into a catch-all reference page.
 - [Verification Report Bundle M7 Plan](02_plans/205_verification_report_bundle_m7_plan.md):
   stacked milestone for report obligations, configured-skill task indexes, and
   report bundle JSON renderers.
+- [Verification VAS M8 Plan](02_plans/206_verification_vas_m8_plan.md):
+  stacked milestone for report writing, performance indexes, receipt metadata,
+  waiver completeness, disabled task kinds, and dependency-signal profile
+  inference.
 
 ## 03_features: Functional Ledger
 
