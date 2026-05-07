@@ -2,6 +2,9 @@ import type {
   TypeScriptHarnessFinding,
   TypeScriptHarnessRule,
   TypeScriptPackageEntryResolutionFact,
+  TypeScriptPublicFunctionControlFlowFact,
+  TypeScriptPublicFunctionParamFact,
+  TypeScriptReasoningModule,
   TypeScriptReasoningTree,
 } from "../../model.js";
 
@@ -35,8 +38,67 @@ const TS_AGENT_R003: TypeScriptHarnessRule = {
   labels: { surface: "agent", parser: "reasoning-tree" },
 };
 
+const TS_AGENT_R004: TypeScriptHarnessRule = {
+  ruleId: "TS-AGENT-R004",
+  packId: "typescript.agent_policy",
+  severity: "info",
+  title: "Public function exposes multiple flag parameters",
+  requirement:
+    "Replace multiple public boolean mode parameters with a named options object or discriminated union so agents can preserve mode semantics without reading every branch.",
+  labels: { surface: "agent", parser: "native-syntax" },
+};
+
+const TS_AGENT_R005: TypeScriptHarnessRule = {
+  ruleId: "TS-AGENT-R005",
+  packId: "typescript.agent_policy",
+  severity: "info",
+  title: "Public function exposes a broad positional parameter surface",
+  requirement:
+    "Replace broad public positional parameter lists with a named options, request, or builder surface so agents can preserve call semantics without re-reading every call site.",
+  labels: { surface: "agent", parser: "native-syntax" },
+};
+
+const TS_AGENT_R006: TypeScriptHarnessRule = {
+  ruleId: "TS-AGENT-R006",
+  packId: "typescript.agent_policy",
+  severity: "info",
+  title: "Public API exposes an anonymous primitive tuple",
+  requirement:
+    "Replace public tuple parameters or return values that bundle primitive semantic values with named object, tuple alias, or domain types so agents can preserve field intent.",
+  labels: { surface: "agent", parser: "native-syntax" },
+};
+
+const TS_AGENT_R007: TypeScriptHarnessRule = {
+  ruleId: "TS-AGENT-R007",
+  packId: "typescript.agent_policy",
+  severity: "info",
+  title: "Public function hides algorithm behind nested control flow",
+  requirement:
+    "Expose public TypeScript algorithm shape through guard clauses, discriminated dispatch, or small named pipeline steps so agents can reason about the branch structure before editing.",
+  labels: { surface: "agent", parser: "native-syntax" },
+};
+
+const TS_AGENT_R008: TypeScriptHarnessRule = {
+  ruleId: "TS-AGENT-R008",
+  packId: "typescript.agent_policy",
+  severity: "info",
+  title: "Public function owns a broad linear algorithm surface",
+  requirement:
+    "Split broad public TypeScript functions into small named helpers or pipeline steps so agents can edit one algorithm responsibility at a time.",
+  labels: { surface: "agent", parser: "native-syntax" },
+};
+
 export function typeScriptAgentPolicyRules(): readonly TypeScriptHarnessRule[] {
-  return [TS_AGENT_R001, TS_AGENT_R002, TS_AGENT_R003];
+  return [
+    TS_AGENT_R001,
+    TS_AGENT_R002,
+    TS_AGENT_R003,
+    TS_AGENT_R004,
+    TS_AGENT_R005,
+    TS_AGENT_R006,
+    TS_AGENT_R007,
+    TS_AGENT_R008,
+  ];
 }
 
 export function evaluateAgentPolicyRules(
@@ -56,7 +118,9 @@ export function evaluateAgentPolicyRules(
       labels: TS_AGENT_R001.labels,
     }))
     .concat(evaluatePackageEntryAdvice(reasoningTree))
-    .concat(evaluateFacadeIntentAdvice(reasoningTree));
+    .concat(evaluateFacadeIntentAdvice(reasoningTree))
+    .concat(evaluateNativeApiShapeAdvice(reasoningTree))
+    .concat(evaluateNativeAlgorithmShapeAdvice(reasoningTree));
 }
 
 function evaluatePackageEntryAdvice(
@@ -116,4 +180,205 @@ function ownerPath(edge: { readonly toPath?: string }): string[] {
 
 function packageConditionsLabel(conditions: readonly string[]): string {
   return conditions.length === 0 ? "" : ` (${conditions.join("/")})`;
+}
+
+function evaluateNativeApiShapeAdvice(
+  reasoningTree: TypeScriptReasoningTree,
+): TypeScriptHarnessFinding[] {
+  return sourceModules(reasoningTree)
+    .flatMap((moduleReport) => [
+      ...flagParameterAdvice(moduleReport),
+      ...broadParameterAdvice(moduleReport),
+      ...tupleApiAdvice(moduleReport),
+    ])
+    .sort((left, right) => findingSortKey(left).localeCompare(findingSortKey(right)));
+}
+
+function flagParameterAdvice(moduleReport: TypeScriptReasoningModule): TypeScriptHarnessFinding[] {
+  const rule = TS_AGENT_R004;
+  return groupedFunctionParams(moduleReport.publicFunctionParams).flatMap((params) => {
+    const flagParams = params.filter((param) => param.flagContractType !== undefined);
+    const first = flagParams[0];
+    if (first === undefined || flagParams.length < 2) {
+      return [];
+    }
+    return [
+      {
+        ruleId: rule.ruleId,
+        packId: rule.packId,
+        severity: rule.severity,
+        title: rule.title,
+        summary: `Public function '${first.functionName}' exposes multiple flag parameters: ${flagParams
+          .map((param) => `${param.paramName}: ${param.typeText ?? param.flagContractType}`)
+          .join(", ")}.`,
+        location: first.location,
+        requirement: rule.requirement,
+        ...sourceLineField(first.sourceLine),
+        label: "public function flag parameters",
+        labels: rule.labels,
+      },
+    ];
+  });
+}
+
+function broadParameterAdvice(moduleReport: TypeScriptReasoningModule): TypeScriptHarnessFinding[] {
+  const rule = TS_AGENT_R005;
+  return groupedFunctionParams(moduleReport.publicFunctionParams).flatMap((params) => {
+    const first = params[0];
+    if (first === undefined || params.length < 6) {
+      return [];
+    }
+    return [
+      {
+        ruleId: rule.ruleId,
+        packId: rule.packId,
+        severity: rule.severity,
+        title: rule.title,
+        summary: `Public function '${first.functionName}' exposes ${params.length} positional parameters.`,
+        location: first.location,
+        requirement: rule.requirement,
+        ...sourceLineField(first.sourceLine),
+        label: "public function broad parameters",
+        labels: rule.labels,
+      },
+    ];
+  });
+}
+
+function tupleApiAdvice(moduleReport: TypeScriptReasoningModule): TypeScriptHarnessFinding[] {
+  const rule = TS_AGENT_R006;
+  return moduleReport.publicTupleApiSurfaces.map((surface) => ({
+    ruleId: rule.ruleId,
+    packId: rule.packId,
+    severity: rule.severity,
+    title: rule.title,
+    summary: `Public function '${surface.functionName}' exposes ${surface.surfaceName} as anonymous tuple with primitive elements: ${surface.elementContractTypes.join(", ")}.`,
+    location: surface.location,
+    requirement: rule.requirement,
+    ...sourceLineField(surface.sourceLine),
+    label: "public primitive tuple api",
+    labels: rule.labels,
+  }));
+}
+
+function evaluateNativeAlgorithmShapeAdvice(
+  reasoningTree: TypeScriptReasoningTree,
+): TypeScriptHarnessFinding[] {
+  return sourceModules(reasoningTree)
+    .flatMap((moduleReport) => moduleReport.publicFunctionControlFlows)
+    .flatMap((controlFlow) => [
+      ...nestedAlgorithmAdvice(controlFlow),
+      ...broadLinearAlgorithmAdvice(controlFlow),
+    ])
+    .sort((left, right) => findingSortKey(left).localeCompare(findingSortKey(right)));
+}
+
+function nestedAlgorithmAdvice(
+  controlFlow: TypeScriptPublicFunctionControlFlowFact,
+): TypeScriptHarnessFinding[] {
+  const signals = nestedAlgorithmSignals(controlFlow);
+  if (signals.length === 0) {
+    return [];
+  }
+  const rule = TS_AGENT_R007;
+  return [
+    {
+      ruleId: rule.ruleId,
+      packId: rule.packId,
+      severity: rule.severity,
+      title: rule.title,
+      summary: `Public function '${controlFlow.functionName}' hides algorithm shape. Signals: ${signals.join(", ")}.`,
+      location: controlFlow.location,
+      requirement: rule.requirement,
+      ...sourceLineField(controlFlow.sourceLine),
+      label: "public function nested algorithm",
+      labels: rule.labels,
+    },
+  ];
+}
+
+function broadLinearAlgorithmAdvice(
+  controlFlow: TypeScriptPublicFunctionControlFlowFact,
+): TypeScriptHarnessFinding[] {
+  const signals = broadLinearAlgorithmSignals(controlFlow);
+  if (signals.length === 0) {
+    return [];
+  }
+  const rule = TS_AGENT_R008;
+  return [
+    {
+      ruleId: rule.ruleId,
+      packId: rule.packId,
+      severity: rule.severity,
+      title: rule.title,
+      summary: `Public function '${controlFlow.functionName}' spans ${controlFlow.lineSpan} lines with ${controlFlow.statementCount} statements and a ${controlFlow.maxBlockStatementCount}-statement block. Signals: ${signals.join(", ")}.`,
+      location: controlFlow.location,
+      requirement: rule.requirement,
+      ...sourceLineField(controlFlow.sourceLine),
+      label: "public function broad linear algorithm",
+      labels: rule.labels,
+    },
+  ];
+}
+
+function nestedAlgorithmSignals(
+  controlFlow: TypeScriptPublicFunctionControlFlowFact,
+): readonly string[] {
+  return [
+    controlFlow.maxNestingDepth >= 5 ? "deep control-flow nesting" : undefined,
+    controlFlow.loopCount >= 2 && controlFlow.branchCount >= 4
+      ? "nested loops mixed with branches"
+      : undefined,
+    controlFlow.branchCount >= 12 && controlFlow.loopCount === 0
+      ? "large branch surface without dispatch table"
+      : undefined,
+  ].filter((signal): signal is string => signal !== undefined);
+}
+
+function broadLinearAlgorithmSignals(
+  controlFlow: TypeScriptPublicFunctionControlFlowFact,
+): readonly string[] {
+  if (controlFlow.maxNestingDepth > 2) {
+    return [];
+  }
+  return [
+    controlFlow.lineSpan >= 90 && controlFlow.statementCount >= 28
+      ? "long public function body"
+      : undefined,
+    controlFlow.maxBlockStatementCount >= 22 ? "large linear statement block" : undefined,
+  ].filter((signal): signal is string => signal !== undefined);
+}
+
+function groupedFunctionParams(
+  params: readonly TypeScriptPublicFunctionParamFact[],
+): readonly (readonly TypeScriptPublicFunctionParamFact[])[] {
+  const groups = new Map<string, TypeScriptPublicFunctionParamFact[]>();
+  for (const param of params) {
+    const key = `${param.functionName}\0${param.functionLine}`;
+    const existing = groups.get(key);
+    if (existing === undefined) {
+      groups.set(key, [param]);
+      continue;
+    }
+    existing.push(param);
+  }
+  return [...groups.values()];
+}
+
+function sourceModules(tree: TypeScriptReasoningTree): readonly TypeScriptReasoningModule[] {
+  return tree.modules.filter(
+    (moduleReport) =>
+      moduleReport.isValid &&
+      moduleReport.role !== "test" &&
+      moduleReport.role !== "declaration" &&
+      moduleReport.role !== "config",
+  );
+}
+
+function findingSortKey(finding: TypeScriptHarnessFinding): string {
+  return `${finding.ruleId}\0${finding.location.path ?? ""}\0${finding.location.line}\0${finding.summary}`;
+}
+
+function sourceLineField(sourceLine: string | undefined): { readonly sourceLine?: string } {
+  return sourceLine === undefined ? {} : { sourceLine };
 }

@@ -115,12 +115,13 @@ findings.
 
 ## Public Facade
 
-Consumers should import from the package root. The root facade exposes the M7
+Consumers should import from the package root. The root facade exposes the M9
 contract: parser entrypoints, project/explicit runners, project snapshot
 helpers, assertion helpers, compact/JSON/reasoning renderers, rule catalog
 functions, policy config helpers, verification profile-index builders/renderers,
 verification planners/renderers, verification task-index builders/renderers,
-verification report-bundle builders/renderers, and model types, including
-`TypeScriptHarnessRunMode`, `TypeScriptRulePack`, and verification policy/task
-model types. Reasoning builders, rule evaluators, and verification internals
-remain internal implementation details.
+verification report-bundle builders/renderers, report writer helpers, and model
+types, including `TypeScriptHarnessRunMode`, `TypeScriptRulePack`,
+parser-native public API/data/control-flow fact types, and verification
+policy/task model types. Reasoning builders, rule evaluators, and verification
+internals remain internal implementation details.

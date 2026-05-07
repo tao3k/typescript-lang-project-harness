@@ -68,6 +68,10 @@ function reasoningModuleFromRole(
       .map((exportFact) => exportFact.name)
       .sort(),
     importSpecifiers: moduleReport.imports.map((importFact) => importFact.moduleSpecifier).sort(),
+    publicFunctionParams: moduleReport.publicFunctionParams,
+    publicTupleApiSurfaces: moduleReport.publicTupleApiSurfaces,
+    publicDataFields: moduleReport.publicDataFields,
+    publicFunctionControlFlows: moduleReport.publicFunctionControlFlows,
   };
 }
 

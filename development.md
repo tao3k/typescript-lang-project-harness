@@ -20,6 +20,11 @@ TypeScript source text to infer imports, exports, syntax validity, project
 references, or module ownership.
 When a rule needs a new TypeScript concept, add a parser fact first, then
 consume that fact from reasoning/render/rules.
+M9 parser-native source facts live under `src/parser/native_syntax/`: public
+API shape, public primitive data-field shape, and public function control-flow
+shape. Keep new TypeScript AST walking in that parser sublayer, project the
+facts into the reasoning tree, and make rule packs consume only those projected
+facts.
 Project semantic diagnostics must come from the parser-owned TypeScript
 `Program`; rule packs and renderers may only consume the reported
 `semanticDiagnostics` facts. Preserve TypeScript diagnostic codes such as
@@ -132,7 +137,7 @@ empty child-edge placeholders.
 
 ## Public API Contract
 
-The package root is the supported M8 import surface. Tests in
+The package root is the supported M9 import surface. Tests in
 `tests/unit/public_api.test.ts` lock the runtime facade, type exports, and public
 agent snapshot behavior. Do not export internal reasoning builders, rule-pack
 evaluators, or verification internals unless they become an intentional library

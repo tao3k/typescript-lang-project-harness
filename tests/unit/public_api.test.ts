@@ -39,6 +39,10 @@ import type {
   TypeScriptProjectHarnessScope,
   TypeScriptProjectReferencePackageFact,
   TypeScriptProjectReferenceResolutionFact,
+  TypeScriptPublicDataFieldFact,
+  TypeScriptPublicFunctionControlFlowFact,
+  TypeScriptPublicFunctionParamFact,
+  TypeScriptPublicTupleApiSurfaceFact,
   TypeScriptReasoningDiagnosticFact,
   TypeScriptReasoningImportSummaryFact,
   TypeScriptReasoningModule,
@@ -119,6 +123,10 @@ type PublicModelContract = readonly [
   TypeScriptProjectHarnessScope,
   TypeScriptProjectReferencePackageFact,
   TypeScriptProjectReferenceResolutionFact,
+  TypeScriptPublicDataFieldFact,
+  TypeScriptPublicFunctionControlFlowFact,
+  TypeScriptPublicFunctionParamFact,
+  TypeScriptPublicTupleApiSurfaceFact,
   TypeScriptReasoningDiagnosticFact,
   TypeScriptReasoningImportSummaryFact,
   TypeScriptReasoningModule,
@@ -167,7 +175,7 @@ type PublicModelContract = readonly [
 
 const publicModelContract: PublicModelContract | undefined = undefined;
 
-test("public facade exposes the stable M8 runtime surface", () => {
+test("public facade exposes the stable M9 runtime surface", () => {
   assert.deepEqual(Object.keys(api).sort(), [
     "DEFAULT_IGNORED_DIR_NAMES",
     "TypeScriptVerificationReportWriteError",

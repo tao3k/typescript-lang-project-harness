@@ -54,7 +54,7 @@ Default project execution runs these packs in descriptor order:
 5. `typescript.test_layout`
 6. `typescript.agent_policy`
 
-The current M8 surface implements the native parser boundary, source syntax
+The current M9 surface implements the native parser boundary, source syntax
 diagnostics, native TypeScript `Program` semantic diagnostics with TypeScript
 diagnostic codes, parseable `tsconfig.json` policy, TypeScript JSON AST-backed
 package/config facts, reasoning-tree snapshots, project-level workspace
@@ -73,6 +73,15 @@ non-blocking: `TS-PROJ-R004` points out referenced package configs missing
 `composite` or `declaration`, and `TS-PROJ-R005` points out package
 `exports`/`imports` when the effective TypeScript `moduleResolution` is not
 `node16`, `nodenext`, or `bundler`.
+M9 extends the parser-native fact layer with exported function parameter facts,
+anonymous public tuple API facts, exported primitive data-field facts, and
+public function control-flow shape facts. Those facts are projected into the
+reasoning tree before policy runs. The active M9 policy surface remains
+low-noise and advisory: `TS-AGENT-R004` through `TS-AGENT-R008` cover public
+flag parameters, broad positional parameter lists, anonymous primitive tuple
+APIs, deeply nested public algorithms, and broad linear public algorithms.
+The exported primitive data-field facts are available to downstream tooling and
+future policies, but M9 does not enable a public DTO/data-shape gate by default.
 The verification lane now includes M5 task planning, M6 profile-index drafts,
 M7 report obligations, and M8 Rust VAS-aligned artifact surfaces: configured
 skill task-index JSON, performance-index JSON, report-bundle manifest JSON, a
@@ -166,15 +175,16 @@ block naming the required bundle artifacts.
 
 ## Public API Contract
 
-The package facade exports the M8 library surface: runners, project agent
+The package facade exports the M9 library surface: runners, project agent
 snapshot helpers, assertion helpers, parser entrypoints,
 compact/JSON/reasoning renderers, rule catalog functions, policy config helper
 functions, verification policy helpers, profile-index builders/renderers,
 verification planners/renderers, task-index and performance-index
 builders/renderers, report-bundle builders/renderers, report writer helpers,
-and report model types. Internals such as reasoning-tree builders, rule-pack
-evaluators, and verification internals stay private so downstream tools depend
-on parser-owned facts and stable rendered output instead of implementation
+and report model types, including parser-native public API/data/control-flow
+fact types. Internals such as reasoning-tree builders, rule-pack evaluators,
+and verification internals stay private so downstream tools depend on
+parser-owned facts and stable rendered output instead of implementation
 modules.
 
 ## CI

@@ -99,6 +99,89 @@ test("parser extracts declaration-only export assignment facts", () => {
   );
 });
 
+test("parser extracts native public API and control-flow facts", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-parser-native-api-"));
+  const sourcePath = path.join(root, "api.ts");
+  fs.writeFileSync(
+    sourcePath,
+    [
+      "export interface ApiRecord {",
+      "  id: string;",
+      "  revision: number;",
+      "  enabled: boolean;",
+      "}",
+      "export type Pair = { left: string; right: number };",
+      "export function configure(",
+      "  id: string,",
+      "  dryRun: boolean,",
+      "  force: boolean,",
+      "  point: [string, number]",
+      "): [string, number] {",
+      "  if (dryRun) {",
+      "    return point;",
+      "  }",
+      "  return [id, force ? 1 : 0];",
+      "}",
+    ].join("\n"),
+  );
+
+  const report = parseTypeScriptSourceFile(sourcePath);
+
+  assert.deepEqual(
+    report.publicFunctionParams.map((param) => ({
+      fn: param.functionName,
+      name: param.paramName,
+      type: param.typeText,
+      primitive: param.primitiveContractType,
+      flag: param.flagContractType,
+    })),
+    [
+      { fn: "configure", name: "id", type: "string", primitive: "string", flag: undefined },
+      { fn: "configure", name: "dryRun", type: "boolean", primitive: "boolean", flag: "boolean" },
+      { fn: "configure", name: "force", type: "boolean", primitive: "boolean", flag: "boolean" },
+      {
+        fn: "configure",
+        name: "point",
+        type: "[string, number]",
+        primitive: undefined,
+        flag: undefined,
+      },
+    ],
+  );
+  assert.deepEqual(
+    report.publicTupleApiSurfaces.map((surface) => ({
+      fn: surface.functionName,
+      surface: surface.surfaceName,
+      elements: surface.elementContractTypes,
+    })),
+    [
+      { fn: "configure", surface: "parameter `point`", elements: ["string", "number"] },
+      { fn: "configure", surface: "return value", elements: ["string", "number"] },
+    ],
+  );
+  assert.deepEqual(
+    report.publicDataFields.map(
+      (field) =>
+        `${field.typeKind}:${field.typeName}.${field.fieldName}:${field.primitiveContractType}`,
+    ),
+    [
+      "interface:ApiRecord.id:string",
+      "interface:ApiRecord.revision:number",
+      "interface:ApiRecord.enabled:boolean",
+      "type:Pair.left:string",
+      "type:Pair.right:number",
+    ],
+  );
+  assert.deepEqual(
+    report.publicFunctionControlFlows.map((flow) => ({
+      fn: flow.functionName,
+      branches: flow.branchCount,
+      statements: flow.statementCount,
+    })),
+    [{ fn: "configure", branches: 2, statements: 3 }],
+  );
+});
+
 test("parser reports TypeScript syntax diagnostics", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-parser-bad-"));
   const sourcePath = path.join(root, "bad.ts");

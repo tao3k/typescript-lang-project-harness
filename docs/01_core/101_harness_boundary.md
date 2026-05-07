@@ -56,7 +56,8 @@ referenced package metadata and referenced package compiler options from
 TypeScript project references, workspace
 package metadata from root `workspaces`, package-root anchored module roles,
 module layers, module line counts, owner branches, owner dependencies, package
-entry owners, shadowed/orphaned source-shape counters, and import edges.
+entry owners, parser-native public API/data/control-flow facts,
+shadowed/orphaned source-shape counters, and import edges.
 Parser-visible package `bin` owners feed the `entrypoint` module role.
 Parser-visible `index.*`, `main.*`, config, and test file roles are matched by
 explicit module suffix lists, not dynamic regular-expression construction.
@@ -74,6 +75,12 @@ Semantic diagnostics are a parser-owned fact from TypeScript's native
 `Program`; rule packs may surface them as advice, including stable codes such
 as `TS2322` and native related spans, but they must not call TypeScript parser
 APIs directly.
+Public API shape, exported primitive data fields, and public function
+control-flow shape are also parser-owned native syntax facts. M9 projects those
+facts into the reasoning tree and enables only low-noise public API and
+algorithm-shape advice. Exported primitive data-field facts are available for
+future policies and downstream tools, but they do not create a default style or
+DTO gate.
 
 The reasoning tree consumes parser-owned import resolution and diagnostic facts,
 including source syntax, TypeScript semantic, `tsconfig`, and package JSON
@@ -185,9 +192,10 @@ reported as `TS-PROJ-R004`/`TS-PROJ-R005` advice from parser-owned
 compiler-option facts, not package-manager or style policy. Modularity findings
 are `TS-MOD-*` ownership advice over the parser-owned reasoning tree, and test
 layout findings are `TS-TEST-*` advice over parser-owned module roles and
-configured test roots. Future `TS-MOD-*`, `TS-TEST-*`, and
-`TS-AGENT-*` rules should remain non-blocking unless a caller explicitly
-promotes them.
+configured test roots. M9 `TS-AGENT-R004` through `TS-AGENT-R008` surface
+parser-native public API and algorithm-shape advice as `info`. Future
+`TS-MOD-*`, `TS-TEST-*`, and `TS-AGENT-*` rules should remain non-blocking
+unless a caller explicitly promotes them.
 
 ## Non-Goals
 
@@ -201,3 +209,6 @@ and writes caller-requested JSON artifacts only. Running external skills and
 managing long-lived verification receipts remain future work. Dependency facts
 and package metadata stay orientation inputs unless a later project-owned
 policy explicitly promotes them.
+M9 also does not add a broad TypeScript style gate. It imports Rust's
+parser-native agent-policy idea only where TypeScript-native syntax facts can
+produce low-noise repair advice.
