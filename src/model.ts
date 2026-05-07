@@ -84,6 +84,52 @@ export interface TypeScriptExportFact {
   readonly location: SourceLocation;
 }
 
+export interface TypeScriptPublicFunctionParamFact {
+  readonly functionName: string;
+  readonly functionLine: number;
+  readonly paramName: string;
+  readonly typeText?: string;
+  readonly primitiveContractType?: string;
+  readonly flagContractType?: string;
+  readonly location: SourceLocation;
+  readonly sourceLine?: string;
+}
+
+export interface TypeScriptPublicTupleApiSurfaceFact {
+  readonly functionName: string;
+  readonly functionLine: number;
+  readonly surfaceName: string;
+  readonly typeText: string;
+  readonly elementContractTypes: readonly string[];
+  readonly location: SourceLocation;
+  readonly sourceLine?: string;
+}
+
+export interface TypeScriptPublicDataFieldFact {
+  readonly typeKind: "interface" | "type" | "class";
+  readonly typeName: string;
+  readonly typeLine: number;
+  readonly fieldName: string;
+  readonly typeText?: string;
+  readonly primitiveContractType?: string;
+  readonly flagContractType?: string;
+  readonly location: SourceLocation;
+  readonly sourceLine?: string;
+}
+
+export interface TypeScriptPublicFunctionControlFlowFact {
+  readonly functionName: string;
+  readonly functionLine: number;
+  readonly lineSpan: number;
+  readonly statementCount: number;
+  readonly branchCount: number;
+  readonly loopCount: number;
+  readonly maxNestingDepth: number;
+  readonly maxBlockStatementCount: number;
+  readonly location: SourceLocation;
+  readonly sourceLine?: string;
+}
+
 export interface TypeScriptNativeDiagnosticRelatedInformation {
   readonly code: number;
   readonly source?: string;
@@ -109,6 +155,10 @@ export interface TypeScriptModuleReport {
   readonly imports: readonly TypeScriptImportFact[];
   readonly importResolutions: readonly TypeScriptNativeImportResolutionFact[];
   readonly exports: readonly TypeScriptExportFact[];
+  readonly publicFunctionParams: readonly TypeScriptPublicFunctionParamFact[];
+  readonly publicTupleApiSurfaces: readonly TypeScriptPublicTupleApiSurfaceFact[];
+  readonly publicDataFields: readonly TypeScriptPublicDataFieldFact[];
+  readonly publicFunctionControlFlows: readonly TypeScriptPublicFunctionControlFlowFact[];
 }
 
 export interface TypeScriptPathAliasFact {
@@ -275,6 +325,10 @@ export interface TypeScriptReasoningModule {
   readonly exportNames: readonly string[];
   readonly typeOnlyExportNames: readonly string[];
   readonly importSpecifiers: readonly string[];
+  readonly publicFunctionParams: readonly TypeScriptPublicFunctionParamFact[];
+  readonly publicTupleApiSurfaces: readonly TypeScriptPublicTupleApiSurfaceFact[];
+  readonly publicDataFields: readonly TypeScriptPublicDataFieldFact[];
+  readonly publicFunctionControlFlows: readonly TypeScriptPublicFunctionControlFlowFact[];
 }
 
 export interface TypeScriptReasoningDiagnosticFact {

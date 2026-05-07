@@ -41,7 +41,16 @@ test("rule catalog keeps deterministic pack order and agent advice severity", ()
   );
   assert.deepEqual(
     typeScriptAgentPolicyRules().map((rule) => `${rule.ruleId}:${rule.severity}`),
-    ["TS-AGENT-R001:info", "TS-AGENT-R002:info", "TS-AGENT-R003:info"],
+    [
+      "TS-AGENT-R001:info",
+      "TS-AGENT-R002:info",
+      "TS-AGENT-R003:info",
+      "TS-AGENT-R004:info",
+      "TS-AGENT-R005:info",
+      "TS-AGENT-R006:info",
+      "TS-AGENT-R007:info",
+      "TS-AGENT-R008:info",
+    ],
   );
 });
 
@@ -71,7 +80,16 @@ test("agent policy reports unresolved project imports without blocking", () => {
   assert.equal(isTypeScriptHarnessClean(report), true);
   assert.deepEqual(
     typeScriptAgentPolicyRules().map((rule) => rule.ruleId),
-    ["TS-AGENT-R001", "TS-AGENT-R002", "TS-AGENT-R003"],
+    [
+      "TS-AGENT-R001",
+      "TS-AGENT-R002",
+      "TS-AGENT-R003",
+      "TS-AGENT-R004",
+      "TS-AGENT-R005",
+      "TS-AGENT-R006",
+      "TS-AGENT-R007",
+      "TS-AGENT-R008",
+    ],
   );
   assert.deepEqual(
     report.findings
@@ -146,4 +164,79 @@ test("agent policy reports multi-owner facades without intent docs", () => {
     ["TS-AGENT-R003"],
   );
   assert.match(rendered, /Facade re-exports 2 owners without a local intent doc/u);
+});
+
+test("agent policy reports parser-native public API shape advice without blocking", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-api-shape-agent-"));
+  fs.mkdirSync(path.join(root, "src"));
+  fs.writeFileSync(path.join(root, "tsconfig.json"), JSON.stringify({ include: ["src/**/*.ts"] }));
+  fs.writeFileSync(
+    path.join(root, "src", "api.ts"),
+    [
+      "export function loadOwner(",
+      "  ownerId: string,",
+      "  includeDrafts: boolean,",
+      "  forceRefresh: boolean,",
+      "  region: string,",
+      "  timeoutMs: number,",
+      "  traceId: string",
+      "): [string, number] {",
+      "  return [ownerId, timeoutMs];",
+      "}",
+    ].join("\n"),
+  );
+
+  const report = runTypeScriptProjectHarness(root);
+  const rendered = renderTypeScriptProjectHarness(report);
+
+  assert.equal(isTypeScriptHarnessClean(report), true);
+  assert.deepEqual(
+    report.findings.map((finding) => finding.ruleId),
+    ["TS-AGENT-R004", "TS-AGENT-R005", "TS-AGENT-R006"],
+  );
+  assert.match(rendered, /multiple flag parameters/u);
+  assert.match(rendered, /exposes 6 positional parameters/u);
+  assert.match(rendered, /anonymous tuple with primitive elements: string, number/u);
+});
+
+test("agent policy reports parser-native algorithm shape advice without blocking", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-algorithm-agent-"));
+  fs.mkdirSync(path.join(root, "src"));
+  fs.writeFileSync(path.join(root, "tsconfig.json"), JSON.stringify({ include: ["src/**/*.ts"] }));
+  fs.writeFileSync(
+    path.join(root, "src", "algorithm.ts"),
+    [
+      "export function nestedAlgorithm(value: number): number {",
+      "  if (value > 0) {",
+      "    if (value > 1) {",
+      "      if (value > 2) {",
+      "        if (value > 3) {",
+      "          if (value > 4) {",
+      "            return value;",
+      "          }",
+      "        }",
+      "      }",
+      "    }",
+      "  }",
+      "  return 0;",
+      "}",
+      "export function broadLinearAlgorithm(value: number): number {",
+      ...Array.from({ length: 92 }, (_, index) =>
+        index < 30 ? `  const step${index} = value + ${index};` : "  void value;",
+      ),
+      "  return step29;",
+      "}",
+    ].join("\n"),
+  );
+
+  const report = runTypeScriptProjectHarness(root);
+  const rendered = renderTypeScriptProjectHarness(report);
+
+  assert.equal(isTypeScriptHarnessClean(report), true);
+  assert.deepEqual(
+    report.findings.map((finding) => finding.ruleId),
+    ["TS-AGENT-R007", "TS-AGENT-R008"],
+  );
+  assert.match(rendered, /hides algorithm shape/u);
+  assert.match(rendered, /broadLinearAlgorithm/u);
 });

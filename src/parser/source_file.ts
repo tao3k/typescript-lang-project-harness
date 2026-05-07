@@ -15,6 +15,7 @@ import {
   nativeDiagnosticFromTsDiagnostic,
   parseDiagnosticsForSourceFile,
 } from "./diagnostics.js";
+import { collectTypeScriptNativeSyntaxFacts } from "./native_syntax/index.js";
 
 export function parseTypeScriptSourceFile(filePathInput: string): TypeScriptModuleReport {
   const filePath = path.resolve(filePathInput);
@@ -38,6 +39,7 @@ export function moduleReportFromSourceFile(
   semanticDiagnostics: readonly TypeScriptNativeDiagnostic[],
   importResolutions: readonly TypeScriptNativeImportResolutionFact[],
 ): TypeScriptModuleReport {
+  const nativeSyntaxFacts = collectTypeScriptNativeSyntaxFacts(sourceFile);
   return {
     path: path.resolve(sourceFile.fileName),
     isValid: diagnostics.length === 0,
@@ -50,6 +52,10 @@ export function moduleReportFromSourceFile(
     imports: collectImportFacts(sourceFile),
     importResolutions,
     exports: collectExportFacts(sourceFile),
+    publicFunctionParams: nativeSyntaxFacts.publicFunctionParams,
+    publicTupleApiSurfaces: nativeSyntaxFacts.publicTupleApiSurfaces,
+    publicDataFields: nativeSyntaxFacts.publicDataFields,
+    publicFunctionControlFlows: nativeSyntaxFacts.publicFunctionControlFlows,
   };
 }
 

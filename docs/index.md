@@ -32,6 +32,9 @@ entrypoint into a catch-all reference page.
   stacked milestone for report writing, performance indexes, receipt metadata,
   waiver completeness, disabled task kinds, and dependency-signal profile
   inference.
+- [Parser-Native Agent Policy M9 Plan](02_plans/207_parser_native_agent_policy_m9_plan.md):
+  stacked milestone for parser-native public API/data/control-flow facts and
+  low-noise TypeScript agent policy advice.
 
 ## 03_features: Functional Ledger
 

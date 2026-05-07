@@ -91,6 +91,19 @@ them.
   TypeScript owners or documented external artifacts.
 - `TS-AGENT-R003`: facade `index.*` modules that re-export multiple owners
   should include a local intent doc.
+- `TS-AGENT-R004`: public functions should avoid multiple boolean mode
+  parameters when a named options object or discriminated union would preserve
+  agent-visible intent.
+- `TS-AGENT-R005`: public functions should avoid broad positional parameter
+  surfaces when a named request/options object would preserve call semantics.
+- `TS-AGENT-R006`: public tuple parameters and return values that bundle
+  primitive semantic values should use named object, tuple alias, or domain
+  types.
+- `TS-AGENT-R007`: public functions with deeply nested or branch-heavy
+  algorithm shape should expose guard clauses, discriminated dispatch, or small
+  named steps.
+- `TS-AGENT-R008`: broad linear public functions should split algorithm
+  responsibilities into small named helpers or pipeline steps.
 
 ## Reasoning Tree Policy
 
@@ -112,6 +125,10 @@ package-manager policy.
 Package-name dependency rows include whether the package owner came from a
 TypeScript project reference or a workspace package fact, so agents can edit the
 right owner boundary without guessing.
+M9 also carries parser-native public API/data/control-flow facts in each
+reasoning module. Active agent policy uses those facts for public API and
+algorithm-shape repair hints only. Exported primitive data-field facts are
+available as facts but do not create a default data-shape finding in M9.
 When TypeScript selects JavaScript through `allowJs`, parser-visible `.js`,
 `.jsx`, `.mjs`, and `.cjs` files participate in the same module-role policy as
 TypeScript files.
@@ -171,8 +188,9 @@ status, top-of-file intent docs, granular type-only import/export facts,
 package entry metadata, package metadata diagnostics and package metadata source
 locations for root, project-reference, and workspace packages, compiler-option
 facts, effective module resolution, referenced package compiler-option facts,
-module line counts, package-root anchored module layers, and project/module-level
-diagnostic facts consumed by the reasoning tree. The reasoning layer owns
+module line counts, package-root anchored module layers, parser-native public
+API/data/control-flow facts, and project/module-level diagnostic facts consumed
+by the reasoning tree. The reasoning layer owns
 source-shape projections such as shadowed owner namespaces and orphaned source
 files after native parser facts and TypeScript import resolution are available.
 The harness layer
