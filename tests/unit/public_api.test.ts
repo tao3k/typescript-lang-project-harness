@@ -175,7 +175,7 @@ type PublicModelContract = readonly [
 
 const publicModelContract: PublicModelContract | undefined = undefined;
 
-test("public facade exposes the stable M10 runtime surface", () => {
+test("public facade exposes the stable M11 runtime surface", () => {
   assert.deepEqual(Object.keys(api).sort(), [
     "DEFAULT_IGNORED_DIR_NAMES",
     "TypeScriptVerificationReportWriteError",

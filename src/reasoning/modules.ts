@@ -108,7 +108,10 @@ function moduleLayer(
   if (relativePath === "src/render.ts") {
     return "render";
   }
-  if (relativePath === "src/model.ts") {
+  if (
+    relativePath === "src/model.ts" ||
+    (relativePath.startsWith(`src${path.sep}`) && path.basename(relativePath) === "model.ts")
+  ) {
     return "model";
   }
   if (relativePath.startsWith(`src${path.sep}`)) {

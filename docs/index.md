@@ -38,6 +38,8 @@ entrypoint into a catch-all reference page.
 - [Agent Advice Test Gate M10 Plan](02_plans/208_agent_advice_test_gate_m10_plan.md):
   stacked milestone for surfacing visible agent advice through an explicit
   test-gate assertion without changing default CLI blocking semantics.
+- [Public Data Shape Agent Advice M11 Plan](02_plans/209_public_data_shape_agent_advice_m11_plan.md):
+  stacked milestone for conservative parser-native public data-shape advice.
 
 ## 03_features: Functional Ledger
 

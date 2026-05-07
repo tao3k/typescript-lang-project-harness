@@ -141,7 +141,7 @@ empty child-edge placeholders.
 
 ## Public API Contract
 
-The package root is the supported M10 import surface. Tests in
+The package root is the supported M11 import surface. Tests in
 `tests/unit/public_api.test.ts` lock the runtime facade, type exports, and public
 agent snapshot behavior. Do not export internal reasoning builders, rule-pack
 evaluators, or verification internals unless they become an intentional library

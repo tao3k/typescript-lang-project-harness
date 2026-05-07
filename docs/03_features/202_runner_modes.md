@@ -122,7 +122,7 @@ findings.
 
 ## Public Facade
 
-Consumers should import from the package root. The root facade exposes the M10
+Consumers should import from the package root. The root facade exposes the M11
 contract: parser entrypoints, project/explicit runners, project snapshot
 helpers, assertion helpers, compact/JSON/reasoning renderers, rule catalog
 functions, policy config helpers, verification profile-index builders/renderers,

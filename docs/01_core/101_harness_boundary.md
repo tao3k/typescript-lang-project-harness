@@ -193,7 +193,9 @@ compiler-option facts, not package-manager or style policy. Modularity findings
 are `TS-MOD-*` ownership advice over the parser-owned reasoning tree, and test
 layout findings are `TS-TEST-*` advice over parser-owned module roles and
 configured test roots. M9 `TS-AGENT-R004` through `TS-AGENT-R008` surface
-parser-native public API and algorithm-shape advice as `info`. Future
+parser-native public API and algorithm-shape advice as `info`, and M11
+`TS-AGENT-R009` surfaces conservative public data-shape advice from the same
+parser-native fact chain. Future
 `TS-MOD-*`, `TS-TEST-*`, and `TS-AGENT-*` rules should remain non-blocking
 unless a caller explicitly promotes them.
 
