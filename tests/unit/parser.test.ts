@@ -368,6 +368,64 @@ test("parser extracts native public API and control-flow facts", () => {
   );
 });
 
+test("parser marks Effect runtime calls inside React Query callbacks", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-parser-react-query-"));
+  const sourcePath = path.join(root, "component.tsx");
+  fs.writeFileSync(
+    sourcePath,
+    [
+      "declare namespace Effect {",
+      "  export interface Effect<A, E = never, R = never> {}",
+      "  export function runPromise<A>(program: Effect<A>): Promise<A>;",
+      "}",
+      "declare const ownerEffect: Effect.Effect<string, Error>;",
+      "declare function useQuery(options: {",
+      "  readonly queryKey: readonly string[];",
+      "  readonly queryFn: () => Promise<string>;",
+      "}): unknown;",
+      "declare function useMutation(options: {",
+      "  readonly mutationFn: () => Promise<string>;",
+      "}): unknown;",
+      "export function OwnerPanel() {",
+      "  const outside = Effect.runPromise(ownerEffect);",
+      "  useQuery({",
+      "    queryKey: ['owner'],",
+      "    queryFn: () => Effect.runPromise(ownerEffect),",
+      "  });",
+      "  useMutation({",
+      "    mutationFn() {",
+      "      return Effect.runPromise(ownerEffect);",
+      "    },",
+      "  });",
+      "  return outside;",
+      "}",
+    ].join("\n"),
+  );
+
+  const report = parseTypeScriptSourceFile(sourcePath);
+
+  assert.deepEqual(
+    report.effectRuntimeCalls.map((call) => ({
+      callee: call.callee,
+      kind: call.callKind,
+      boundary: call.runtimeBoundaryKind,
+    })),
+    [
+      { callee: "Effect.runPromise", kind: "default-runtime", boundary: undefined },
+      {
+        callee: "Effect.runPromise",
+        kind: "default-runtime",
+        boundary: "react-query-callback",
+      },
+      {
+        callee: "Effect.runPromise",
+        kind: "default-runtime",
+        boundary: "react-query-callback",
+      },
+    ],
+  );
+});
+
 test("parser reports TypeScript syntax diagnostics", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-parser-bad-"));
   const sourcePath = path.join(root, "bad.ts");

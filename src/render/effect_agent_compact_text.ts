@@ -41,12 +41,12 @@ export function effectAdviceFixSteps(
         'add `import { Effect } from "effect"` where the target module needs Effect types or constructors',
         "change public async/Promise domain API signatures to return `Effect.Effect<Success, DomainError, Requirements>`",
         "replace rejecting async work with `Effect.tryPromise({ try: () => promise, catch: (cause) => new DomainError({ cause }) })`",
-        "keep `Effect.run*` only in parser-owned entrypoints, CLI handlers, or runtime integration modules",
+        "keep `Effect.run*` only in parser-owned entrypoints, CLI handlers, React Query callbacks, or runtime integration modules",
       ];
     case "TS-EXT-EFFECT-R003":
       return [
         "move `Effect.run*` or `Runtime.run*` out of source modules",
-        "return Effect descriptions from source owners and execute them in entrypoints/adapters",
+        "return Effect descriptions from source owners and execute them in entrypoints, adapters, or parser-visible React Query callbacks",
       ];
     case "TS-EXT-EFFECT-R004":
       return [

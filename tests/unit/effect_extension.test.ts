@@ -263,6 +263,57 @@ test("Effect runtime execution advice stays out of entrypoints", () => {
   );
 });
 
+test("Effect runtime execution advice treats React Query callbacks as runtime boundaries", () => {
+  const root = effectProject("react-query-runtime-boundary", {
+    packageJson: {
+      dependencies: { effect: "^3.0.0" },
+    },
+    source: {
+      "component.ts": [
+        'import { Effect } from "effect";',
+        "declare const program: Effect.Effect<string, Error>;",
+        "declare function useQuery(options: {",
+        "  readonly queryKey: readonly string[];",
+        "  readonly queryFn: () => Promise<string>;",
+        "}): unknown;",
+        "declare function useMutation(options: {",
+        "  readonly mutationFn: () => Promise<string>;",
+        "}): unknown;",
+        "export function OwnerPanel() {",
+        "  const direct = Effect.runPromise(program);",
+        "  useQuery({",
+        "    queryKey: ['owner'],",
+        "    queryFn: () => Effect.runPromise(program),",
+        "  });",
+        "  useMutation({",
+        "    mutationFn() {",
+        "      return Effect.runPromise(program);",
+        "    },",
+        "  });",
+        "  return direct;",
+        "}",
+      ],
+    },
+  });
+
+  const report = runTypeScriptProjectHarness(root);
+
+  assert.equal(isTypeScriptHarnessClean(report), true);
+  assert.deepEqual(
+    report.findings
+      .filter((finding) => finding.ruleId.startsWith("TS-EXT-EFFECT"))
+      .map((finding) =>
+        [
+          finding.ruleId,
+          finding.severity,
+          path.relative(root, finding.location.path ?? ""),
+          finding.labels.runtime_calls ?? "",
+        ].join(":"),
+      ),
+    ["TS-EXT-EFFECT-R003:info:src/component.ts:Effect.runPromise"],
+  );
+});
+
 test("Effect policy treats package script TypeScript targets as entrypoint adapters", () => {
   const root = effectProject("script-entrypoint", {
     packageJson: {

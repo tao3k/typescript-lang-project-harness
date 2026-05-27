@@ -22,6 +22,7 @@ export type {
   TypeScriptEffectProductionBoundaryMissingCapability,
   TypeScriptEffectProductionBoundarySignalFact,
   TypeScriptEffectProductionBoundarySignalKind,
+  TypeScriptEffectRuntimeBoundaryKind,
   TypeScriptEffectRuntimeCallFact,
   TypeScriptEffectRuntimeCallKind,
   TypeScriptEffectSchemaBoundarySignalFact,

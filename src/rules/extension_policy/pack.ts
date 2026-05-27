@@ -216,7 +216,10 @@ function evaluateEffectRuntimeBoundaryAdvice(
 function effectRuntimeBoundaryAdviceForModule(
   moduleReport: TypeScriptReasoningModule,
 ): TypeScriptHarnessFinding[] {
-  const first = moduleReport.effectRuntimeCalls[0];
+  const disallowedRuntimeCalls = moduleReport.effectRuntimeCalls.filter(
+    (call) => !isAllowedEffectRuntimeBoundary(call.runtimeBoundaryKind),
+  );
+  const first = disallowedRuntimeCalls[0];
   if (first === undefined) {
     return [];
   }
@@ -227,7 +230,7 @@ function effectRuntimeBoundaryAdviceForModule(
       severity: TS_EXT_EFFECT_R003.severity,
       title: TS_EXT_EFFECT_R003.title,
       summary: `Effect runtime execution appears inside a ${moduleReport.role} module: ${renderRuntimeCallNames(
-        moduleReport.effectRuntimeCalls,
+        disallowedRuntimeCalls,
       )}.`,
       location: first.location,
       requirement: TS_EXT_EFFECT_R003.requirement,
@@ -236,10 +239,16 @@ function effectRuntimeBoundaryAdviceForModule(
       labels: {
         ...TS_EXT_EFFECT_R003.labels,
         module_role: moduleReport.role,
-        runtime_calls: moduleReport.effectRuntimeCalls.map((call) => call.callee).join(","),
+        runtime_calls: disallowedRuntimeCalls.map((call) => call.callee).join(","),
       },
     },
   ];
+}
+
+function isAllowedEffectRuntimeBoundary(
+  runtimeBoundaryKind: TypeScriptEffectRuntimeCallFact["runtimeBoundaryKind"],
+): boolean {
+  return runtimeBoundaryKind === "react-query-callback";
 }
 
 function evaluateEffectServiceRequirementAdvice(
