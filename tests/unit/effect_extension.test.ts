@@ -46,6 +46,7 @@ test("Effect dependency activates extension snapshot and async domain advice", (
       "TS-EXT-EFFECT-R007:info",
       "TS-EXT-EFFECT-R008:info",
       "TS-EXT-EFFECT-R009:info",
+      "TS-EXT-EFFECT-R010:info",
     ],
   );
   assert.deepEqual(
@@ -508,7 +509,7 @@ test("Effect.promise rejection-capable interop receives tryPromise advice", () =
       "    throw new Error('boom');",
       "  }",
       "  return 'owner';",
-      "});",
+      "}).pipe(Effect.withSpan('owner.load'), Effect.timeout('1 second'));",
     ],
   });
 
@@ -663,6 +664,56 @@ test("Effect JSON boundary advice asks agents to decode with Schema", () => {
   assert.match(advice, /Schema\.parseJson/u);
 });
 
+test("Effect production boundary advice asks agents for observability and resilience", () => {
+  const root = effectProject("production-boundary", {
+    packageJson: {
+      dependencies: { effect: "^3.0.0" },
+    },
+    source: {
+      "production-boundary.ts": [
+        'import { Effect, Metric, Schedule } from "effect";',
+        "declare const httpDuration: Metric.Metric<number>;",
+        "declare function requestOwner(id: string): Promise<string>;",
+        "export const loadOwnerRaw = (id: string) =>",
+        "  Effect.tryPromise({",
+        "    try: () => requestOwner(id),",
+        "    catch: (cause) => new Error('owner request failed', { cause }),",
+        "  });",
+        "export const loadOwnerWithPolicy = (id: string) =>",
+        "  Metric.trackDuration(",
+        "    Effect.tryPromise({",
+        "      try: () => requestOwner(id),",
+        "      catch: (cause) => new Error('owner request failed', { cause }),",
+        "    }).pipe(",
+        "      Effect.withSpan('owner.load'),",
+        "      Effect.retry(Schedule.exponential('100 millis')),",
+        "      Effect.timeout('2 seconds'),",
+        "    ),",
+        "    httpDuration,",
+        "  );",
+      ],
+    },
+  });
+
+  const report = runTypeScriptProjectHarness(root);
+  const finding = report.findings.find((candidate) => candidate.ruleId === "TS-EXT-EFFECT-R010");
+  const advice = renderTypeScriptProjectHarnessAgentCompactText(report, { findings: "all" });
+
+  assert.equal(isTypeScriptHarnessClean(report), true);
+  assert.equal(finding?.severity, "info");
+  assert.equal(finding?.labels.missing_capabilities, "observability,resilience");
+  assert.match(finding?.labels.production_boundary ?? "", /loadOwnerRaw/u);
+  assert.doesNotMatch(finding?.labels.production_boundary ?? "", /loadOwnerWithPolicy/u);
+  assert.match(
+    advice,
+    /\[TS-EXT-EFFECT-R010\] info x1: Add production policy to Effect external IO boundaries/u,
+  );
+  assert.match(advice, /Effect\.withSpan/u);
+  assert.match(advice, /Effect\.retry\(Schedule\.exponential/u);
+  assert.match(advice, /Effect\.timeout/u);
+  assert.match(advice, /Metric\.trackDuration/u);
+});
+
 function effectProject(
   name: string,
   options: {
@@ -700,6 +751,7 @@ function effectProject(
       "      readonly _success?: Success;",
       "      readonly _failure?: Failure;",
       "      readonly _requirements?: Requirements;",
+      "      readonly pipe: <Result>(...fns: ReadonlyArray<(effect: Effect<Success, Failure, Requirements>) => Result>) => Result;",
       "    };",
       "    export function runPromise<Success>(effect: Effect<Success, unknown, unknown>): Promise<Success>;",
       "    export function promise<Success>(thunk: () => Promise<Success>): Effect<Success, unknown, never>;",
@@ -707,6 +759,27 @@ function effectProject(
       "      readonly try: () => Promise<Success>;",
       "      readonly catch: (cause: unknown) => Failure;",
       "    }): Effect<Success, Failure, never>;",
+      "    export function retry<Success, Failure, Requirements>(",
+      "      effect: Effect<Success, Failure, Requirements>,",
+      "      policy: unknown,",
+      "    ): Effect<Success, Failure, Requirements>;",
+      "    export function retry(policy: unknown): <Success, Failure, Requirements>(",
+      "      effect: Effect<Success, Failure, Requirements>,",
+      "    ) => Effect<Success, Failure, Requirements>;",
+      "    export function timeout<Success, Failure, Requirements>(",
+      "      effect: Effect<Success, Failure, Requirements>,",
+      "      duration: string,",
+      "    ): Effect<Success, Failure, Requirements>;",
+      "    export function timeout(duration: string): <Success, Failure, Requirements>(",
+      "      effect: Effect<Success, Failure, Requirements>,",
+      "    ) => Effect<Success, Failure, Requirements>;",
+      "    export function withSpan<Success, Failure, Requirements>(",
+      "      effect: Effect<Success, Failure, Requirements>,",
+      "      name: string,",
+      "    ): Effect<Success, Failure, Requirements>;",
+      "    export function withSpan(name: string): <Success, Failure, Requirements>(",
+      "      effect: Effect<Success, Failure, Requirements>,",
+      "    ) => Effect<Success, Failure, Requirements>;",
       "    export function acquireRelease<Success, Failure, Requirements>(",
       "      acquire: Effect<Success, Failure, Requirements>,",
       "      release: (value: Success) => Effect<void, never, never>,",
@@ -730,6 +803,16 @@ function effectProject(
       "  }",
       "  export namespace Runtime {",
       "    export function runPromise<Success>(effect: Effect.Effect<Success, unknown, unknown>): Promise<Success>;",
+      "  }",
+      "  export namespace Metric {",
+      "    export interface Metric<A> { readonly _A?: A }",
+      "    export function trackDuration<Success, Failure, Requirements>(",
+      "      effect: Effect.Effect<Success, Failure, Requirements>,",
+      "      metric: Metric<number>,",
+      "    ): Effect.Effect<Success, Failure, Requirements>;",
+      "  }",
+      "  export namespace Schedule {",
+      "    export function exponential(duration: string): unknown;",
       "  }",
       "  export namespace Schema {",
       "    export interface Schema<A> { readonly _A?: A }",

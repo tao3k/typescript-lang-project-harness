@@ -20,6 +20,8 @@ export function effectAgentTaskTitle(finding: TypeScriptHarnessFinding): string 
       return "Declare Effect concurrency and failure policy for async batches";
     case "TS-EXT-EFFECT-R009":
       return "Decode JSON boundaries with Effect Schema";
+    case "TS-EXT-EFFECT-R010":
+      return "Add production policy to Effect external IO boundaries";
     default:
       return undefined;
   }
@@ -79,6 +81,13 @@ export function effectAdviceFixSteps(
         "decode `response.json()` or `JSON.parse` output with `Schema.decodeUnknown`, `Schema.decodeUnknownEither`, or `Schema.parseJson`",
         "map parse failures into the module domain error instead of returning raw `unknown` payloads",
       ];
+    case "TS-EXT-EFFECT-R010":
+      return [
+        'wrap external IO effects with `Effect.withSpan("domain.operation")` and add stable span/log attributes',
+        "add production resilience policy such as `Effect.timeout(...)`, `Effect.retry(Schedule.exponential(...))`, or `Effect.retryOrElse(...)`",
+        "record useful counters/durations with `Metric.counter`, `Metric.trackDuration`, or project metrics where this boundary is latency-sensitive",
+        "keep the policy at the public Effect boundary so downstream agents can see timeout, retry, and telemetry intent together",
+      ];
     default:
       return undefined;
   }
@@ -104,6 +113,8 @@ export function effectProblemText(finding: TypeScriptHarnessFinding): string | u
       return "async batch lacks explicit Effect concurrency and failure policy";
     case "TS-EXT-EFFECT-R009":
       return "public JSON boundary is parsed without Effect Schema validation";
+    case "TS-EXT-EFFECT-R010":
+      return "public external IO Effect lacks visible observability or resilience policy";
     default:
       return undefined;
   }
@@ -129,6 +140,8 @@ export function effectParserEvidenceText(finding: TypeScriptHarnessFinding): str
       return "native Promise combinators, await loops, and Effect collection calls";
     case "TS-EXT-EFFECT-R009":
       return "native JSON.parse/response.json calls + Schema decode evidence";
+    case "TS-EXT-EFFECT-R010":
+      return "native Effect Promise/async/fetch calls + withSpan/log/Metric/retry/timeout evidence";
     default:
       return undefined;
   }

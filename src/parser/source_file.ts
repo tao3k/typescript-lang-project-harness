@@ -64,6 +64,7 @@ export function moduleReportFromSourceFile(
     effectResourceScopeRisks: nativeSyntaxFacts.effectResourceScopeRisks,
     effectConcurrencySignals: nativeSyntaxFacts.effectConcurrencySignals,
     effectSchemaBoundarySignals: nativeSyntaxFacts.effectSchemaBoundarySignals,
+    effectProductionBoundarySignals: nativeSyntaxFacts.effectProductionBoundarySignals,
     effectServiceMethods: nativeSyntaxFacts.effectServiceMethods,
   };
 }

@@ -15,6 +15,7 @@ import {
   effectPolicySourceModules,
   sourceModules,
 } from "./effect_modules.js";
+import { evaluateEffectProductionBoundaryAdvice, TS_EXT_EFFECT_R010 } from "./effect_production.js";
 import { evaluateEffectSchemaBoundaryAdvice, TS_EXT_EFFECT_R009 } from "./effect_schema.js";
 
 export const TS_EXT_EFFECT_R001: TypeScriptHarnessRule = {
@@ -98,6 +99,7 @@ export function typeScriptExtensionPolicyRules(): readonly TypeScriptHarnessRule
     TS_EXT_EFFECT_R007,
     TS_EXT_EFFECT_R008,
     TS_EXT_EFFECT_R009,
+    TS_EXT_EFFECT_R010,
   ];
 }
 
@@ -114,6 +116,7 @@ export function evaluateExtensionPolicyRules(
     ...evaluateEffectResourceScopeAdvice(reasoningTree),
     ...evaluateEffectConcurrencyAdvice(reasoningTree),
     ...evaluateEffectSchemaBoundaryAdvice(reasoningTree),
+    ...evaluateEffectProductionBoundaryAdvice(reasoningTree),
   ].sort((left, right) => findingSortKey(left).localeCompare(findingSortKey(right)));
 }
 

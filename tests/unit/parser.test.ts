@@ -124,6 +124,8 @@ test("parser extracts native public API and control-flow facts", () => {
       "  export function acquireRelease<A>(acquire: Effect<A>, release: (a: A) => Effect<void>): Effect<A>;",
       "  export function scoped<A>(program: Effect<A>): Effect<A>;",
       "  export function all<A>(programs: Iterable<Effect<A>>, options?: { concurrency?: number }): Effect<A[]>;",
+      "  export function withSpan<A>(name: string): (program: Effect<A>) => Effect<A>;",
+      "  export function timeout<A>(duration: string): (program: Effect<A>) => Effect<A>;",
       "  export function Tag(name: string): any;",
       "}",
       "export interface OwnerService {",
@@ -149,6 +151,13 @@ test("parser extracts native public API and control-flow facts", () => {
       "  Effect.acquireRelease(acquireOwner, releaseOwner)",
       ");",
       "export const riskyOwnerEffect = Effect.promise(async () => 'owner');",
+      "export const productionOwnerEffect = Effect.tryPromise({",
+      "  try: async () => 'owner',",
+      "  catch: (cause) => new Error('boom', { cause })",
+      "}).pipe(",
+      "  Effect.withSpan('owner.production'),",
+      "  Effect.timeout('1 second')",
+      ");",
       "export async function loadOwners(ids: string[]): Promise<string[]> {",
       "  return Promise.all(ids.map(() => fetchOwner()));",
       "}",
@@ -308,6 +317,15 @@ test("parser extracts native public API and control-flow facts", () => {
       "loadOwnersSequential:sequential-await-loop:for-of-await",
       "loadOwnerEffects:effect-combinator-missing-concurrency:Effect.all",
     ],
+  );
+  assert.deepEqual(
+    report.effectProductionBoundarySignals.map(
+      (signal) =>
+        `${signal.ownerName}:${signal.signalKind}:${signal.callee}:${signal.missingCapabilities.join(
+          "+",
+        )}`,
+    ),
+    ["riskyOwnerEffect:effect-promise-interop:Effect.promise:observability+resilience"],
   );
   assert.deepEqual(
     report.effectServiceMethods.map((method) => ({

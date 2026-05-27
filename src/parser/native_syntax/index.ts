@@ -2,6 +2,7 @@ import ts from "typescript";
 
 import type {
   TypeScriptEffectPromiseInteropRiskFact,
+  TypeScriptEffectProductionBoundarySignalFact,
   TypeScriptEffectResourceScopeRiskFact,
   TypeScriptEffectRuntimeCallFact,
   TypeScriptEffectSchemaBoundarySignalFact,
@@ -31,6 +32,7 @@ import {
 import { collectEffectConcurrencySignals } from "./effect_concurrency.js";
 import { collectEffectResourceScopeRisks } from "./effect_resources.js";
 import { collectEffectSchemaBoundarySignals } from "./effect_schema.js";
+import { collectEffectProductionBoundarySignals } from "./effect_production.js";
 
 export interface TypeScriptNativeSyntaxFacts {
   readonly publicFunctionParams: readonly TypeScriptPublicFunctionParamFact[];
@@ -45,6 +47,7 @@ export interface TypeScriptNativeSyntaxFacts {
   readonly effectResourceScopeRisks: readonly TypeScriptEffectResourceScopeRiskFact[];
   readonly effectConcurrencySignals: readonly TypeScriptEffectConcurrencySignalFact[];
   readonly effectSchemaBoundarySignals: readonly TypeScriptEffectSchemaBoundarySignalFact[];
+  readonly effectProductionBoundarySignals: readonly TypeScriptEffectProductionBoundarySignalFact[];
   readonly effectServiceMethods: readonly TypeScriptEffectServiceMethodFact[];
 }
 
@@ -64,6 +67,7 @@ export function collectTypeScriptNativeSyntaxFacts(
     effectResourceScopeRisks: collectEffectResourceScopeRisks(sourceFile),
     effectConcurrencySignals: collectEffectConcurrencySignals(sourceFile),
     effectSchemaBoundarySignals: collectEffectSchemaBoundarySignals(sourceFile),
+    effectProductionBoundarySignals: collectEffectProductionBoundarySignals(sourceFile),
     effectServiceMethods: collectEffectServiceMethods(sourceFile),
   };
 }

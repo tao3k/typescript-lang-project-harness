@@ -63,7 +63,7 @@ for advisory rules; it does not mutate catalog severity.
 `TS-SEM-*`, `TS-PROJ-R003`, `TS-PROJ-R004`, `TS-PROJ-R005`,
 `TS-PROJ-R006`, `TS-MOD-*`, `TS-TEST-*`, `TS-AGENT-*`, and
 `TS-EXT-EFFECT-R002` through
-`TS-EXT-EFFECT-R009` rules are `info` findings. They are rendered by default
+`TS-EXT-EFFECT-R010` rules are `info` findings. They are rendered by default
 for repair agents but do not fail assertions unless a caller promotes them or
 uses the agent test-gate helper `assertTypeScriptProjectHarnessAgentClean()`.
 The agent test-gate helper renders grouped compact advice text so large
@@ -181,6 +181,15 @@ projects keep a bounded first reading surface for agents.
   `Schema.is`, or `Schema.asserts` evidence. Compact advice points agents
   toward `Schema.decodeUnknown`, `Schema.decodeUnknownEither`, or
   `Schema.parseJson` plus typed domain parse errors.
+- `TS-EXT-EFFECT-R010`: when Effect projects construct public external IO
+  boundaries, the boundary should expose production observability and
+  resilience policy. Parser-native facts detect `Effect.tryPromise`,
+  `Effect.promise`, `Effect.async`, and `fetch` calls, then suppress the advice
+  when the same owner already shows both observability evidence
+  (`Effect.withSpan`, Effect logging/annotations, or `Metric.*`) and
+  resilience evidence (`Effect.retry*` or `Effect.timeout*`). Compact advice
+  points agents toward stable span names, log/span attributes, duration or
+  counter metrics, retries with `Schedule`, and timeouts.
 
 ## Reasoning Tree Policy
 
@@ -227,6 +236,10 @@ result as agent orientation/advice.
 M17 starts Effect capability-boundary coverage for Schema validation. The
 parser owns JSON-boundary and Schema-decode evidence; extension policy consumes
 only the reasoning-tree facts and keeps the result as low-noise agent advice.
+M18 adds Effect production-observability coverage for external IO boundaries.
+The parser owns interop/fetch and telemetry/resilience evidence; extension
+policy consumes only those facts and keeps the result as non-blocking repair
+guidance.
 When TypeScript selects JavaScript through `allowJs`, parser-visible `.js`,
 `.jsx`, `.mjs`, and `.cjs` files participate in the same module-role policy as
 TypeScript files.

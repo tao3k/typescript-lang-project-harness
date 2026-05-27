@@ -144,6 +144,24 @@ export interface TypeScriptEffectSchemaBoundarySignalFact {
   readonly sourceLine?: string;
 }
 
+export type TypeScriptEffectProductionBoundarySignalKind =
+  | "effect-async-interop"
+  | "effect-promise-interop"
+  | "effect-try-promise-interop"
+  | "fetch-call";
+
+export type TypeScriptEffectProductionBoundaryMissingCapability = "observability" | "resilience";
+
+export interface TypeScriptEffectProductionBoundarySignalFact {
+  readonly ownerName: string;
+  readonly ownerLine: number;
+  readonly signalKind: TypeScriptEffectProductionBoundarySignalKind;
+  readonly callee: string;
+  readonly missingCapabilities: readonly TypeScriptEffectProductionBoundaryMissingCapability[];
+  readonly location: SourceLocation;
+  readonly sourceLine?: string;
+}
+
 export type TypeScriptEffectServiceContainerKind = "interface" | "type" | "class" | "effect-tag";
 
 export interface TypeScriptEffectServiceMethodFact {
