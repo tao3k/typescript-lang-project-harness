@@ -153,7 +153,7 @@ findings. Project-scoped policy stays quiet unless a project scope is available.
 
 `renderTypeScriptReasoningTree()` turns a report into a compact agent snapshot.
 It follows the Rust harness agent snapshot shape: `Modules:`, `Extensions:`,
-`OwnerBranches:`, `OwnerDependencies:`, and `FindingGroups:`. It renders reasoning-tree
+`BuildTools:`, `OwnerBranches:`, `OwnerDependencies:`, and `FindingGroups:`. It renders reasoning-tree
 `ownerBranches` and `ownerDependencies` facts built from parser-owned module
 roles, source exports, import specifiers, TypeScript-native
 relative/path-alias/package/external import resolution, package-name import
@@ -204,10 +204,13 @@ replacement for `tsc`. Malformed `package.json` metadata is reported as
 project references, so the project harness can still produce a repair surface.
 Project-reference config shape and package-entry module-resolution shape are
 reported as `TS-PROJ-R004`/`TS-PROJ-R005` advice from parser-owned
-compiler-option facts, not package-manager or style policy. Modularity findings
-are `TS-MOD-*` ownership advice over the parser-owned reasoning tree, and test
-layout findings are `TS-TEST-*` advice over parser-owned module roles and
-configured test roots. M9 `TS-AGENT-R004` through `TS-AGENT-R008` surface
+compiler-option facts, not package-manager or style policy. Rspack build-tool
+visibility is reported as `TS-PROJ-R006` advice from parser-owned package
+dependency/script facts and config-file presence; it does not become a manifest
+dependency gate. Modularity findings are `TS-MOD-*` ownership advice over the
+parser-owned reasoning tree, and test layout findings are `TS-TEST-*` advice
+over parser-owned module roles and configured test roots. M9
+`TS-AGENT-R004` through `TS-AGENT-R008` surface
 parser-native public API and algorithm-shape advice as `info`, and M11
 `TS-AGENT-R009` surfaces conservative public data-shape advice from the same
 parser-native fact chain. M12 adds parser-owned public type alias and

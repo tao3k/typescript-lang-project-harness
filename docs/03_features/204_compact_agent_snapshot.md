@@ -24,9 +24,11 @@ The output uses the same section grammar as the Rust harness agent snapshot:
 
 ```text
 pkg <path>
-Modules: source=<n> roots=<n> branches=<n> deps=<n> shadowed=<n> orphaned=<n> paths=<n> refs=<n> workspaces=<n> package-owners=<n> extensions=<n> findings=<n>
+Modules: source=<n> roots=<n> branches=<n> deps=<n> shadowed=<n> orphaned=<n> paths=<n> refs=<n> workspaces=<n> package-owners=<n> extensions=<n> build-tools=<n> findings=<n>
 Extensions:
  - <extension> activation=<state> capabilities=<name,...> config=<source>
+BuildTools:
+ - <tool> capabilities=<name,...> packages=<name,...> configs=<file,...> scripts=<name,...>
 OwnerBranches:
  - <path> [<roles>] owner=<owner> imports=<resolution:count,...> exports=<names> -> <edge-kind:path,...>
 OwnerDependencies:
@@ -50,6 +52,10 @@ boilerplate is omitted.
   It is emitted only when the parser has a known extension fact. Capability
   names are compact labels for agent orientation, not an installed package
   inventory.
+- `BuildTools:` lists known parser-owned build-tool facts such as Rspack or
+  Rsbuild. It is emitted only when package dependencies, package scripts,
+  config files, or explicit harness config make that tool visible. It is not a
+  bundler audit and does not replace `tsc` or framework build checks.
 - `shadowed=` counts parser-visible TypeScript source owners that have more
   than one source shape for the same owner namespace, such as a file owner and
   an `index.*` directory owner, unless one shape explicitly re-exports the

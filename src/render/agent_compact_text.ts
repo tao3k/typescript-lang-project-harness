@@ -283,6 +283,8 @@ function agentTaskTitle(finding: TypeScriptHarnessFinding): string {
       return "Wrap rejection-capable Promise interop with Effect.tryPromise";
     case "TS-EXT-EFFECT-R007":
       return "Make Effect resource lifetime and Scope boundaries explicit";
+    case "TS-PROJ-R006":
+      return "Expose Rspack build surface through npm scripts";
     default:
       return finding.title;
   }
@@ -348,6 +350,12 @@ function adviceFixSteps(finding: TypeScriptHarnessFinding): readonly string[] {
         "make resource lifetime explicit with `Effect.scoped(Effect.acquireRelease(...))`",
         "or expose/document a `Scope` or `Layer` resource boundary",
       ];
+    case "TS-PROJ-R006":
+      return [
+        "add or update package scripts so `npm run build` or an equivalent script runs `rspack build`",
+        "keep `tsc --noEmit` in `npm run check` when the project still needs TypeScript type checking",
+        "if declaration output is required, keep a separate `tsc --emitDeclarationOnly` or `tsc` build step",
+      ];
     default:
       return ["open the target, apply the rule contract in source, and rerun harness"];
   }
@@ -377,6 +385,8 @@ function problemText(finding: TypeScriptHarnessFinding): string {
       return "Effect.promise wraps rejection-capable async interop without typed error mapping";
     case "TS-EXT-EFFECT-R007":
       return "Effect.acquireRelease resource lacks an explicit local Scope boundary";
+    case "TS-PROJ-R006":
+      return "Rspack is configured or installed but not exposed through package scripts";
     default:
       return finding.label;
   }
@@ -403,6 +413,8 @@ function adviceParserEvidenceText(finding: TypeScriptHarnessFinding): string {
     case "TS-AGENT-R011":
     case "TS-AGENT-R012":
       return "native exported TypeScript type/API facts";
+    case "TS-PROJ-R006":
+      return "package.json dependency/script facts + Rspack config files";
     default:
       return "";
   }

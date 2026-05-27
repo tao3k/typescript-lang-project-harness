@@ -54,8 +54,18 @@ const TS_PROJ_R005: TypeScriptHarnessRule = {
   labels: { surface: "project", parser: "tsconfig" },
 };
 
+const TS_PROJ_R006: TypeScriptHarnessRule = {
+  ruleId: "TS-PROJ-R006",
+  packId: "typescript.project_policy",
+  severity: "info",
+  title: "Rspack projects should expose npm build scripts",
+  requirement:
+    "When package.json or config files declare Rspack, the project should expose that build surface through package scripts so npm check/test and agents can run the same build path.",
+  labels: { surface: "project", parser: "package-json", build_tool: "rspack" },
+};
+
 export function typeScriptProjectPolicyRules(): readonly TypeScriptHarnessRule[] {
-  return [TS_PROJ_R001, TS_PROJ_R002, TS_PROJ_R003, TS_PROJ_R004, TS_PROJ_R005];
+  return [TS_PROJ_R001, TS_PROJ_R002, TS_PROJ_R003, TS_PROJ_R004, TS_PROJ_R005, TS_PROJ_R006];
 }
 
 export function evaluateProjectPolicyRules(
@@ -88,6 +98,7 @@ export function evaluateProjectPolicyRules(
       ),
     ...evaluateProjectReferenceConfigAdvice(reasoningTree),
     ...evaluatePackageEntryResolutionModeAdvice(reasoningTree),
+    ...evaluateRspackBuildSurfaceAdvice(reasoningTree),
   );
   return findings;
 }
@@ -172,4 +183,42 @@ function evaluatePackageEntryResolutionModeAdvice(
       labels: TS_PROJ_R005.labels,
     },
   ];
+}
+
+function evaluateRspackBuildSurfaceAdvice(
+  reasoningTree: TypeScriptReasoningTree,
+): TypeScriptHarnessFinding[] {
+  const rspack = reasoningTree.packageBuildTools.find((buildTool) => buildTool.name === "rspack");
+  if (rspack === undefined || rspack.scriptNames.length > 0) {
+    return [];
+  }
+  return [
+    {
+      ruleId: TS_PROJ_R006.ruleId,
+      packId: TS_PROJ_R006.packId,
+      severity: TS_PROJ_R006.severity,
+      title: TS_PROJ_R006.title,
+      summary: `Rspack is visible through ${rspackSignalSummary(rspack)}, but package.json scripts do not expose rspack build or serve.`,
+      location: rspack.location,
+      requirement: TS_PROJ_R006.requirement,
+      label: "expose Rspack through package scripts",
+      labels: {
+        ...TS_PROJ_R006.labels,
+        packages: rspack.packageNames.join(","),
+        configs: rspack.configFiles.join(","),
+        repair:
+          "add package scripts such as build=rspack build and keep tsc in check/test when type or declaration output is required",
+      },
+    },
+  ];
+}
+
+function rspackSignalSummary(
+  buildTool: TypeScriptReasoningTree["packageBuildTools"][number],
+): string {
+  const parts = [
+    buildTool.packageNames.length > 0 ? `packages ${buildTool.packageNames.join(",")}` : undefined,
+    buildTool.configFiles.length > 0 ? `configs ${buildTool.configFiles.join(",")}` : undefined,
+  ].filter((part): part is string => part !== undefined);
+  return parts.length === 0 ? "package.json harness config" : parts.join(" and ");
 }

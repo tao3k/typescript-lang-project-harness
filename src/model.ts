@@ -1,4 +1,12 @@
 import type {
+  TypeScriptPackageBuildToolConfigSource,
+  TypeScriptPackageBuildToolDependencySource,
+  TypeScriptPackageBuildToolFact,
+  TypeScriptPackageBuildToolName,
+  TypeScriptPackageBuildToolSignalFact,
+  TypeScriptPackageBuildToolSignalKind,
+} from "./model/build_tools.js";
+import type {
   TypeScriptPackageExtensionActivation,
   TypeScriptPackageExtensionConfigSource,
   TypeScriptPackageExtensionCoverage,
@@ -13,6 +21,14 @@ import type {
 } from "./model/module_facts.js";
 import type { TypeScriptVerificationPolicy } from "./verification/model.js";
 
+export type {
+  TypeScriptPackageBuildToolConfigSource,
+  TypeScriptPackageBuildToolDependencySource,
+  TypeScriptPackageBuildToolFact,
+  TypeScriptPackageBuildToolName,
+  TypeScriptPackageBuildToolSignalFact,
+  TypeScriptPackageBuildToolSignalKind,
+} from "./model/build_tools.js";
 export type {
   TypeScriptEffectErrorChannelKind,
   TypeScriptEffectRuntimeCallFact,
@@ -237,6 +253,7 @@ export interface PackageJsonFacts {
   readonly workspaces: readonly PackageJsonWorkspaceFact[];
   readonly workspacePackages: readonly TypeScriptWorkspacePackageFact[];
   readonly packageExtensions: readonly TypeScriptPackageExtensionFact[];
+  readonly packageBuildTools: readonly TypeScriptPackageBuildToolFact[];
   readonly scriptNames: readonly string[];
   readonly workspacePatterns: readonly string[];
   readonly diagnostics: readonly TypeScriptNativeDiagnostic[];
@@ -376,6 +393,7 @@ export interface TypeScriptReasoningTree {
   readonly packageScripts: readonly PackageJsonScriptFact[];
   readonly packageWorkspaces: readonly PackageJsonWorkspaceFact[];
   readonly packageExtensions: readonly TypeScriptPackageExtensionFact[];
+  readonly packageBuildTools: readonly TypeScriptPackageBuildToolFact[];
   readonly workspacePackages: readonly TypeScriptWorkspacePackageFact[];
   readonly workspacePatterns: readonly string[];
   readonly projectReferencePackages: readonly TypeScriptProjectReferencePackageFact[];

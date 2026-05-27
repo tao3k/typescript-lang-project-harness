@@ -50,6 +50,9 @@ entrypoint into a catch-all reference page.
 - [Effect Resource Scope M15 Plan](02_plans/213_effect_resource_scope_m15_plan.md):
   stacked milestone for parser-native Effect resource scope advice before PR
   closure.
+- [Build Tool Rspack Surface M16 Plan](02_plans/214_build_tool_rspack_surface_plan.md):
+  stacked milestone for parser-owned Rspack/Rsbuild build-tool facts and
+  low-noise package-script advice.
 
 ## 03_features: Functional Ledger
 

@@ -6,6 +6,7 @@ import test from "node:test";
 
 import {
   isTypeScriptHarnessClean,
+  renderTypeScriptProjectHarnessAgentCompactText,
   renderTypeScriptProjectHarness,
   renderTypeScriptReasoningTree,
   runTypeScriptProjectHarness,
@@ -32,6 +33,7 @@ test("project harness reports malformed package json without throwing", () => {
       "TS-PROJ-R003:info",
       "TS-PROJ-R004:info",
       "TS-PROJ-R005:info",
+      "TS-PROJ-R006:info",
     ],
   );
   assert.deepEqual(
@@ -494,4 +496,168 @@ test("project harness preserves conditional package targets from the TypeScript 
     /package exports:\. \[node\/default\] --unresolved--> \.\/dist\/index\.node\.js/u,
   );
   assert.match(rendered, /package imports:#internal \[default\] --owner--> src\/internal\.ts/u);
+});
+
+test("project harness records Rspack build tool facts from package json and config files", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-rspack-build-tool-"));
+  fs.mkdirSync(path.join(root, "src"));
+  fs.writeFileSync(path.join(root, "src", "index.ts"), "export const ok = 1;\n");
+  fs.writeFileSync(
+    path.join(root, "rspack.config.ts"),
+    "export default { entry: './src/index.ts' };\n",
+  );
+  fs.writeFileSync(
+    path.join(root, "tsconfig.json"),
+    JSON.stringify({ include: ["src/**/*.ts", "rspack.config.ts"] }),
+  );
+  fs.writeFileSync(
+    path.join(root, "package.json"),
+    JSON.stringify({
+      name: "@example/rspack-build-tool",
+      scripts: {
+        check: "tsc --noEmit",
+      },
+      devDependencies: {
+        "@rspack/core": "^1.5.0",
+      },
+    }),
+  );
+
+  const report = runTypeScriptProjectHarness(root);
+  const packageJson = report.projectScope?.packageJson;
+  assert.ok(packageJson !== undefined);
+  assert.deepEqual(
+    packageJson.packageBuildTools.map((buildTool) => ({
+      name: buildTool.name,
+      packageNames: buildTool.packageNames,
+      configFiles: buildTool.configFiles,
+      scriptNames: buildTool.scriptNames,
+      signals: buildTool.signals.map(
+        (signal) => `${signal.kind}:${signal.source ?? ""}:${signal.value}`,
+      ),
+    })),
+    [
+      {
+        name: "rspack",
+        packageNames: ["@rspack/core"],
+        configFiles: ["rspack.config.ts"],
+        scriptNames: [],
+        signals: ["dependency:devDependencies:@rspack/core", "config::rspack.config.ts"],
+      },
+    ],
+  );
+
+  const snapshot = renderTypeScriptReasoningTree(report);
+  const advice = renderTypeScriptProjectHarnessAgentCompactText(report);
+  assert.match(snapshot, /Modules: source=2 branches=1 build-tools=1 findings=1/u);
+  assert.match(
+    snapshot,
+    /BuildTools:\n - rspack capabilities=bundle,dev-server,typescript-config packages=@rspack\/core configs=rspack\.config\.ts/u,
+  );
+  assert.deepEqual(
+    report.findings
+      .filter((finding) => finding.ruleId === "TS-PROJ-R006")
+      .map((finding) => `${finding.severity}:${finding.label}`),
+    ["info:expose Rspack through package scripts"],
+  );
+  assert.match(
+    advice,
+    /\[TS-PROJ-R006\] info x1: Expose Rspack build surface through npm scripts/u,
+  );
+  assert.match(advice, /add or update package scripts so `npm run build`/u);
+});
+
+test("Rspack script facts satisfy the build tool surface advice", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-rspack-script-"));
+  fs.mkdirSync(path.join(root, "src"));
+  fs.writeFileSync(path.join(root, "src", "index.ts"), "export const ok = 1;\n");
+  fs.writeFileSync(
+    path.join(root, "rspack.config.ts"),
+    "export default { entry: './src/index.ts' };\n",
+  );
+  fs.writeFileSync(
+    path.join(root, "tsconfig.json"),
+    JSON.stringify({ include: ["src/**/*.ts", "rspack.config.ts"] }),
+  );
+  fs.writeFileSync(
+    path.join(root, "package.json"),
+    JSON.stringify({
+      name: "@example/rspack-script",
+      scripts: {
+        build: "rspack build --configLoader=native",
+      },
+      devDependencies: {
+        "@rspack/cli": "^1.5.0",
+        "@rspack/core": "^1.5.0",
+      },
+    }),
+  );
+
+  const report = runTypeScriptProjectHarness(root);
+
+  assert.deepEqual(
+    report.projectScope?.packageJson.packageBuildTools.map((buildTool) => ({
+      name: buildTool.name,
+      packageNames: buildTool.packageNames,
+      configFiles: buildTool.configFiles,
+      scriptNames: buildTool.scriptNames,
+    })),
+    [
+      {
+        name: "rspack",
+        packageNames: ["@rspack/cli", "@rspack/core"],
+        configFiles: ["rspack.config.ts"],
+        scriptNames: ["build"],
+      },
+    ],
+  );
+  assert.deepEqual(
+    report.findings.filter((finding) => finding.ruleId === "TS-PROJ-R006"),
+    [],
+  );
+});
+
+test("package json harness config can explicitly expose Rspack build tool intent", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-rspack-config-intent-"));
+  fs.mkdirSync(path.join(root, "src"));
+  fs.writeFileSync(path.join(root, "src", "index.ts"), "export const ok = 1;\n");
+  fs.writeFileSync(path.join(root, "tsconfig.json"), JSON.stringify({ include: ["src/**/*.ts"] }));
+  fs.writeFileSync(
+    path.join(root, "package.json"),
+    JSON.stringify({
+      name: "@example/rspack-config-intent",
+      typescriptProjectHarness: {
+        buildTools: {
+          rspack: "enable",
+        },
+      },
+    }),
+  );
+
+  const report = runTypeScriptProjectHarness(root);
+
+  assert.deepEqual(
+    report.projectScope?.packageJson.packageBuildTools.map((buildTool) => ({
+      name: buildTool.name,
+      packageNames: buildTool.packageNames,
+      configFiles: buildTool.configFiles,
+      scriptNames: buildTool.scriptNames,
+      signals: buildTool.signals.map(
+        (signal) => `${signal.kind}:${signal.source ?? ""}:${signal.value}`,
+      ),
+    })),
+    [
+      {
+        name: "rspack",
+        packageNames: [],
+        configFiles: [],
+        scriptNames: [],
+        signals: ["harness-config:typescriptProjectHarness:rspack"],
+      },
+    ],
+  );
+  assert.match(
+    report.findings.find((finding) => finding.ruleId === "TS-PROJ-R006")?.summary ?? "",
+    /package\.json harness config/u,
+  );
 });

@@ -58,6 +58,11 @@ Known extension activation, such as Effect, is also parser-owned. The parser
 may derive `packageExtensions` from package dependency fields and
 `typescriptProjectHarness.extensions`, but rule packs consume only the typed
 extension fact.
+Known build-tool visibility, such as Rspack/Rsbuild, follows the same boundary.
+The parser derives `packageBuildTools` from known dependency names, package
+scripts, config files, and optional `typescriptProjectHarness.buildTools`
+config. Rule packs consume that typed fact for low-noise agent advice; they do
+not parse shell scripts as a package-manager policy or replace bundler tooling.
 
 `assertTypeScriptProjectHarnessClean()` follows the same blocking-only
 semantics. `assertTypeScriptProjectHarnessAgentClean()` is the test-gate variant
@@ -105,10 +110,10 @@ inspect.
 
 Reports always include a reasoning tree assembled from parser-owned facts.
 `renderTypeScriptReasoningTree(report)` renders the Rust-style agent snapshot
-shape: `Modules:`, `Extensions:`, `OwnerBranches:`, `OwnerDependencies:`, and
-`FindingGroups:`. It summarizes module roles, exports, path-alias/package
+shape: `Modules:`, `Extensions:`, `BuildTools:`, `OwnerBranches:`,
+`OwnerDependencies:`, and `FindingGroups:`. It summarizes module roles, exports, path-alias/package
 edges, package-name import owners, project-reference/workspace owner
-provenance, package entry owners, known package extension activation, and
+provenance, package entry owners, known package extension/build-tool facts, and
 Rust-style source-shape counters such as
 `shadowed=` and `orphaned=` while omitting singleton and zero-value boilerplate.
 Explicit-path reports use the same grouping surface, with diagnostics grouped

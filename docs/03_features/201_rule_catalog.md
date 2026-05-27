@@ -60,8 +60,9 @@ for advisory rules; it does not mutate catalog severity.
 
 ## Agent Advice Rules
 
-`TS-SEM-*`, `TS-PROJ-R003`, `TS-PROJ-R004`, `TS-PROJ-R005`, `TS-MOD-*`,
-`TS-TEST-*`, `TS-AGENT-*`, and `TS-EXT-EFFECT-R002` through
+`TS-SEM-*`, `TS-PROJ-R003`, `TS-PROJ-R004`, `TS-PROJ-R005`,
+`TS-PROJ-R006`, `TS-MOD-*`, `TS-TEST-*`, `TS-AGENT-*`, and
+`TS-EXT-EFFECT-R002` through
 `TS-EXT-EFFECT-R007` rules are `info` findings. They are rendered by default
 for repair agents but do not fail assertions unless a caller promotes them or
 uses the agent test-gate helper `assertTypeScriptProjectHarnessAgentClean()`.
@@ -84,6 +85,10 @@ projects keep a bounded first reading surface for agents.
   effective TypeScript `moduleResolution` of `node16`, `nodenext`, or `bundler`.
   The value comes from TypeScript compiler-option facts, including defaults
   implied by `module`, not raw JSON string matching.
+- `TS-PROJ-R006`: projects with parser-visible Rspack package/config facts
+  should expose that build surface through package scripts. This helps agents
+  run `npm run build` or `npm run check` without adding ad-hoc local gate
+  scripts, and it remains non-blocking advice.
 - `TS-MOD-R001`: production source, facade, entrypoint, and config modules
   should not depend on parser-visible test owners.
 - `TS-MOD-R002`: package project modules should stay below their layer line
@@ -193,6 +198,11 @@ dependency fields only to derive `packageExtensions` for a known extension such
 as Effect. That fact can activate extension policy and snapshot capability
 lines, but it does not expose a generic manifest dependency model and it does
 not create package-manager gates.
+M16 adds parser-owned build-tool facts for Rspack/Rsbuild-family projects. The
+parser may read known package dependency names, package scripts, config-file
+presence, and optional `typescriptProjectHarness.buildTools` config to produce
+`packageBuildTools` facts. Policy consumes only those typed facts and keeps the
+result as agent orientation/advice.
 When TypeScript selects JavaScript through `allowJs`, parser-visible `.js`,
 `.jsx`, `.mjs`, and `.cjs` files participate in the same module-role policy as
 TypeScript files.
@@ -201,8 +211,8 @@ orientation metrics. They may appear as `shadowed=` and `orphaned=` counters in
 agent snapshots, but they do not create default rule findings in M3.
 
 `renderTypeScriptReasoningTree()` exposes those facts as Rust-style agent
-snapshot text: `Modules:`, `Extensions:`, `OwnerBranches:`, `OwnerDependencies:`, and
-`FindingGroups:`. It groups diagnostics by rule id and owner path instead of
+snapshot text: `Modules:`, `Extensions:`, `BuildTools:`, `OwnerBranches:`,
+`OwnerDependencies:`, and `FindingGroups:`. It groups diagnostics by rule id and owner path instead of
 rendering full diagnostic cards. Full TypeScript diagnostic codes, source
 lines, and related information remain available in the default compact finding
 renderer and JSON output. The snapshot is not a style report and it does not

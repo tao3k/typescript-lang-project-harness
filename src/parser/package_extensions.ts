@@ -3,10 +3,10 @@ import ts from "typescript";
 import type {
   SourceLocation,
   TypeScriptPackageExtensionConfigSource,
-  TypeScriptPackageExtensionDependencySource,
   TypeScriptPackageExtensionFact,
 } from "../model.js";
 import { locationForNode } from "./diagnostics.js";
+import { packageDependencyProperty } from "./package_dependencies.js";
 import {
   jsonObjectProperty,
   packageJsonProperty,
@@ -15,13 +15,6 @@ import {
 import type { ParsedPackageJsonDocument } from "./types.js";
 
 const EFFECT_EXTENSION_CAPABILITIES = ["typed-async", "domain-effects", "policy"] as const;
-
-const PACKAGE_DEPENDENCY_SOURCE_NAMES: readonly TypeScriptPackageExtensionDependencySource[] = [
-  "dependencies",
-  "devDependencies",
-  "peerDependencies",
-  "optionalDependencies",
-];
 
 const HARNESS_CONFIG_SOURCE_NAMES: readonly TypeScriptPackageExtensionConfigSource[] = [
   "typescriptProjectHarness",
@@ -60,29 +53,6 @@ export function packageExtensionFacts(
       ...(effectConfig === undefined ? {} : { configSource: effectConfig.source }),
     },
   ];
-}
-
-function packageDependencyProperty(
-  document: ParsedPackageJsonDocument,
-  packageName: string,
-):
-  | {
-      readonly source: TypeScriptPackageExtensionDependencySource;
-      readonly location: SourceLocation;
-    }
-  | undefined {
-  for (const source of PACKAGE_DEPENDENCY_SOURCE_NAMES) {
-    const property = packageJsonProperty(document, source);
-    if (property === undefined || !ts.isObjectLiteralExpression(property.initializer)) {
-      continue;
-    }
-    const dependencyProperty = jsonObjectProperty(property.initializer, packageName);
-    if (dependencyProperty === undefined) {
-      continue;
-    }
-    return { source, location: locationForNode(document.sourceFile, dependencyProperty) };
-  }
-  return undefined;
 }
 
 function packageExtensionConfigProperty(

@@ -78,8 +78,9 @@ modularity/test-layout advice, and the first non-blocking agent advice rules.
 It also includes Rust-aligned policy configuration for disabling single rules,
 disabling built-in rule packs, overriding single-rule severities, overriding
 rule-pack severities, and promoting advisory rules by `blockingRuleIds`.
-`TS-SEM-*`, `TS-PROJ-R003`, `TS-PROJ-R004`, `TS-PROJ-R005`, `TS-MOD-*`,
-`TS-TEST-*`, `TS-AGENT-*`, and `TS-EXT-EFFECT-R002` through
+`TS-SEM-*`, `TS-PROJ-R003`, `TS-PROJ-R004`, `TS-PROJ-R005`,
+`TS-PROJ-R006`, `TS-MOD-*`, `TS-TEST-*`, `TS-AGENT-*`, and
+`TS-EXT-EFFECT-R002` through
 `TS-EXT-EFFECT-R007` findings are shown to agents without failing the default
 gate. `TS-EXT-EFFECT-R001` is `error` because an
 explicit Effect enablement that lacks the `effect` dependency is a broken
@@ -90,7 +91,10 @@ project-shape advice also stays
 non-blocking: `TS-PROJ-R004` points out referenced package configs missing
 `composite` or `declaration`, and `TS-PROJ-R005` points out package
 `exports`/`imports` when the effective TypeScript `moduleResolution` is not
-`node16`, `nodenext`, or `bundler`.
+`node16`, `nodenext`, or `bundler`. `TS-PROJ-R006` points out Rspack package
+or config facts that are not exposed through package scripts, so agents can run
+the same build path through `npm run build`/`npm run check` instead of inventing
+local gate scripts.
 M9 extends the parser-native fact layer with exported function parameter facts,
 anonymous public tuple API facts, exported primitive data-field facts, and
 public function control-flow shape facts. Those facts are projected into the
@@ -157,6 +161,13 @@ filesystem report writer, receipt evidence URI/timestamp metadata, complete
 waiver checks, disabled task-kind controls, and parser-fact dependency signals
 for profile inference. It still does not execute external skills or add
 manifest dependency policy.
+M16 adds parser-owned build-tool facts for Rspack/Rsbuild-family projects. The
+parser recognizes known package dependencies, `rspack.config.*` /
+`rsbuild.config.*`, package scripts, and optional
+`typescriptProjectHarness.buildTools` config, then emits `BuildTools:` in the
+agent snapshot. This remains a build/profile orientation surface: it does not
+replace TypeScript type checking, declaration emit, framework compilers, or
+package-manager dependency audits.
 
 For agent repair loops, `renderTypeScriptProjectHarnessAgentCompactText(report)`
 and `--agent-compact` emit task-oriented repair instructions, while
@@ -167,7 +178,7 @@ workspace or project-reference package facts are present, the CLI groups each
 package scope under a compact `pkg <path>` heading and runs that package from
 its own `package.json` anchor and local `tsconfig.json`. Each package snapshot
 starts with `Modules:` and then renders
-`Extensions:`, `OwnerBranches:`, `OwnerDependencies:`, and `FindingGroups:`
+`Extensions:`, `BuildTools:`, `OwnerBranches:`, `OwnerDependencies:`, and `FindingGroups:`
 when those sections are non-empty. The renderer consumes reasoning-tree `ownerBranches`
 and `ownerDependencies` rather than rediscovering owner structure from raw
 source or raw import edges.

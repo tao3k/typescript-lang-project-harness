@@ -71,6 +71,9 @@ Known extension activation facts are the narrow exception to the no-manifest
 policy rule: the parser may read package dependency fields only to derive a
 typed `packageExtensions` fact such as Effect activation. Rule packs must
 consume that fact instead of reading package metadata directly.
+Known build-tool visibility is also parser-owned: the parser may derive
+`packageBuildTools` from known dependency names, scripts, config files, and
+explicit harness config, while rule packs consume only that typed fact.
 JavaScript files should enter reports only through TypeScript's native project
 selection, such as `allowJs`; do not widen fallback discovery with ad hoc JS
 scanning.
@@ -150,8 +153,8 @@ reasoning-tree project root, because TypeScript diagnostic text can include
 host absolute paths even when diagnostic locations are already structured.
 Snapshot rendering should stay Rust-aligned: cap long branch and child-edge
 surfaces, group owner dependency fan-in/fan-out when useful, render compact
-`Extensions:` activation lines only when present, and do not render empty
-child-edge placeholders.
+`Extensions:` and `BuildTools:` lines only when present, and do not render
+empty child-edge placeholders.
 
 ## Public API Contract
 

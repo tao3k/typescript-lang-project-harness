@@ -119,6 +119,8 @@ test("source and snapshot model exclude manifest dependency policy gates", () =>
   );
   assertIncludes(sourceText, "packageExtensions");
   assertIncludes(sourceText, "TypeScriptPackageExtensionFact");
+  assertIncludes(sourceText, "packageBuildTools");
+  assertIncludes(sourceText, "TypeScriptPackageBuildToolFact");
   assertNoAny(
     goldenSnapshot,
     [

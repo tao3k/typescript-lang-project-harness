@@ -14,6 +14,7 @@ import type {
 } from "../model.js";
 import { compilerOptionFacts } from "./compiler_options.js";
 import { locationForNode } from "./diagnostics.js";
+import { packageBuildToolFacts } from "./package_build_tools.js";
 import { packageExtensionFacts } from "./package_extensions.js";
 import {
   jsonObjectProperty,
@@ -39,6 +40,7 @@ export function readPackageJsonFacts(projectRoot: string): PackageJsonFacts {
       workspaces: [],
       workspacePackages: [],
       packageExtensions: [],
+      packageBuildTools: [],
       scriptNames: [],
       workspacePatterns: [],
       diagnostics: [],
@@ -66,6 +68,7 @@ export function readPackageJsonFacts(projectRoot: string): PackageJsonFacts {
     workspaces,
     workspacePackages,
     packageExtensions: packageExtensionFacts(document),
+    packageBuildTools: packageBuildToolFacts(projectRoot, document, scripts),
     scriptNames: scripts.map((script) => script.name),
     workspacePatterns: workspaces.map((workspace) => workspace.pattern),
     diagnostics: document.diagnostics,
