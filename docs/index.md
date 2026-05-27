@@ -53,6 +53,9 @@ entrypoint into a catch-all reference page.
 - [Build Tool Rspack Surface M16 Plan](02_plans/214_build_tool_rspack_surface_plan.md):
   stacked milestone for parser-owned Rspack/Rsbuild build-tool facts and
   low-noise package-script advice.
+- [Effect Capability Boundaries M17 Plan](02_plans/215_effect_capability_boundaries_m17_plan.md):
+  stacked milestone for parser-owned Effect Schema boundary advice and the
+  broader Effect capability-policy map.
 
 ## 03_features: Functional Ledger
 

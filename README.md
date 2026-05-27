@@ -85,7 +85,7 @@ rule-pack severities, and promoting advisory rules by `blockingRuleIds`.
 `TS-SEM-*`, `TS-PROJ-R003`, `TS-PROJ-R004`, `TS-PROJ-R005`,
 `TS-PROJ-R006`, `TS-MOD-*`, `TS-TEST-*`, `TS-AGENT-*`, and
 `TS-EXT-EFFECT-R002` through
-`TS-EXT-EFFECT-R007` findings are shown to agents without failing the default
+`TS-EXT-EFFECT-R009` findings are shown to agents without failing the default
 gate. `TS-EXT-EFFECT-R001` is `error` because an
 explicit Effect enablement that lacks the `effect` dependency is a broken
 project configuration promise. Package metadata diagnostics cover both the
@@ -183,6 +183,17 @@ parser recognizes known package dependencies, `rspack.config.*` /
 agent snapshot. This remains a build/profile orientation surface: it does not
 replace TypeScript type checking, declaration emit, framework compilers, or
 package-manager dependency audits.
+M17 starts the broader Effect capability-boundary surface without making the
+harness a generic Effect linter. `TS-EXT-EFFECT-R009` records parser-native
+`JSON.parse` and `response.json()` facts in public source owners, suppresses
+the advice when the same owner already uses Effect Schema decode/validate
+APIs, and tells agents to add `Schema.decodeUnknown`,
+`Schema.decodeUnknownEither`, or `Schema.parseJson` at untrusted JSON
+boundaries. Existing Effect advice now covers typed async APIs, runtime
+execution, service requirements, error channels, Promise interop,
+resource/scope, concurrency/failure policy, and Schema validation. Streams,
+observability, and richer service architecture checks remain follow-up slices
+that must start from parser-owned facts before policy consumes them.
 
 For agent repair loops, `renderTypeScriptProjectHarnessAgentCompactText(report)`
 and `--agent-compact` emit task-oriented repair instructions, while

@@ -45,6 +45,7 @@ test("Effect dependency activates extension snapshot and async domain advice", (
       "TS-EXT-EFFECT-R006:info",
       "TS-EXT-EFFECT-R007:info",
       "TS-EXT-EFFECT-R008:info",
+      "TS-EXT-EFFECT-R009:info",
     ],
   );
   assert.deepEqual(
@@ -610,6 +611,58 @@ test("Effect async batch advice asks agents to declare concurrency policy", () =
   assert.match(advice, /concurrency budget/u);
 });
 
+test("Effect JSON boundary advice asks agents to decode with Schema", () => {
+  const root = effectProject("schema-boundary", {
+    packageJson: {
+      dependencies: { effect: "^3.0.0" },
+    },
+    source: {
+      "json-boundary.ts": [
+        'import { Effect, Schema } from "effect";',
+        "declare const Owner: Schema.Schema<{ readonly id: string }>;",
+        "export async function loadRawOwner(response: { json(): Promise<unknown> }): Promise<unknown> {",
+        "  return response.json();",
+        "}",
+        "export function parseRawOwner(text: string): Effect.Effect<unknown, Error> {",
+        "  return Effect.tryPromise({",
+        "    try: async () => JSON.parse(text),",
+        "    catch: (cause) => new Error('invalid owner', { cause }),",
+        "  });",
+        "}",
+        "export async function loadDecodedOwner(response: { json(): Promise<unknown> }): Promise<unknown> {",
+        "  const payload = await response.json();",
+        "  return Schema.decodeUnknownSync(Owner)(payload);",
+        "}",
+        "export const parseRawOwnerProgram = Effect.tryPromise({",
+        '  try: async () => JSON.parse(\'{"id":"owner-1"}\'),',
+        "  catch: (cause) => new Error('invalid owner', { cause }),",
+        "});",
+      ],
+    },
+  });
+
+  const report = runTypeScriptProjectHarness(root);
+  const finding = report.findings.find((candidate) => candidate.ruleId === "TS-EXT-EFFECT-R009");
+  const advice = renderTypeScriptProjectHarnessAgentCompactText(report, { findings: "all" });
+
+  assert.equal(isTypeScriptHarnessClean(report), true);
+  assert.equal(finding?.severity, "info");
+  assert.equal(
+    finding?.labels.schema_boundary_kinds,
+    "json-parse-without-schema,response-json-without-schema",
+  );
+  assert.match(finding?.labels.schema_boundary ?? "", /loadRawOwner/u);
+  assert.match(finding?.labels.schema_boundary ?? "", /parseRawOwner/u);
+  assert.match(finding?.labels.schema_boundary ?? "", /parseRawOwnerProgram/u);
+  assert.doesNotMatch(finding?.labels.schema_boundary ?? "", /loadDecodedOwner/u);
+  assert.match(
+    advice,
+    /\[TS-EXT-EFFECT-R009\] info x1: Decode JSON boundaries with Effect Schema/u,
+  );
+  assert.match(advice, /Schema\.decodeUnknown/u);
+  assert.match(advice, /Schema\.parseJson/u);
+});
+
 function effectProject(
   name: string,
   options: {
@@ -677,6 +730,12 @@ function effectProject(
       "  }",
       "  export namespace Runtime {",
       "    export function runPromise<Success>(effect: Effect.Effect<Success, unknown, unknown>): Promise<Success>;",
+      "  }",
+      "  export namespace Schema {",
+      "    export interface Schema<A> { readonly _A?: A }",
+      "    export function decodeUnknown<A>(schema: Schema<A>): (input: unknown) => Effect.Effect<A, Error, never>;",
+      "    export function decodeUnknownSync<A>(schema: Schema<A>): (input: unknown) => A;",
+      "    export function parseJson<A>(schema: Schema<A>): Schema<A>;",
       "  }",
       "}",
       "",

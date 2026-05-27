@@ -97,6 +97,7 @@ function reasoningModuleFromRole(
     effectPromiseInteropRisks: moduleReport.effectPromiseInteropRisks,
     effectResourceScopeRisks: moduleReport.effectResourceScopeRisks,
     effectConcurrencySignals: moduleReport.effectConcurrencySignals,
+    effectSchemaBoundarySignals: moduleReport.effectSchemaBoundarySignals,
     effectServiceMethods: moduleReport.effectServiceMethods,
   };
 }

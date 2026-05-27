@@ -131,6 +131,19 @@ export interface TypeScriptEffectConcurrencySignalFact {
   readonly sourceLine?: string;
 }
 
+export type TypeScriptEffectSchemaBoundarySignalKind =
+  | "json-parse-without-schema"
+  | "response-json-without-schema";
+
+export interface TypeScriptEffectSchemaBoundarySignalFact {
+  readonly ownerName: string;
+  readonly ownerLine: number;
+  readonly signalKind: TypeScriptEffectSchemaBoundarySignalKind;
+  readonly callee: string;
+  readonly location: SourceLocation;
+  readonly sourceLine?: string;
+}
+
 export type TypeScriptEffectServiceContainerKind = "interface" | "type" | "class" | "effect-tag";
 
 export interface TypeScriptEffectServiceMethodFact {

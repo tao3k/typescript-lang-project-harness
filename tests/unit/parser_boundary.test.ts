@@ -17,7 +17,7 @@ test("TypeScript semantics stay in the parser layer", () => {
 
   assert.match(parserSource, /from "typescript"/u);
   assert.match(parserSource, /parseJsonText/u);
-  assert.doesNotMatch(parserSource, /JSON\.parse/u);
+  assert.doesNotMatch(parserSource, /JSON\.parse\s*\(/u);
   for (const sourcePath of sourceFiles(path.join(projectRoot, "src"))) {
     if (isParserLayerSource(sourcePath)) {
       continue;

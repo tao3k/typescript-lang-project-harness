@@ -18,6 +18,8 @@ export function effectAgentTaskTitle(finding: TypeScriptHarnessFinding): string 
       return "Make Effect resource lifetime and Scope boundaries explicit";
     case "TS-EXT-EFFECT-R008":
       return "Declare Effect concurrency and failure policy for async batches";
+    case "TS-EXT-EFFECT-R009":
+      return "Decode JSON boundaries with Effect Schema";
     default:
       return undefined;
   }
@@ -71,6 +73,12 @@ export function effectAdviceFixSteps(
         "choose failure behavior explicitly: fail fast with `Effect.all`/`forEach`, collect successes with `Effect.allSuccesses`, or validate/partition when partial failure is expected",
         "name the concurrency budget as a domain constant instead of leaving unbounded Promise fan-out",
       ];
+    case "TS-EXT-EFFECT-R009":
+      return [
+        "define an `effect/Schema` schema for each untrusted JSON boundary",
+        "decode `response.json()` or `JSON.parse` output with `Schema.decodeUnknown`, `Schema.decodeUnknownEither`, or `Schema.parseJson`",
+        "map parse failures into the module domain error instead of returning raw `unknown` payloads",
+      ];
     default:
       return undefined;
   }
@@ -94,6 +102,8 @@ export function effectProblemText(finding: TypeScriptHarnessFinding): string | u
       return "Effect.acquireRelease resource lacks an explicit local Scope boundary";
     case "TS-EXT-EFFECT-R008":
       return "async batch lacks explicit Effect concurrency and failure policy";
+    case "TS-EXT-EFFECT-R009":
+      return "public JSON boundary is parsed without Effect Schema validation";
     default:
       return undefined;
   }
@@ -117,6 +127,8 @@ export function effectParserEvidenceText(finding: TypeScriptHarnessFinding): str
       return "native Effect.acquireRelease + Effect.scoped calls";
     case "TS-EXT-EFFECT-R008":
       return "native Promise combinators, await loops, and Effect collection calls";
+    case "TS-EXT-EFFECT-R009":
+      return "native JSON.parse/response.json calls + Schema decode evidence";
     default:
       return undefined;
   }

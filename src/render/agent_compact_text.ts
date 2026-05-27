@@ -251,7 +251,9 @@ function renderTargetGroup(group: TargetOwnerGroup): string {
   const surfaces =
     group.first.labels.async_surfaces ??
     group.first.labels.runtime_calls ??
-    group.first.labels.concurrency_signals;
+    group.first.labels.concurrency_signals ??
+    group.first.labels.resource_scope ??
+    group.first.labels.schema_boundary;
   const suffix = surfaces === undefined || surfaces === "" ? "" : ` first=${surfaces}`;
   return `   - ${group.owner} x${group.count}${suffix}`;
 }
@@ -396,6 +398,10 @@ function targetDetailText(finding: TypeScriptHarnessFinding): string {
       return labelValue("interop", finding.labels.promise_interop) ?? finding.label;
     case "TS-EXT-EFFECT-R007":
       return labelValue("resource", finding.labels.resource_scope) ?? finding.label;
+    case "TS-EXT-EFFECT-R008":
+      return labelValue("batch", finding.labels.concurrency_signals) ?? finding.label;
+    case "TS-EXT-EFFECT-R009":
+      return labelValue("json", finding.labels.schema_boundary) ?? finding.label;
     case "TS-AGENT-R010":
       return labelValue("alias", finding.labels.alias) ?? finding.label;
     default:

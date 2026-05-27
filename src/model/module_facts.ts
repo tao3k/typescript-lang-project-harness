@@ -8,6 +8,7 @@ import type {
   TypeScriptEffectPromiseInteropRiskFact,
   TypeScriptEffectResourceScopeRiskFact,
   TypeScriptEffectRuntimeCallFact,
+  TypeScriptEffectSchemaBoundarySignalFact,
   TypeScriptEffectServiceMethodFact,
   TypeScriptEffectConcurrencySignalFact,
   TypeScriptPublicAsyncEffectSurfaceFact,
@@ -62,6 +63,7 @@ export interface TypeScriptModuleReport {
   readonly effectPromiseInteropRisks: readonly TypeScriptEffectPromiseInteropRiskFact[];
   readonly effectResourceScopeRisks: readonly TypeScriptEffectResourceScopeRiskFact[];
   readonly effectConcurrencySignals: readonly TypeScriptEffectConcurrencySignalFact[];
+  readonly effectSchemaBoundarySignals: readonly TypeScriptEffectSchemaBoundarySignalFact[];
   readonly effectServiceMethods: readonly TypeScriptEffectServiceMethodFact[];
 }
 
@@ -88,5 +90,6 @@ export interface TypeScriptReasoningModule {
   readonly effectPromiseInteropRisks: readonly TypeScriptEffectPromiseInteropRiskFact[];
   readonly effectResourceScopeRisks: readonly TypeScriptEffectResourceScopeRiskFact[];
   readonly effectConcurrencySignals: readonly TypeScriptEffectConcurrencySignalFact[];
+  readonly effectSchemaBoundarySignals: readonly TypeScriptEffectSchemaBoundarySignalFact[];
   readonly effectServiceMethods: readonly TypeScriptEffectServiceMethodFact[];
 }
