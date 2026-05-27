@@ -13,6 +13,7 @@ import type {
   TypeScriptPublicDataFieldFact,
   TypeScriptPublicFunctionControlFlowFact,
   TypeScriptPublicFunctionParamFact,
+  TypeScriptReactRenderPuritySignalFact,
   TypeScriptPublicTypeAliasFact,
   TypeScriptPublicTupleApiSurfaceFact,
 } from "../../model.js";
@@ -33,6 +34,7 @@ import { collectEffectConcurrencySignals } from "./effect_concurrency.js";
 import { collectEffectResourceScopeRisks } from "./effect_resources.js";
 import { collectEffectSchemaBoundarySignals } from "./effect_schema.js";
 import { collectEffectProductionBoundarySignals } from "./effect_production.js";
+import { collectReactRenderPuritySignals } from "./react.js";
 
 export interface TypeScriptNativeSyntaxFacts {
   readonly publicFunctionParams: readonly TypeScriptPublicFunctionParamFact[];
@@ -49,6 +51,7 @@ export interface TypeScriptNativeSyntaxFacts {
   readonly effectSchemaBoundarySignals: readonly TypeScriptEffectSchemaBoundarySignalFact[];
   readonly effectProductionBoundarySignals: readonly TypeScriptEffectProductionBoundarySignalFact[];
   readonly effectServiceMethods: readonly TypeScriptEffectServiceMethodFact[];
+  readonly reactRenderPuritySignals: readonly TypeScriptReactRenderPuritySignalFact[];
 }
 
 export function collectTypeScriptNativeSyntaxFacts(
@@ -69,5 +72,6 @@ export function collectTypeScriptNativeSyntaxFacts(
     effectSchemaBoundarySignals: collectEffectSchemaBoundarySignals(sourceFile),
     effectProductionBoundarySignals: collectEffectProductionBoundarySignals(sourceFile),
     effectServiceMethods: collectEffectServiceMethods(sourceFile),
+    reactRenderPuritySignals: collectReactRenderPuritySignals(sourceFile),
   };
 }

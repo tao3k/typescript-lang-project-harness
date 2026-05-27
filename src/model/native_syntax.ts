@@ -162,6 +162,24 @@ export interface TypeScriptEffectProductionBoundarySignalFact {
   readonly sourceLine?: string;
 }
 
+export type TypeScriptReactRenderOwnerKind = "component" | "hook";
+
+export type TypeScriptReactRenderPuritySignalKind =
+  | "browser-global-write"
+  | "date-now"
+  | "math-random"
+  | "new-date";
+
+export interface TypeScriptReactRenderPuritySignalFact {
+  readonly ownerName: string;
+  readonly ownerLine: number;
+  readonly ownerKind: TypeScriptReactRenderOwnerKind;
+  readonly signalKind: TypeScriptReactRenderPuritySignalKind;
+  readonly expression: string;
+  readonly location: SourceLocation;
+  readonly sourceLine?: string;
+}
+
 export type TypeScriptEffectServiceContainerKind = "interface" | "type" | "class" | "effect-tag";
 
 export interface TypeScriptEffectServiceMethodFact {

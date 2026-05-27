@@ -12,6 +12,12 @@ import {
   effectParserEvidenceText,
   effectProblemText,
 } from "./effect_agent_compact_text.js";
+import {
+  reactAdviceFixSteps,
+  reactAgentTaskTitle,
+  reactParserEvidenceText,
+  reactProblemText,
+} from "./react_agent_compact_text.js";
 
 const MAX_ADVICE_ACTIONS = 8;
 const MAX_TARGET_EXAMPLES = 4;
@@ -168,10 +174,10 @@ function projectCoverageLines(
   group: AdviceGroup,
   maxTargetGroups: number,
 ): readonly string[] {
-  if (!isEffectExtensionFinding(group.finding)) {
+  if (!isKnownExtensionFinding(group.finding)) {
     return [];
   }
-  const extension = effectExtensionFact(report);
+  const extension = extensionFact(report, group.finding);
   if (extension === undefined) {
     return [];
   }
@@ -188,14 +194,30 @@ function projectCoverageLines(
   ];
 }
 
-function isEffectExtensionFinding(finding: TypeScriptHarnessFinding): boolean {
-  return finding.ruleId.startsWith("TS-EXT-EFFECT-");
+function isKnownExtensionFinding(finding: TypeScriptHarnessFinding): boolean {
+  return extensionNameForFinding(finding) !== undefined;
 }
 
-function effectExtensionFact(
+function extensionNameForFinding(
+  finding: TypeScriptHarnessFinding,
+): "effect" | "react" | undefined {
+  if (finding.ruleId.startsWith("TS-EXT-EFFECT-")) {
+    return "effect";
+  }
+  if (finding.ruleId.startsWith("TS-EXT-REACT-")) {
+    return "react";
+  }
+  return undefined;
+}
+
+function extensionFact(
   report: TypeScriptHarnessReport,
+  finding: TypeScriptHarnessFinding,
 ): TypeScriptPackageExtensionFact | undefined {
-  return report.reasoningTree.packageExtensions.find((extension) => extension.name === "effect");
+  const extensionName = extensionNameForFinding(finding);
+  return report.reasoningTree.packageExtensions.find(
+    (extension) => extension.name === extensionName,
+  );
 }
 
 function extensionSourceLabel(extension: TypeScriptPackageExtensionFact): string {
@@ -254,7 +276,8 @@ function renderTargetGroup(group: TargetOwnerGroup): string {
     group.first.labels.concurrency_signals ??
     group.first.labels.resource_scope ??
     group.first.labels.schema_boundary ??
-    group.first.labels.production_boundary;
+    group.first.labels.production_boundary ??
+    group.first.labels.react_purity;
   const suffix = surfaces === undefined || surfaces === "" ? "" : ` first=${surfaces}`;
   return `   - ${group.owner} x${group.count}${suffix}`;
 }
@@ -276,6 +299,10 @@ function agentTaskTitle(finding: TypeScriptHarnessFinding): string {
   if (effectTitle !== undefined) {
     return effectTitle;
   }
+  const reactTitle = reactAgentTaskTitle(finding);
+  if (reactTitle !== undefined) {
+    return reactTitle;
+  }
   switch (finding.ruleId) {
     case "TS-AGENT-R009":
       return "Make public DTO/domain fields carry typed meaning";
@@ -296,6 +323,10 @@ function adviceFixSteps(finding: TypeScriptHarnessFinding): readonly string[] {
   const effectSteps = effectAdviceFixSteps(finding);
   if (effectSteps !== undefined) {
     return effectSteps;
+  }
+  const reactSteps = reactAdviceFixSteps(finding);
+  if (reactSteps !== undefined) {
+    return reactSteps;
   }
   switch (finding.ruleId) {
     case "TS-AGENT-R009":
@@ -335,6 +366,10 @@ function problemText(finding: TypeScriptHarnessFinding): string {
   if (effectProblem !== undefined) {
     return effectProblem;
   }
+  const reactProblem = reactProblemText(finding);
+  if (reactProblem !== undefined) {
+    return reactProblem;
+  }
   switch (finding.ruleId) {
     case "TS-AGENT-R009":
       return "public exported data shape uses primitive fields for domain meaning";
@@ -355,6 +390,10 @@ function adviceParserEvidenceText(finding: TypeScriptHarnessFinding): string {
   const effectEvidence = effectParserEvidenceText(finding);
   if (effectEvidence !== undefined) {
     return effectEvidence;
+  }
+  const reactEvidence = reactParserEvidenceText(finding);
+  if (reactEvidence !== undefined) {
+    return reactEvidence;
   }
   switch (finding.ruleId) {
     case "TS-AGENT-R009":
@@ -405,6 +444,8 @@ function targetDetailText(finding: TypeScriptHarnessFinding): string {
       return labelValue("json", finding.labels.schema_boundary) ?? finding.label;
     case "TS-EXT-EFFECT-R010":
       return labelValue("io", finding.labels.production_boundary) ?? finding.label;
+    case "TS-EXT-REACT-R002":
+      return labelValue("purity", finding.labels.react_purity) ?? finding.label;
     case "TS-AGENT-R010":
       return labelValue("alias", finding.labels.alias) ?? finding.label;
     default:

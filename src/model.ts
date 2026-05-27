@@ -36,6 +36,9 @@ export type {
   TypeScriptPublicDiscriminatedUnionVariantFieldFact,
   TypeScriptPublicFunctionControlFlowFact,
   TypeScriptPublicFunctionParamFact,
+  TypeScriptReactRenderOwnerKind,
+  TypeScriptReactRenderPuritySignalFact,
+  TypeScriptReactRenderPuritySignalKind,
   TypeScriptPublicTupleApiSurfaceFact,
   TypeScriptPublicTypeAliasFact,
 } from "./model/native_syntax.js";

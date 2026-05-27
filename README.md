@@ -83,11 +83,11 @@ It also includes Rust-aligned policy configuration for disabling single rules,
 disabling built-in rule packs, overriding single-rule severities, overriding
 rule-pack severities, and promoting advisory rules by `blockingRuleIds`.
 `TS-SEM-*`, `TS-PROJ-R003`, `TS-PROJ-R004`, `TS-PROJ-R005`,
-`TS-PROJ-R006`, `TS-MOD-*`, `TS-TEST-*`, `TS-AGENT-*`, and
-`TS-EXT-EFFECT-R002` through
-`TS-EXT-EFFECT-R010` findings are shown to agents without failing the default
-gate. `TS-EXT-EFFECT-R001` is `error` because an
-explicit Effect enablement that lacks the `effect` dependency is a broken
+`TS-PROJ-R006`, `TS-MOD-*`, `TS-TEST-*`, `TS-AGENT-*`,
+`TS-EXT-EFFECT-R002` through `TS-EXT-EFFECT-R010`, and
+`TS-EXT-REACT-R002` findings are shown to agents without failing the default
+gate. `TS-EXT-EFFECT-R001` and `TS-EXT-REACT-R001` are `error` because an
+explicit extension enablement that lacks its package dependency is a broken
 project configuration promise. Package metadata diagnostics cover both the
 project root package and TypeScript project reference packages, plus package
 metadata discovered from root workspace patterns. Modern TypeScript
@@ -203,6 +203,19 @@ evidence (`Effect.withSpan`, Effect logging/annotations, or `Metric.*`) and
 resilience evidence (`Effect.retry*` or `Effect.timeout*`), and tells agents to
 put span names, log attributes, metrics, retry, and timeout policy at the
 public Effect boundary.
+M19 adds the first React extension from the staged official React docs
+baseline. A `react` dependency auto-activates project-wide React policy, and
+`typescriptProjectHarness.extensions.react = "enable"` makes that commitment
+explicit. Explicit enablement without the `react` dependency emits
+`TS-EXT-REACT-R001` as an `error`. Active React projects get non-blocking
+`TS-EXT-REACT-R002` compact advice when parser-native component or hook facts
+show obvious render-purity violations such as `new Date`, `Date.now`,
+`Math.random`, or `document`/`window` writes in render. The advice tells agents
+to move non-idempotent values to lazy state, event handlers, server/domain
+inputs, or Effect/domain boundaries, and to move browser writes into
+`useEffect` or event handlers with cleanup. It does not replace
+`eslint-plugin-react-hooks`, React Compiler diagnostics, framework compilers,
+or UI style policy.
 
 For agent repair loops, `renderTypeScriptProjectHarnessAgentCompactText(report)`
 and `--agent-compact` emit task-oriented repair instructions, while

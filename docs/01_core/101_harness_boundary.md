@@ -239,8 +239,12 @@ whose public async domain APIs still expose raw Promise surfaces.
 `TS-EXT-EFFECT-R003` through `TS-EXT-EFFECT-R010` remain non-blocking Effect
 capability advice over parser-owned runtime, service, error-channel,
 Promise-interop, resource, concurrency, Schema, and production-observability
-facts. Future `TS-MOD-*`, `TS-TEST-*`, and `TS-AGENT-*` rules should remain
-non-blocking unless a caller explicitly promotes them.
+facts. M19 adds the same package-owned extension shape for React:
+`TS-EXT-REACT-R001` is an `error` when explicit React extension config lacks a
+`react` dependency, while `TS-EXT-REACT-R002` stays `info` advice over
+parser-native component/hook owner facts and render-purity signals. Future
+`TS-MOD-*`, `TS-TEST-*`, and `TS-AGENT-*` rules should remain non-blocking
+unless a caller explicitly promotes them.
 
 ## Non-Goals
 
