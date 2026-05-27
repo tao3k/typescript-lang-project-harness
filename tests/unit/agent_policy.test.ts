@@ -68,6 +68,7 @@ test("rule catalog keeps deterministic pack order and agent advice severity", ()
       "TS-EXT-EFFECT-R005:info",
       "TS-EXT-EFFECT-R006:info",
       "TS-EXT-EFFECT-R007:info",
+      "TS-EXT-EFFECT-R008:info",
     ],
   );
 });

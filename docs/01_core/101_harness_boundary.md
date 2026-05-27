@@ -64,11 +64,15 @@ Parser-visible package `bin` owners and TypeScript targets referenced by
 entrypoint sits under `src/cli` or `src/bin`, that adapter tree is treated as
 entrypoint surface so project-wide Effect advice stays aimed at reusable source
 owners.
-Effect adapter module patterns declared in
-`typescriptProjectHarness.extensions.effect.adapterModules` are also
-parser-owned package facts. They document framework or runtime Promise
-boundaries without letting rule packs read `package.json` or infer adapter
-semantics from source text.
+Effect package config only declares activation. It does not expose per-file
+allowlists that can narrow project-wide coverage; parser-owned module roles are
+the only structural mechanism that keeps entrypoint surfaces out of reusable
+source-owner advice.
+Effect async/concurrency advice also starts in parser-native facts: the parser
+records Promise combinator fan-out, await-in-loop batch work, and Effect
+collection calls that omit explicit concurrency options. Rule packs consume
+those facts to produce low-noise agent instructions; they do not rescan source
+text to infer concurrency policy.
 Parser-visible `index.*`, `main.*`, config, and test file roles are matched by
 explicit module suffix lists, not dynamic regular-expression construction.
 Workspace package config facts are package-root local: a workspace package only

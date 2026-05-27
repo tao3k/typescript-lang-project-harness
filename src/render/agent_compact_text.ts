@@ -6,6 +6,12 @@ import type {
   TypeScriptHarnessReport,
   TypeScriptPackageExtensionFact,
 } from "../model.js";
+import {
+  effectAdviceFixSteps,
+  effectAgentTaskTitle,
+  effectParserEvidenceText,
+  effectProblemText,
+} from "./effect_agent_compact_text.js";
 
 const MAX_ADVICE_ACTIONS = 8;
 const MAX_TARGET_EXAMPLES = 4;
@@ -242,7 +248,10 @@ function targetOwnerPath(
 }
 
 function renderTargetGroup(group: TargetOwnerGroup): string {
-  const surfaces = group.first.labels.async_surfaces ?? group.first.labels.runtime_calls;
+  const surfaces =
+    group.first.labels.async_surfaces ??
+    group.first.labels.runtime_calls ??
+    group.first.labels.concurrency_signals;
   const suffix = surfaces === undefined || surfaces === "" ? "" : ` first=${surfaces}`;
   return `   - ${group.owner} x${group.count}${suffix}`;
 }
@@ -260,6 +269,10 @@ function renderTaskHeader(finding: TypeScriptHarnessFinding, count: number, inde
 }
 
 function agentTaskTitle(finding: TypeScriptHarnessFinding): string {
+  const effectTitle = effectAgentTaskTitle(finding);
+  if (effectTitle !== undefined) {
+    return effectTitle;
+  }
   switch (finding.ruleId) {
     case "TS-AGENT-R009":
       return "Make public DTO/domain fields carry typed meaning";
@@ -269,20 +282,6 @@ function agentTaskTitle(finding: TypeScriptHarnessFinding): string {
       return "Replace stringly state fields with finite typed states";
     case "TS-AGENT-R012":
       return "Give discriminated-union payloads named domain shapes";
-    case "TS-EXT-EFFECT-R001":
-      return "Make explicit Effect extension config match package dependencies";
-    case "TS-EXT-EFFECT-R002":
-      return "Migrate public async domain APIs to Effect";
-    case "TS-EXT-EFFECT-R003":
-      return "Move Effect runtime execution to entrypoint or adapter boundaries";
-    case "TS-EXT-EFFECT-R004":
-      return "Move Effect service dependencies into Layer/runtime construction";
-    case "TS-EXT-EFFECT-R005":
-      return "Use typed domain errors in Effect error channels";
-    case "TS-EXT-EFFECT-R006":
-      return "Wrap rejection-capable Promise interop with Effect.tryPromise";
-    case "TS-EXT-EFFECT-R007":
-      return "Make Effect resource lifetime and Scope boundaries explicit";
     case "TS-PROJ-R006":
       return "Expose Rspack build surface through npm scripts";
     default:
@@ -291,6 +290,10 @@ function agentTaskTitle(finding: TypeScriptHarnessFinding): string {
 }
 
 function adviceFixSteps(finding: TypeScriptHarnessFinding): readonly string[] {
+  const effectSteps = effectAdviceFixSteps(finding);
+  if (effectSteps !== undefined) {
+    return effectSteps;
+  }
   switch (finding.ruleId) {
     case "TS-AGENT-R009":
       return [
@@ -313,43 +316,6 @@ function adviceFixSteps(finding: TypeScriptHarnessFinding): readonly string[] {
         "move primitive discriminated-union payload fields into named payload/domain types",
         "prefer a named payload object such as `UserLoadedPayload` with branded ids",
       ];
-    case "TS-EXT-EFFECT-R001":
-      return [
-        "if Effect policy is intended, add `effect` to package dependencies and keep `typescriptProjectHarness.extensions.effect` enabled",
-        "otherwise remove the explicit extension config",
-      ];
-    case "TS-EXT-EFFECT-R002":
-      return [
-        'add `import { Effect } from "effect"` where the target module needs Effect types or constructors',
-        "change public async/Promise domain API signatures to return `Effect.Effect<Success, DomainError, Requirements>`",
-        "replace rejecting async work with `Effect.tryPromise({ try: () => promise, catch: (cause) => new DomainError({ cause }) })`",
-        "keep `Effect.run*` only in entrypoints, framework adapters, CLI handlers, or runtime integration modules",
-      ];
-    case "TS-EXT-EFFECT-R003":
-      return [
-        "move `Effect.run*` or `Runtime.run*` out of source modules",
-        "return Effect descriptions from source owners and execute them in entrypoints/adapters",
-      ];
-    case "TS-EXT-EFFECT-R004":
-      return [
-        "move service dependencies into `Layer` or runtime construction",
-        "expose public service methods as `Effect.Effect<Success, Error, never>` when possible",
-      ];
-    case "TS-EXT-EFFECT-R005":
-      return [
-        "replace primitive, any, unknown, or void Effect error channels with tagged or domain error types",
-        "make the error type catchable with `Effect.catchTag` or the project recovery policy",
-      ];
-    case "TS-EXT-EFFECT-R006":
-      return [
-        "replace rejection-capable `Effect.promise` calls with `Effect.tryPromise({ try: () => promise, catch: (cause) => new DomainError({ cause }) })`",
-        "map failures into a typed domain error",
-      ];
-    case "TS-EXT-EFFECT-R007":
-      return [
-        "make resource lifetime explicit with `Effect.scoped(Effect.acquireRelease(...))`",
-        "or expose/document a `Scope` or `Layer` resource boundary",
-      ];
     case "TS-PROJ-R006":
       return [
         "add or update package scripts so `npm run build` or an equivalent script runs `rspack build`",
@@ -362,6 +328,10 @@ function adviceFixSteps(finding: TypeScriptHarnessFinding): readonly string[] {
 }
 
 function problemText(finding: TypeScriptHarnessFinding): string {
+  const effectProblem = effectProblemText(finding);
+  if (effectProblem !== undefined) {
+    return effectProblem;
+  }
   switch (finding.ruleId) {
     case "TS-AGENT-R009":
       return "public exported data shape uses primitive fields for domain meaning";
@@ -371,20 +341,6 @@ function problemText(finding: TypeScriptHarnessFinding): string {
       return "public data shape uses raw string for finite state/kind/mode";
     case "TS-AGENT-R012":
       return "public discriminated-union variant carries primitive semantic payload fields";
-    case "TS-EXT-EFFECT-R001":
-      return "package config enables Effect policy but package dependencies do not provide Effect";
-    case "TS-EXT-EFFECT-R002":
-      return "public async/Promise domain API exposes raw Promise instead of Effect.Effect";
-    case "TS-EXT-EFFECT-R003":
-      return "source module executes Effect runtime instead of returning an Effect description";
-    case "TS-EXT-EFFECT-R004":
-      return "public Effect service method leaks implementation requirements";
-    case "TS-EXT-EFFECT-R005":
-      return "public Effect API uses a weak error channel";
-    case "TS-EXT-EFFECT-R006":
-      return "Effect.promise wraps rejection-capable async interop without typed error mapping";
-    case "TS-EXT-EFFECT-R007":
-      return "Effect.acquireRelease resource lacks an explicit local Scope boundary";
     case "TS-PROJ-R006":
       return "Rspack is configured or installed but not exposed through package scripts";
     default:
@@ -393,21 +349,11 @@ function problemText(finding: TypeScriptHarnessFinding): string {
 }
 
 function adviceParserEvidenceText(finding: TypeScriptHarnessFinding): string {
+  const effectEvidence = effectParserEvidenceText(finding);
+  if (effectEvidence !== undefined) {
+    return effectEvidence;
+  }
   switch (finding.ruleId) {
-    case "TS-EXT-EFFECT-R001":
-      return "package.json extension config + dependency facts";
-    case "TS-EXT-EFFECT-R002":
-      return "package.json Effect activation + native async/Promise return facts";
-    case "TS-EXT-EFFECT-R003":
-      return "native Effect.run*/Runtime.run* calls + module role";
-    case "TS-EXT-EFFECT-R004":
-      return "native public Effect service method return types";
-    case "TS-EXT-EFFECT-R005":
-      return "native public Effect error-channel types";
-    case "TS-EXT-EFFECT-R006":
-      return "native Effect.promise calls inside public Effect surfaces";
-    case "TS-EXT-EFFECT-R007":
-      return "native Effect.acquireRelease + Effect.scoped calls";
     case "TS-AGENT-R009":
     case "TS-AGENT-R010":
     case "TS-AGENT-R011":

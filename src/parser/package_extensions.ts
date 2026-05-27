@@ -48,7 +48,6 @@ export function packageExtensionFacts(
       activation,
       coverage: "project",
       capabilities: EFFECT_EXTENSION_CAPABILITIES,
-      adapterModulePatterns: effectConfig?.adapterModulePatterns ?? [],
       location,
       ...(effectDependency === undefined ? {} : { dependencySource: effectDependency.source }),
       ...(effectConfig === undefined ? {} : { configSource: effectConfig.source }),
@@ -63,7 +62,6 @@ function packageExtensionConfigProperty(
   | {
       readonly source: TypeScriptPackageExtensionConfigSource;
       readonly location: SourceLocation;
-      readonly adapterModulePatterns: readonly string[];
     }
   | undefined {
   for (const source of HARNESS_CONFIG_SOURCE_NAMES) {
@@ -91,7 +89,6 @@ function packageExtensionConfigProperty(
     return {
       source,
       location: locationForNode(document.sourceFile, extensionProperty),
-      adapterModulePatterns: config.adapterModulePatterns,
     };
   }
   return undefined;
@@ -99,29 +96,22 @@ function packageExtensionConfigProperty(
 
 function extensionConfigInfo(value: ts.Expression): {
   readonly enabled: boolean;
-  readonly adapterModulePatterns: readonly string[];
 } {
   if (value.kind === ts.SyntaxKind.TrueKeyword) {
-    return { enabled: true, adapterModulePatterns: [] };
+    return { enabled: true };
   }
   if (ts.isStringLiteral(value)) {
     return {
       enabled: value.text.toLowerCase() === "enable",
-      adapterModulePatterns: [],
     };
   }
   if (!ts.isObjectLiteralExpression(value)) {
-    return { enabled: false, adapterModulePatterns: [] };
+    return { enabled: false };
   }
   const enabledProperty = jsonObjectProperty(value, "enabled");
-  const adapterModulesProperty = jsonObjectProperty(value, "adapterModules");
   return {
     enabled:
       enabledProperty === undefined ? true : extensionConfigEnables(enabledProperty.initializer),
-    adapterModulePatterns:
-      adapterModulesProperty === undefined
-        ? []
-        : stringArrayValues(adapterModulesProperty.initializer),
   };
 }
 
@@ -130,13 +120,4 @@ function extensionConfigEnables(value: ts.Expression): boolean {
     return true;
   }
   return ts.isStringLiteral(value) && value.text.toLowerCase() === "enable";
-}
-
-function stringArrayValues(value: ts.Expression): readonly string[] {
-  if (!ts.isArrayLiteralExpression(value)) {
-    return [];
-  }
-  return value.elements
-    .map((element) => (ts.isStringLiteral(element) ? element.text.trim() : ""))
-    .filter((element) => element.length > 0);
 }

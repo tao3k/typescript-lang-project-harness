@@ -63,7 +63,7 @@ for advisory rules; it does not mutate catalog severity.
 `TS-SEM-*`, `TS-PROJ-R003`, `TS-PROJ-R004`, `TS-PROJ-R005`,
 `TS-PROJ-R006`, `TS-MOD-*`, `TS-TEST-*`, `TS-AGENT-*`, and
 `TS-EXT-EFFECT-R002` through
-`TS-EXT-EFFECT-R007` rules are `info` findings. They are rendered by default
+`TS-EXT-EFFECT-R008` rules are `info` findings. They are rendered by default
 for repair agents but do not fail assertions unless a caller promotes them or
 uses the agent test-gate helper `assertTypeScriptProjectHarnessAgentClean()`.
 The agent test-gate helper renders grouped compact advice text so large
@@ -141,11 +141,9 @@ projects keep a bounded first reading surface for agents.
   an `effect` dependency or explicit Effect config asks the harness to guide
   agents toward `Effect.Effect<Success, DomainError, Requirements>`,
   `Effect.tryPromise({ try: () => promise, catch: (cause) => ... })`, and
-  entrypoint/adapter-only `Effect.run*` execution. Framework adapter modules
-  can be documented through
-  `typescriptProjectHarness.extensions.effect.adapterModules` path patterns in
-  `package.json`; those patterns are parser-owned facts consumed by the Effect
-  rule pack.
+  entrypoint/adapter-only `Effect.run*` execution. Explicit Effect config only
+  enables the project-wide extension; it cannot provide per-file allowlists that
+  suppress source-owner findings.
 - `TS-EXT-EFFECT-R003`: when the Effect extension is active, source modules
   should return Effect descriptions and leave `Effect.run*` / `Runtime.run*`
   execution to entrypoint, framework adapter, or managed runtime integration
@@ -164,6 +162,15 @@ projects keep a bounded first reading surface for agents.
 - `TS-EXT-EFFECT-R007`: when public Effect APIs construct resources with
   `Effect.acquireRelease` without a local `Effect.scoped` boundary, they should
   make scope closure explicit or document the exported resource boundary.
+- `TS-EXT-EFFECT-R008`: when Effect projects own async batch work, they should
+  declare concurrency and failure policy through Effect collection combinators.
+  Parser-native facts detect `Promise.all` / `Promise.race` style fan-out,
+  await-in-loop batch work, and Effect collection combinators such as
+  `Effect.forEach` / `Effect.all` that omit `{ concurrency: ... }`. Compact
+  advice points agents toward `Effect.forEach(items, item => workEffect(item),
+{ concurrency: n })`, `Effect.all(effects, { concurrency: n })`, named
+  project concurrency budgets, and explicit fail-fast, validation, partition,
+  or `Effect.allSuccesses` semantics.
 
 ## Reasoning Tree Policy
 

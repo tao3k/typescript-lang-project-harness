@@ -140,13 +140,16 @@ interop, and `Effect.run*` execution only at entrypoint or adapter boundaries.
 Package-owned CLI adapters are recognized from parser-owned `bin` facts and
 from TypeScript targets named in `package.json` scripts, so agent advice stays
 focused on source/domain owners instead of asking benchmark or command handlers
-to return Effect values. Projects can also keep framework adapters explicit
-with parser-owned package config:
-`typescriptProjectHarness.extensions.effect.adapterModules = ["src/data/*.functions.ts"]`.
-Those configured adapter modules may expose Promise boundaries and execute
-`Effect.run*` while the surrounding domain/source owners keep returning Effect
-descriptions.
-to masquerade as reusable domain APIs.
+to return Effect values. The package config can enable the extension, but it
+cannot narrow coverage with per-file allowlists; reusable source owners remain
+visible to the policy until their public async surfaces move to Effect.
+M15 also gives agents performance-oriented Effect guidance for async batches:
+parser-native facts detect `Promise.all` fan-out, await-in-loop batch work, and
+Effect collection combinators that omit a concurrency budget. The compact
+advice points agents toward `Effect.forEach(..., { concurrency: n })`,
+`Effect.all(..., { concurrency: n })`, named project concurrency budgets, and
+explicit failure strategies such as fail-fast, `Effect.allSuccesses`,
+validation, or partitioning.
 This is extension policy, not a manifest dependency gate.
 M14 enriches that extension from the current Effect docs without widening it
 into a style linter. Parser-native facts now record `Effect.run*` /

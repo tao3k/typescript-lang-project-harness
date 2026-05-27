@@ -44,6 +44,7 @@ test("Effect dependency activates extension snapshot and async domain advice", (
       "TS-EXT-EFFECT-R005:info",
       "TS-EXT-EFFECT-R006:info",
       "TS-EXT-EFFECT-R007:info",
+      "TS-EXT-EFFECT-R008:info",
     ],
   );
   assert.deepEqual(
@@ -312,8 +313,8 @@ test("Effect policy treats package script TypeScript targets as entrypoint adapt
   );
 });
 
-test("Effect policy respects package-configured adapter module patterns", () => {
-  const root = effectProject("configured-adapter-modules", {
+test("Effect object config remains project-wide and does not suppress modules", () => {
+  const root = effectProject("object-config-project-wide", {
     packageJson: {
       dependencies: { effect: "^3.0.0" },
       typescriptProjectHarness: {
@@ -353,16 +354,12 @@ test("Effect policy respects package-configured adapter module patterns", () => 
 
   assert.equal(isTypeScriptHarnessClean(report), true);
   assert.deepEqual(
-    report.projectScope?.packageJson.packageExtensions.map((extension) => ({
-      activation: extension.activation,
-      adapterModulePatterns: extension.adapterModulePatterns,
-    })),
-    [
-      {
-        activation: "config-enabled",
-        adapterModulePatterns: ["src/adapters/**/*.ts", "src/*.functions.ts"],
-      },
-    ],
+    report.projectScope?.packageJson.packageExtensions.map((extension) => [
+      extension.activation,
+      extension.coverage,
+      extension.configSource,
+    ]),
+    [["config-enabled", "project", "typescriptProjectHarness"]],
   );
   assert.deepEqual(
     report.findings
@@ -376,12 +373,15 @@ test("Effect policy respects package-configured adapter module patterns", () => 
         ].join(":"),
       ),
     [
+      "TS-EXT-EFFECT-R002:info:src/adapters/http.ts:source",
       "TS-EXT-EFFECT-R002:info:src/domain.ts:source",
+      "TS-EXT-EFFECT-R002:info:src/query.functions.ts:source",
+      "TS-EXT-EFFECT-R003:info:src/adapters/http.ts:source",
       "TS-EXT-EFFECT-R003:info:src/domain.ts:source",
     ],
   );
   assert.match(snapshot, /config=typescriptProjectHarness/u);
-  assert.match(snapshot, /adapters=src\/adapters\/\*\*\/\*\.ts,src\/\*\.functions\.ts/u);
+  assert.doesNotMatch(snapshot, /adapters=/u);
 });
 
 test("Effect service methods with requirement leaks receive layer-boundary advice", () => {
@@ -496,6 +496,62 @@ test("Effect.acquireRelease without local scoped boundary receives resource advi
   );
 });
 
+test("Effect async batch advice asks agents to declare concurrency policy", () => {
+  const root = effectProject("concurrency-policy", {
+    packageJson: {
+      dependencies: { effect: "^3.0.0" },
+    },
+    source: [
+      'import { Effect } from "effect";',
+      "declare function loadOne(id: string): Promise<string>;",
+      "declare function loadOneEffect(id: string): Effect.Effect<string, Error>;",
+      "export async function loadAllOwners(ids: readonly string[]): Promise<readonly string[]> {",
+      "  return Promise.all(ids.map((id) => loadOne(id)));",
+      "}",
+      "export async function loadOwnersSequentially(ids: readonly string[]): Promise<readonly string[]> {",
+      "  const owners: string[] = [];",
+      "  for (const id of ids) {",
+      "    owners.push(await loadOne(id));",
+      "  }",
+      "  return owners;",
+      "}",
+      "export function loadOwnerEffects(ids: readonly string[]): Effect.Effect<readonly string[], Error> {",
+      "  return Effect.forEach(ids, loadOneEffect);",
+      "}",
+      "export function loadOwnerEffectsWithBudget(ids: readonly string[]): Effect.Effect<readonly string[], Error> {",
+      "  return Effect.forEach(ids, loadOneEffect, { concurrency: 4 });",
+      "}",
+    ],
+  });
+
+  const report = runTypeScriptProjectHarness(root);
+  const advice = renderTypeScriptProjectHarnessAgentCompactText(report);
+  const finding = report.findings.find((candidate) => candidate.ruleId === "TS-EXT-EFFECT-R008");
+
+  assert.equal(isTypeScriptHarnessClean(report), true);
+  assert.notEqual(finding, undefined);
+  assert.equal(
+    finding?.labels.concurrency_kinds,
+    "effect-combinator-missing-concurrency,promise-combinator,sequential-await-loop",
+  );
+  assert.match(
+    finding?.labels.concurrency_signals ?? "",
+    /loadAllOwners:Promise\.all.*loadOwnersSequentially:for-of-await.*loadOwnerEffects:Effect\.forEach/u,
+  );
+  assert.doesNotMatch(finding?.labels.concurrency_signals ?? "", /loadOwnerEffectsWithBudget/u);
+  assert.match(
+    advice,
+    /\[TS-EXT-EFFECT-R008\] info x1: Declare Effect concurrency and failure policy for async batches/u,
+  );
+  assert.match(
+    advice,
+    /Effect\.forEach\(items, item => workEffect\(item\), \{ concurrency: n \}\)/u,
+  );
+  assert.match(advice, /Effect\.all\(effects, \{ concurrency: n \}\)/u);
+  assert.match(advice, /Effect\.allSuccesses/u);
+  assert.match(advice, /concurrency budget/u);
+});
+
 function effectProject(
   name: string,
   options: {
@@ -547,6 +603,19 @@ function effectProject(
       "    export function scoped<Success, Failure, Requirements>(",
       "      effect: Effect<Success, Failure, Requirements>,",
       "    ): Effect<Success, Failure, Requirements>;",
+      "    export function all<Success, Failure, Requirements>(",
+      "      effects: Iterable<Effect<Success, Failure, Requirements>>,",
+      "      options?: { readonly concurrency?: number | 'unbounded' },",
+      "    ): Effect<readonly Success[], Failure, Requirements>;",
+      "    export function allSuccesses<Success, Failure, Requirements>(",
+      "      effects: Iterable<Effect<Success, Failure, Requirements>>,",
+      "      options?: { readonly concurrency?: number | 'unbounded' },",
+      "    ): Effect<readonly Success[], never, Requirements>;",
+      "    export function forEach<Item, Success, Failure, Requirements>(",
+      "      items: Iterable<Item>,",
+      "      f: (item: Item) => Effect<Success, Failure, Requirements>,",
+      "      options?: { readonly concurrency?: number | 'unbounded' },",
+      "    ): Effect<readonly Success[], Failure, Requirements>;",
       "  }",
       "  export namespace Runtime {",
       "    export function runPromise<Success>(effect: Effect.Effect<Success, unknown, unknown>): Promise<Success>;",

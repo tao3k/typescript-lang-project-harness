@@ -117,6 +117,20 @@ export interface TypeScriptEffectResourceScopeRiskFact {
   readonly sourceLine?: string;
 }
 
+export type TypeScriptEffectConcurrencySignalKind =
+  | "effect-combinator-missing-concurrency"
+  | "promise-combinator"
+  | "sequential-await-loop";
+
+export interface TypeScriptEffectConcurrencySignalFact {
+  readonly ownerName: string;
+  readonly ownerLine: number;
+  readonly signalKind: TypeScriptEffectConcurrencySignalKind;
+  readonly callee: string;
+  readonly location: SourceLocation;
+  readonly sourceLine?: string;
+}
+
 export type TypeScriptEffectServiceContainerKind = "interface" | "type" | "class" | "effect-tag";
 
 export interface TypeScriptEffectServiceMethodFact {

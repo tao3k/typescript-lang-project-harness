@@ -9,10 +9,10 @@ import type {
   TypeScriptReasoningModule,
   TypeScriptReasoningTree,
 } from "../../model.js";
+import { evaluateEffectConcurrencyAdvice, TS_EXT_EFFECT_R008 } from "./effect_concurrency.js";
 import {
   effectPolicyIsActive,
   effectPolicySourceModules,
-  isEffectAdapterModule,
   sourceModules,
 } from "./effect_modules.js";
 
@@ -32,7 +32,7 @@ export const TS_EXT_EFFECT_R002: TypeScriptHarnessRule = {
   severity: "info",
   title: "Effect extension expects typed async domain effects",
   requirement:
-    "When the Effect extension is active, public source APIs that expose async domain work should return Effect.Effect or a documented boundary adapter instead of raw Promise surfaces.",
+    "When the Effect extension is active, public source APIs that expose async domain work should return Effect.Effect instead of raw Promise surfaces.",
   labels: { surface: "extension", parser: "native-syntax", extension: "effect" },
 };
 
@@ -42,7 +42,7 @@ export const TS_EXT_EFFECT_R003: TypeScriptHarnessRule = {
   severity: "info",
   title: "Effect runtime execution should stay at entrypoint boundaries",
   requirement:
-    "Effect.run* and Runtime.run* execute Effect descriptions; source modules should normally return Effect values and leave execution to entrypoint, framework adapter, or runtime integration modules.",
+    "Effect.run* and Runtime.run* execute Effect descriptions; source modules should normally return Effect values and leave execution to parser-owned entrypoint or runtime integration modules.",
   labels: { surface: "extension", parser: "native-syntax", extension: "effect" },
 };
 
@@ -95,6 +95,7 @@ export function typeScriptExtensionPolicyRules(): readonly TypeScriptHarnessRule
     TS_EXT_EFFECT_R005,
     TS_EXT_EFFECT_R006,
     TS_EXT_EFFECT_R007,
+    TS_EXT_EFFECT_R008,
   ];
 }
 
@@ -109,6 +110,7 @@ export function evaluateExtensionPolicyRules(
     ...evaluateEffectTypedErrorAdvice(reasoningTree),
     ...evaluateEffectPromiseInteropAdvice(reasoningTree),
     ...evaluateEffectResourceScopeAdvice(reasoningTree),
+    ...evaluateEffectConcurrencyAdvice(reasoningTree),
   ].sort((left, right) => findingSortKey(left).localeCompare(findingSortKey(right)));
 }
 
@@ -194,16 +196,9 @@ function evaluateEffectRuntimeBoundaryAdvice(
   if (!effectPolicyIsActive(reasoningTree.packageExtensions)) {
     return [];
   }
-  return effectPolicySourceModules(reasoningTree).flatMap((moduleReport) => {
-    if (
-      moduleReport.role === "entrypoint" ||
-      moduleReport.role === "test" ||
-      isEffectAdapterModule(reasoningTree, moduleReport)
-    ) {
-      return [];
-    }
-    return effectRuntimeBoundaryAdviceForModule(moduleReport);
-  });
+  return sourceModules(reasoningTree).flatMap((moduleReport) =>
+    effectRuntimeBoundaryAdviceForModule(moduleReport),
+  );
 }
 
 function effectRuntimeBoundaryAdviceForModule(

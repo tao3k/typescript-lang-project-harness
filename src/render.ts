@@ -206,13 +206,9 @@ function renderExtensionLines(
     .map((extension) => {
       const configLabel =
         extension.configSource === undefined ? "" : ` config=${extension.configSource}`;
-      const adapterLabel =
-        extension.adapterModulePatterns.length === 0
-          ? ""
-          : ` adapters=${renderNameList(extension.adapterModulePatterns)}`;
       return ` - ${extension.name} activation=${extension.activation} capabilities=${extension.capabilities.join(
         ",",
-      )} coverage=${extension.coverage}${configLabel}${adapterLabel}`;
+      )} coverage=${extension.coverage}${configLabel}`;
     })
     .sort((left, right) => left.localeCompare(right));
 }

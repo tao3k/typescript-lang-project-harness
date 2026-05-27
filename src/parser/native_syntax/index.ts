@@ -5,6 +5,7 @@ import type {
   TypeScriptEffectResourceScopeRiskFact,
   TypeScriptEffectRuntimeCallFact,
   TypeScriptEffectServiceMethodFact,
+  TypeScriptEffectConcurrencySignalFact,
   TypeScriptPublicAsyncEffectSurfaceFact,
   TypeScriptPublicDiscriminatedUnionVariantFieldFact,
   TypeScriptPublicDataFieldFact,
@@ -26,6 +27,7 @@ import {
   collectEffectRuntimeCalls,
   collectEffectServiceMethods,
 } from "./effect.js";
+import { collectEffectConcurrencySignals } from "./effect_concurrency.js";
 import { collectEffectResourceScopeRisks } from "./effect_resources.js";
 
 export interface TypeScriptNativeSyntaxFacts {
@@ -39,6 +41,7 @@ export interface TypeScriptNativeSyntaxFacts {
   readonly effectRuntimeCalls: readonly TypeScriptEffectRuntimeCallFact[];
   readonly effectPromiseInteropRisks: readonly TypeScriptEffectPromiseInteropRiskFact[];
   readonly effectResourceScopeRisks: readonly TypeScriptEffectResourceScopeRiskFact[];
+  readonly effectConcurrencySignals: readonly TypeScriptEffectConcurrencySignalFact[];
   readonly effectServiceMethods: readonly TypeScriptEffectServiceMethodFact[];
 }
 
@@ -56,6 +59,7 @@ export function collectTypeScriptNativeSyntaxFacts(
     effectRuntimeCalls: collectEffectRuntimeCalls(sourceFile),
     effectPromiseInteropRisks: collectEffectPromiseInteropRisks(sourceFile),
     effectResourceScopeRisks: collectEffectResourceScopeRisks(sourceFile),
+    effectConcurrencySignals: collectEffectConcurrencySignals(sourceFile),
     effectServiceMethods: collectEffectServiceMethods(sourceFile),
   };
 }

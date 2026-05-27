@@ -17,6 +17,8 @@ export type {
 } from "./model/build_tools.js";
 export type {
   TypeScriptEffectErrorChannelKind,
+  TypeScriptEffectConcurrencySignalFact,
+  TypeScriptEffectConcurrencySignalKind,
   TypeScriptEffectRuntimeCallFact,
   TypeScriptEffectRuntimeCallKind,
   TypeScriptEffectPromiseInteropRiskFact,

@@ -62,6 +62,7 @@ export function moduleReportFromSourceFile(
     effectRuntimeCalls: nativeSyntaxFacts.effectRuntimeCalls,
     effectPromiseInteropRisks: nativeSyntaxFacts.effectPromiseInteropRisks,
     effectResourceScopeRisks: nativeSyntaxFacts.effectResourceScopeRisks,
+    effectConcurrencySignals: nativeSyntaxFacts.effectConcurrencySignals,
     effectServiceMethods: nativeSyntaxFacts.effectServiceMethods,
   };
 }

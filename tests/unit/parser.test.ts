@@ -123,6 +123,7 @@ test("parser extracts native public API and control-flow facts", () => {
       "  export function promise<A>(thunk: () => Promise<A>): Effect<A>;",
       "  export function acquireRelease<A>(acquire: Effect<A>, release: (a: A) => Effect<void>): Effect<A>;",
       "  export function scoped<A>(program: Effect<A>): Effect<A>;",
+      "  export function all<A>(programs: Iterable<Effect<A>>, options?: { concurrency?: number }): Effect<A[]>;",
       "  export function Tag(name: string): any;",
       "}",
       "export interface OwnerService {",
@@ -148,6 +149,19 @@ test("parser extracts native public API and control-flow facts", () => {
       "  Effect.acquireRelease(acquireOwner, releaseOwner)",
       ");",
       "export const riskyOwnerEffect = Effect.promise(async () => 'owner');",
+      "export async function loadOwners(ids: string[]): Promise<string[]> {",
+      "  return Promise.all(ids.map(() => fetchOwner()));",
+      "}",
+      "export async function loadOwnersSequential(ids: string[]): Promise<string[]> {",
+      "  const owners: string[] = [];",
+      "  for (const id of ids) {",
+      "    owners.push(await fetchOwner());",
+      "  }",
+      "  return owners;",
+      "}",
+      "export const loadOwnerEffects = (programs: Effect.Effect<string>[]) => Effect.all(programs);",
+      "export const loadOwnerEffectsWithBudget = (programs: Effect.Effect<string>[]) =>",
+      "  Effect.all(programs, { concurrency: 2 });",
       "export function configure(",
       "  id: string,",
       "  dryRun: boolean,",
@@ -165,13 +179,15 @@ test("parser extracts native public API and control-flow facts", () => {
   const report = parseTypeScriptSourceFile(sourcePath);
 
   assert.deepEqual(
-    report.publicFunctionParams.map((param) => ({
-      fn: param.functionName,
-      name: param.paramName,
-      type: param.typeText,
-      primitive: param.primitiveContractType,
-      flag: param.flagContractType,
-    })),
+    report.publicFunctionParams
+      .filter((param) => param.functionName === "configure")
+      .map((param) => ({
+        fn: param.functionName,
+        name: param.paramName,
+        type: param.typeText,
+        primitive: param.primitiveContractType,
+        flag: param.flagContractType,
+      })),
     [
       { fn: "configure", name: "id", type: "string", primitive: "string", flag: undefined },
       { fn: "configure", name: "dryRun", type: "boolean", primitive: "boolean", flag: "boolean" },
@@ -230,21 +246,28 @@ test("parser extracts native public API and control-flow facts", () => {
     ],
   );
   assert.deepEqual(
-    report.publicFunctionControlFlows.map((flow) => ({
-      fn: flow.functionName,
-      branches: flow.branchCount,
-      statements: flow.statementCount,
-    })),
+    report.publicFunctionControlFlows
+      .filter((flow) => flow.functionName === "configure")
+      .map((flow) => ({
+        fn: flow.functionName,
+        branches: flow.branchCount,
+        statements: flow.statementCount,
+      })),
     [{ fn: "configure", branches: 2, statements: 3 }],
   );
   assert.deepEqual(
-    report.publicAsyncEffectSurfaces.map((surface) => ({
-      fn: surface.functionName,
-      promise: surface.returnsPromise,
-      effect: surface.returnsEffect,
-      type: surface.returnTypeText,
-      errorKind: surface.errorChannelKind,
-    })),
+    report.publicAsyncEffectSurfaces
+      .filter(
+        (surface) =>
+          surface.functionName === "fetchOwner" || surface.functionName === "fetchOwnerEffect",
+      )
+      .map((surface) => ({
+        fn: surface.functionName,
+        promise: surface.returnsPromise,
+        effect: surface.returnsEffect,
+        type: surface.returnTypeText,
+        errorKind: surface.errorChannelKind,
+      })),
     [
       {
         fn: "fetchOwner",
@@ -275,6 +298,16 @@ test("parser extracts native public API and control-flow facts", () => {
   assert.deepEqual(
     report.effectResourceScopeRisks.map((risk) => `${risk.ownerName}:${risk.constructorName}`),
     ["ownerResource:Effect.acquireRelease"],
+  );
+  assert.deepEqual(
+    report.effectConcurrencySignals.map(
+      (signal) => `${signal.ownerName}:${signal.signalKind}:${signal.callee}`,
+    ),
+    [
+      "loadOwners:promise-combinator:Promise.all",
+      "loadOwnersSequential:sequential-await-loop:for-of-await",
+      "loadOwnerEffects:effect-combinator-missing-concurrency:Effect.all",
+    ],
   );
   assert.deepEqual(
     report.effectServiceMethods.map((method) => ({
