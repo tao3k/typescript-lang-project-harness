@@ -12,6 +12,7 @@ import type {
 import {
   effectPolicyIsActive,
   effectPolicySourceModules,
+  isEffectAdapterModule,
   sourceModules,
 } from "./effect_modules.js";
 
@@ -194,7 +195,11 @@ function evaluateEffectRuntimeBoundaryAdvice(
     return [];
   }
   return effectPolicySourceModules(reasoningTree).flatMap((moduleReport) => {
-    if (moduleReport.role === "entrypoint" || moduleReport.role === "test") {
+    if (
+      moduleReport.role === "entrypoint" ||
+      moduleReport.role === "test" ||
+      isEffectAdapterModule(reasoningTree, moduleReport)
+    ) {
       return [];
     }
     return effectRuntimeBoundaryAdviceForModule(moduleReport);

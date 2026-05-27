@@ -64,6 +64,11 @@ Parser-visible package `bin` owners and TypeScript targets referenced by
 entrypoint sits under `src/cli` or `src/bin`, that adapter tree is treated as
 entrypoint surface so project-wide Effect advice stays aimed at reusable source
 owners.
+Effect adapter module patterns declared in
+`typescriptProjectHarness.extensions.effect.adapterModules` are also
+parser-owned package facts. They document framework or runtime Promise
+boundaries without letting rule packs read `package.json` or infer adapter
+semantics from source text.
 Parser-visible `index.*`, `main.*`, config, and test file roles are matched by
 explicit module suffix lists, not dynamic regular-expression construction.
 Workspace package config facts are package-root local: a workspace package only

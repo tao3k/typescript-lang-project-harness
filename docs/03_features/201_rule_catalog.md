@@ -141,7 +141,11 @@ projects keep a bounded first reading surface for agents.
   an `effect` dependency or explicit Effect config asks the harness to guide
   agents toward `Effect.Effect<Success, DomainError, Requirements>`,
   `Effect.tryPromise({ try: () => promise, catch: (cause) => ... })`, and
-  entrypoint/adapter-only `Effect.run*` execution.
+  entrypoint/adapter-only `Effect.run*` execution. Framework adapter modules
+  can be documented through
+  `typescriptProjectHarness.extensions.effect.adapterModules` path patterns in
+  `package.json`; those patterns are parser-owned facts consumed by the Effect
+  rule pack.
 - `TS-EXT-EFFECT-R003`: when the Effect extension is active, source modules
   should return Effect descriptions and leave `Effect.run*` / `Runtime.run*`
   execution to entrypoint, framework adapter, or managed runtime integration

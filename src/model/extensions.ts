@@ -27,6 +27,7 @@ export interface TypeScriptPackageExtensionFact {
   readonly activation: TypeScriptPackageExtensionActivation;
   readonly coverage: TypeScriptPackageExtensionCoverage;
   readonly capabilities: readonly string[];
+  readonly adapterModulePatterns: readonly string[];
   readonly location: SourceLocation;
   readonly dependencySource?: TypeScriptPackageExtensionDependencySource;
   readonly configSource?: TypeScriptPackageExtensionConfigSource;

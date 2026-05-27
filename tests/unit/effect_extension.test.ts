@@ -312,6 +312,78 @@ test("Effect policy treats package script TypeScript targets as entrypoint adapt
   );
 });
 
+test("Effect policy respects package-configured adapter module patterns", () => {
+  const root = effectProject("configured-adapter-modules", {
+    packageJson: {
+      dependencies: { effect: "^3.0.0" },
+      typescriptProjectHarness: {
+        extensions: {
+          effect: {
+            enabled: true,
+            adapterModules: ["src/adapters/**/*.ts", "src/*.functions.ts"],
+          },
+        },
+      },
+    },
+    source: {
+      "adapters/http.ts": [
+        'import { Effect } from "effect";',
+        "declare const program: Effect.Effect<string, Error>;",
+        "export function handleHttp(): Promise<string> {",
+        "  return Effect.runPromise(program);",
+        "}",
+      ],
+      "domain.ts": [
+        'import { Effect } from "effect";',
+        "declare const program: Effect.Effect<string, Error>;",
+        "export function loadDomain(): Promise<string> {",
+        "  return Effect.runPromise(program);",
+        "}",
+      ],
+      "query.functions.ts": [
+        "export async function loadQuery(): Promise<string> {",
+        "  return 'query';",
+        "}",
+      ],
+    },
+  });
+
+  const report = runTypeScriptProjectHarness(root);
+  const snapshot = renderTypeScriptReasoningTree(report);
+
+  assert.equal(isTypeScriptHarnessClean(report), true);
+  assert.deepEqual(
+    report.projectScope?.packageJson.packageExtensions.map((extension) => ({
+      activation: extension.activation,
+      adapterModulePatterns: extension.adapterModulePatterns,
+    })),
+    [
+      {
+        activation: "config-enabled",
+        adapterModulePatterns: ["src/adapters/**/*.ts", "src/*.functions.ts"],
+      },
+    ],
+  );
+  assert.deepEqual(
+    report.findings
+      .filter((finding) => finding.ruleId.startsWith("TS-EXT-EFFECT"))
+      .map((finding) =>
+        [
+          finding.ruleId,
+          finding.severity,
+          path.relative(root, finding.location.path ?? ""),
+          finding.labels.module_role ?? "",
+        ].join(":"),
+      ),
+    [
+      "TS-EXT-EFFECT-R002:info:src/domain.ts:source",
+      "TS-EXT-EFFECT-R003:info:src/domain.ts:source",
+    ],
+  );
+  assert.match(snapshot, /config=typescriptProjectHarness/u);
+  assert.match(snapshot, /adapters=src\/adapters\/\*\*\/\*\.ts,src\/\*\.functions\.ts/u);
+});
+
 test("Effect service methods with requirement leaks receive layer-boundary advice", () => {
   const root = effectProject("service-requirements", {
     packageJson: {

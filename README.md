@@ -140,6 +140,12 @@ interop, and `Effect.run*` execution only at entrypoint or adapter boundaries.
 Package-owned CLI adapters are recognized from parser-owned `bin` facts and
 from TypeScript targets named in `package.json` scripts, so agent advice stays
 focused on source/domain owners instead of asking benchmark or command handlers
+to return Effect values. Projects can also keep framework adapters explicit
+with parser-owned package config:
+`typescriptProjectHarness.extensions.effect.adapterModules = ["src/data/*.functions.ts"]`.
+Those configured adapter modules may expose Promise boundaries and execute
+`Effect.run*` while the surrounding domain/source owners keep returning Effect
+descriptions.
 to masquerade as reusable domain APIs.
 This is extension policy, not a manifest dependency gate.
 M14 enriches that extension from the current Effect docs without widening it
