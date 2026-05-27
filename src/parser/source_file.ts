@@ -67,6 +67,8 @@ export function moduleReportFromSourceFile(
     effectProductionBoundarySignals: nativeSyntaxFacts.effectProductionBoundarySignals,
     effectServiceMethods: nativeSyntaxFacts.effectServiceMethods,
     reactRenderPuritySignals: nativeSyntaxFacts.reactRenderPuritySignals,
+    reactHookCallSignals: nativeSyntaxFacts.reactHookCallSignals,
+    reactStaticDefinitionSignals: nativeSyntaxFacts.reactStaticDefinitionSignals,
   };
 }
 

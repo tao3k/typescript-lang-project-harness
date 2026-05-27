@@ -65,6 +65,8 @@ test("policy config can disable several rules and a built-in rule pack", () => {
     "TS-EXT-EFFECT-R010",
     "TS-EXT-REACT-R001",
     "TS-EXT-REACT-R002",
+    "TS-EXT-REACT-R003",
+    "TS-EXT-REACT-R004",
   ]);
   assert.ok(report.findings.every((finding) => !finding.ruleId.startsWith("TS-AGENT-")));
   assert.ok(report.findings.every((finding) => finding.ruleId !== "TS-SEM-R001"));

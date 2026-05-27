@@ -18,11 +18,9 @@ import {
 import { evaluateEffectProductionBoundaryAdvice, TS_EXT_EFFECT_R010 } from "./effect_production.js";
 import { evaluateEffectSchemaBoundaryAdvice, TS_EXT_EFFECT_R009 } from "./effect_schema.js";
 import {
-  evaluateReactConfigurationFindings,
-  evaluateReactRenderPurityAdvice,
-  TS_EXT_REACT_R001,
-  TS_EXT_REACT_R002,
-} from "./react_purity.js";
+  evaluateReactExtensionPolicyRules,
+  typeScriptReactExtensionPolicyRules,
+} from "./react_pack.js";
 
 export const TS_EXT_EFFECT_R001: TypeScriptHarnessRule = {
   ruleId: "TS-EXT-EFFECT-R001",
@@ -106,8 +104,7 @@ export function typeScriptExtensionPolicyRules(): readonly TypeScriptHarnessRule
     TS_EXT_EFFECT_R008,
     TS_EXT_EFFECT_R009,
     TS_EXT_EFFECT_R010,
-    TS_EXT_REACT_R001,
-    TS_EXT_REACT_R002,
+    ...typeScriptReactExtensionPolicyRules(),
   ];
 }
 
@@ -125,8 +122,7 @@ export function evaluateExtensionPolicyRules(
     ...evaluateEffectConcurrencyAdvice(reasoningTree),
     ...evaluateEffectSchemaBoundaryAdvice(reasoningTree),
     ...evaluateEffectProductionBoundaryAdvice(reasoningTree),
-    ...evaluateReactConfigurationFindings(reasoningTree),
-    ...evaluateReactRenderPurityAdvice(reasoningTree),
+    ...evaluateReactExtensionPolicyRules(reasoningTree),
   ].sort((left, right) => findingSortKey(left).localeCompare(findingSortKey(right)));
 }
 

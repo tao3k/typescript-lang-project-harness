@@ -17,7 +17,9 @@ import type {
   TypeScriptPublicDiscriminatedUnionVariantFieldFact,
   TypeScriptPublicFunctionControlFlowFact,
   TypeScriptPublicFunctionParamFact,
+  TypeScriptReactHookCallSignalFact,
   TypeScriptReactRenderPuritySignalFact,
+  TypeScriptReactStaticDefinitionSignalFact,
   TypeScriptPublicTupleApiSurfaceFact,
   TypeScriptPublicTypeAliasFact,
 } from "./native_syntax.js";
@@ -69,6 +71,8 @@ export interface TypeScriptModuleReport {
   readonly effectProductionBoundarySignals: readonly TypeScriptEffectProductionBoundarySignalFact[];
   readonly effectServiceMethods: readonly TypeScriptEffectServiceMethodFact[];
   readonly reactRenderPuritySignals: readonly TypeScriptReactRenderPuritySignalFact[];
+  readonly reactHookCallSignals: readonly TypeScriptReactHookCallSignalFact[];
+  readonly reactStaticDefinitionSignals: readonly TypeScriptReactStaticDefinitionSignalFact[];
 }
 
 export interface TypeScriptReasoningModule {
@@ -98,4 +102,6 @@ export interface TypeScriptReasoningModule {
   readonly effectProductionBoundarySignals: readonly TypeScriptEffectProductionBoundarySignalFact[];
   readonly effectServiceMethods: readonly TypeScriptEffectServiceMethodFact[];
   readonly reactRenderPuritySignals: readonly TypeScriptReactRenderPuritySignalFact[];
+  readonly reactHookCallSignals: readonly TypeScriptReactHookCallSignalFact[];
+  readonly reactStaticDefinitionSignals: readonly TypeScriptReactStaticDefinitionSignalFact[];
 }

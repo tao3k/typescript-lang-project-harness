@@ -242,7 +242,9 @@ Promise-interop, resource, concurrency, Schema, and production-observability
 facts. M19 adds the same package-owned extension shape for React:
 `TS-EXT-REACT-R001` is an `error` when explicit React extension config lacks a
 `react` dependency, while `TS-EXT-REACT-R002` stays `info` advice over
-parser-native component/hook owner facts and render-purity signals. Future
+parser-native component/hook owner facts and render-purity signals. M20 adds
+`TS-EXT-REACT-R003` as an error-level Rules of Hooks structure finding and
+`TS-EXT-REACT-R004` as static component/hook definition advice. Future
 `TS-MOD-*`, `TS-TEST-*`, and `TS-AGENT-*` rules should remain non-blocking
 unless a caller explicitly promotes them.
 

@@ -49,6 +49,8 @@ test("Effect dependency activates extension snapshot and async domain advice", (
       "TS-EXT-EFFECT-R010:info",
       "TS-EXT-REACT-R001:error",
       "TS-EXT-REACT-R002:info",
+      "TS-EXT-REACT-R003:error",
+      "TS-EXT-REACT-R004:info",
     ],
   );
   assert.deepEqual(

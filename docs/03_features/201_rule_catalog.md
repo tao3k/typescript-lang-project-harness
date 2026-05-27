@@ -60,15 +60,20 @@ for advisory rules; it does not mutate catalog severity.
 - `TS-EXT-REACT-R001`: when `package.json` explicitly enables the React
   extension, the `react` dependency must be declared so the configured policy
   can run against a real project dependency.
+- `TS-EXT-REACT-R003`: when the React extension is active, Hooks must keep a
+  stable top-level call order in exported components and custom Hooks. The
+  parser reports conditionals, loops, nested functions, hooks after conditional
+  returns, and `try`/`catch`/`finally` contexts. This is an error because the
+  code can break React state preservation and render consistency.
 
 ## Agent Advice Rules
 
 `TS-SEM-*`, `TS-PROJ-R003`, `TS-PROJ-R004`, `TS-PROJ-R005`,
 `TS-PROJ-R006`, `TS-MOD-*`, `TS-TEST-*`, `TS-AGENT-*`, and
-`TS-EXT-EFFECT-R002` through `TS-EXT-EFFECT-R010` and `TS-EXT-REACT-R002`
-rules are `info` findings. They are rendered by default
-for repair agents but do not fail assertions unless a caller promotes them or
-uses the agent test-gate helper `assertTypeScriptProjectHarnessAgentClean()`.
+`TS-EXT-EFFECT-R002` through `TS-EXT-EFFECT-R010`, `TS-EXT-REACT-R002`, and
+`TS-EXT-REACT-R004` rules are `info` findings. They are rendered by default for
+repair agents but do not fail assertions unless a caller promotes them or uses
+the agent test-gate helper `assertTypeScriptProjectHarnessAgentClean()`.
 The agent test-gate helper renders grouped compact advice text so large
 projects keep a bounded first reading surface for agents.
 
@@ -202,6 +207,13 @@ projects keep a bounded first reading surface for agents.
   server/domain inputs, or Effect/domain boundaries, and to move browser writes
   into `useEffect` or event handlers. This is React extension policy, not a
   replacement for eslint-plugin-react-hooks or React Compiler diagnostics.
+- `TS-EXT-REACT-R004`: when the React extension is active, components and
+  custom hooks should be static module-level definitions. Parser-native facts
+  detect nested PascalCase components and `use*` hook definitions inside public
+  component/hook render owners. Compact advice tells agents to hoist the
+  definitions, pass render-local values through props or explicit hook
+  parameters, and select between existing component references instead of
+  constructing new component types during render.
 
 ## Reasoning Tree Policy
 
