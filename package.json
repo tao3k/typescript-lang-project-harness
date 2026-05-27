@@ -21,7 +21,7 @@
   },
   "scripts": {
     "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
-    "build": "npm run clean && tsc -p tsconfig.json",
+    "build": "npm run clean && tsc -p tsconfig.json && chmod +x dist/src/bin/typescript-project-harness.js",
     "check": "tsc -p tsconfig.json --noEmit",
     "prepare": "npm run build",
     "format": "oxfmt --write .",
