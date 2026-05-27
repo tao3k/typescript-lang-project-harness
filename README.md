@@ -37,6 +37,7 @@ The CLI runs the same project harness:
 ```shell
 typescript-project-harness .
 typescript-project-harness --json .
+typescript-project-harness --agent-compact .
 typescript-project-harness --agent-snapshot .
 ```
 
@@ -44,10 +45,16 @@ Project runs anchor at the nearest `package.json` above the requested path.
 Running from a package subdirectory still evaluates the whole package project,
 including `tsconfig`, package metadata, roots, modules, and edges relative to
 that package root.
-Use `assertTypeScriptProjectHarnessAgentClean()` inside downstream test suites
-when agent-facing advice should fail the test gate. The default
-`assertTypeScriptProjectHarnessClean()` and CLI exit code remain blocking-only
-so `info` advice stays visible without becoming a default policy failure.
+Use `typescript-project-harness --agent-compact .` from downstream
+`package.json` scripts when a shell command should surface agent repair
+instructions without adding a project-local runner script. For `npm test` or
+`npm check` embedded in a test framework, use
+`assertTypeScriptProjectHarnessEmbeddedClean()`; it prints compact agent advice
+by default and fails only on blocking findings. Use
+`assertTypeScriptProjectHarnessAgentClean()` only when agent-facing advice
+should fail the test gate. The default `assertTypeScriptProjectHarnessClean()`
+and CLI exit code remain blocking-only, so `info` advice can stay visible
+without becoming a default policy failure.
 
 ## Current Rule Packs
 
@@ -151,9 +158,11 @@ waiver checks, disabled task-kind controls, and parser-fact dependency signals
 for profile inference. It still does not execute external skills or add
 manifest dependency policy.
 
-For agent repair loops, `renderTypeScriptReasoningTree(report)` emits a
-single-package Rust-style owner snapshot from reasoning tree facts, while the
-`--agent-snapshot` CLI flag emits the project-level snapshot. When parser-owned
+For agent repair loops, `renderTypeScriptProjectHarnessAgentCompactText(report)`
+and `--agent-compact` emit task-oriented repair instructions, while
+`renderTypeScriptReasoningTree(report)` emits a single-package Rust-style owner
+snapshot from reasoning tree facts and the `--agent-snapshot` CLI flag emits the
+project-level snapshot. When parser-owned
 workspace or project-reference package facts are present, the CLI groups each
 package scope under a compact `pkg <path>` heading and runs that package from
 its own `package.json` anchor and local `tsconfig.json`. Each package snapshot

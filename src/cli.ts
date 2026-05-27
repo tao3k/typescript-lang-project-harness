@@ -2,6 +2,7 @@ import path from "node:path";
 
 import {
   renderTypeScriptProjectHarness,
+  renderTypeScriptProjectHarnessAgentCompactText,
   renderTypeScriptProjectHarnessAgentSnapshot,
   renderTypeScriptProjectHarnessJson,
 } from "./render.js";
@@ -46,6 +47,7 @@ export function runCli(argv: readonly string[], streams: CliStreams, cwd: string
 
 interface ParsedArgs {
   readonly json: boolean;
+  readonly agentCompact: boolean;
   readonly agentSnapshot: boolean;
   readonly projectRoot?: string;
   readonly error?: string;
@@ -53,6 +55,7 @@ interface ParsedArgs {
 
 function parseArgs(argv: readonly string[]): ParsedArgs {
   let json = false;
+  let agentCompact = false;
   let agentSnapshot = false;
   let projectRoot: string | undefined;
   for (const arg of argv) {
@@ -60,22 +63,34 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
       json = true;
       continue;
     }
+    if (arg === "--agent-compact") {
+      agentCompact = true;
+      continue;
+    }
     if (arg === "--agent-snapshot") {
       agentSnapshot = true;
       continue;
     }
     if (arg.startsWith("-")) {
-      return { json, agentSnapshot, error: `unknown option: ${arg}` };
+      return { json, agentCompact, agentSnapshot, error: `unknown option: ${arg}` };
     }
     if (projectRoot !== undefined) {
-      return { json, agentSnapshot, error: "expected at most one project root" };
+      return { json, agentCompact, agentSnapshot, error: "expected at most one project root" };
     }
     projectRoot = arg;
   }
-  if (json && agentSnapshot) {
-    return { json, agentSnapshot, error: "--json and --agent-snapshot cannot be combined" };
+  const outputModeCount = [json, agentCompact, agentSnapshot].filter(Boolean).length;
+  if (outputModeCount > 1) {
+    return {
+      json,
+      agentCompact,
+      agentSnapshot,
+      error: "--json, --agent-compact, and --agent-snapshot cannot be combined",
+    };
   }
-  return projectRoot === undefined ? { json, agentSnapshot } : { json, agentSnapshot, projectRoot };
+  return projectRoot === undefined
+    ? { json, agentCompact, agentSnapshot }
+    : { json, agentCompact, agentSnapshot, projectRoot };
 }
 
 function renderCliOutput(
@@ -84,6 +99,10 @@ function renderCliOutput(
 ): string {
   if (args.json) {
     return renderTypeScriptProjectHarnessJson(report);
+  }
+  if (args.agentCompact) {
+    const compact = renderTypeScriptProjectHarnessAgentCompactText(report, { findings: "all" });
+    return compact === "" ? `${renderTypeScriptProjectHarness(report)}\n` : `${compact}\n`;
   }
   if (args.agentSnapshot) {
     return `${renderTypeScriptProjectHarnessAgentSnapshot(

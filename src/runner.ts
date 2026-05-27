@@ -25,6 +25,12 @@ import {
   type TypeScriptProjectHarnessAgentSnapshotPackage,
 } from "./model.js";
 
+export interface TypeScriptProjectHarnessEmbeddedOptions {
+  readonly config?: TypeScriptHarnessConfig;
+  readonly emitAdvice?: boolean;
+  readonly writeAdvice?: (message: string) => unknown;
+}
+
 export function runTypeScriptProjectHarness(
   projectRootInput: string | URL,
   config: TypeScriptHarnessConfig = defaultTypeScriptHarnessConfig(),
@@ -116,6 +122,26 @@ export function assertTypeScriptProjectHarnessAgentClean(
   const report = assertTypeScriptProjectHarnessClean(projectRootInput, config);
   if (advisoryFindings(report).length > 0) {
     throw new Error(renderTypeScriptProjectHarnessAgentCompactText(report));
+  }
+  return report;
+}
+
+export function assertTypeScriptProjectHarnessEmbeddedClean(
+  projectRootInput: string | URL,
+  options: TypeScriptProjectHarnessEmbeddedOptions = {},
+): TypeScriptHarnessReport {
+  const report = assertTypeScriptProjectHarnessClean(
+    projectRootInput,
+    options.config ?? defaultTypeScriptHarnessConfig(),
+  );
+  if (options.emitAdvice !== false) {
+    const advice = renderTypeScriptProjectHarnessAgentCompactText(report, {
+      findings: "advice",
+    });
+    if (advice) {
+      const writeAdvice = options.writeAdvice ?? ((message: string) => console.error(message));
+      writeAdvice(advice);
+    }
   }
   return report;
 }

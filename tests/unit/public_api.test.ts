@@ -217,6 +217,7 @@ test("public facade exposes the stable M13 runtime surface", () => {
     "assertTypeScriptLangHarnessClean",
     "assertTypeScriptProjectHarnessAgentClean",
     "assertTypeScriptProjectHarnessClean",
+    "assertTypeScriptProjectHarnessEmbeddedClean",
     "blockingFindings",
     "buildTypeScriptProjectHarnessAgentSnapshot",
     "buildTypeScriptVerificationPerformanceIndex",
@@ -389,6 +390,21 @@ test("public agent-clean assertion surfaces advisory findings as test-gate feedb
     "agent_policy",
   );
   api.assertTypeScriptProjectHarnessAgentClean(root, config);
+});
+
+test("public embedded assertion emits advice without failing info-only projects", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-embedded-clean-"));
+  writeAdviceOnlyProject(root);
+  const advice: string[] = [];
+
+  const report = api.assertTypeScriptProjectHarnessEmbeddedClean(root, {
+    writeAdvice: (message) => advice.push(message),
+  });
+
+  assert.equal(api.isTypeScriptHarnessClean(report), true);
+  assert.equal(advice.length, 1);
+  assert.match(advice[0] ?? "", /^AgentCompactText: mode=advice findings=3 tasks=3/u);
+  assert.match(advice[0] ?? "", /Directive: edit listed targets/u);
 });
 
 test("public agent compact text renderer can select blocking or all findings", () => {

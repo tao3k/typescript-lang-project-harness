@@ -114,6 +114,7 @@ export type {
 } from "./render.js";
 export {
   assertTypeScriptProjectHarnessAgentClean,
+  assertTypeScriptProjectHarnessEmbeddedClean,
   assertTypeScriptLangHarnessClean,
   assertTypeScriptProjectHarnessClean,
   buildTypeScriptProjectHarnessAgentSnapshot,
@@ -121,6 +122,7 @@ export {
   runTypeScriptProjectHarnessAgentSnapshot,
   runTypeScriptProjectHarness,
 } from "./runner.js";
+export type { TypeScriptProjectHarnessEmbeddedOptions } from "./runner.js";
 export {
   typeScriptAgentPolicyRules,
   typeScriptExtensionPolicyRules,
