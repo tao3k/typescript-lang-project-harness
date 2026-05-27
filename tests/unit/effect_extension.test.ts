@@ -117,6 +117,38 @@ test("Effect dependency gives project-wide async migration advice", () => {
   assert.doesNotMatch(advice, /\n  facts:/u);
 });
 
+test("Effect compact advice is prioritized before generic agent shape advice", () => {
+  const root = effectProject("effect-advice-priority", {
+    packageJson: {
+      dependencies: { effect: "^3.0.0" },
+    },
+    source: [
+      "export type OwnerId = string;",
+      "export async function loadOwner(ownerId: OwnerId): Promise<string> {",
+      "  return ownerId;",
+      "}",
+    ],
+  });
+
+  const report = runTypeScriptProjectHarness(root);
+  const advice = renderTypeScriptProjectHarnessAgentCompactText(report);
+
+  assert.deepEqual(
+    report.findings
+      .filter(
+        (finding) => finding.ruleId === "TS-EXT-EFFECT-R002" || finding.ruleId === "TS-AGENT-R010",
+      )
+      .map((finding) => finding.ruleId)
+      .sort(),
+    ["TS-AGENT-R010", "TS-EXT-EFFECT-R002"],
+  );
+  assert.match(
+    advice,
+    /RepairTasks:\n- \[TS-EXT-EFFECT-R002\] info x1: Migrate public async domain APIs to Effect/u,
+  );
+  assert.match(advice, /\n- \[TS-AGENT-R010\] info x1:/u);
+});
+
 test("explicit Effect enablement without dependency is an error-level blocking finding", () => {
   const root = effectProject("config-missing-dependency", {
     packageJson: {

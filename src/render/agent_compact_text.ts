@@ -77,11 +77,53 @@ function groupedAdviceFindings(findings: readonly TypeScriptHarnessFinding[]): A
     group.count += 1;
     group.findings.push(finding);
   }
-  return [...groups.values()].sort((left, right) =>
-    `${left.finding.severity}:${left.finding.ruleId}:${left.finding.title}`.localeCompare(
-      `${right.finding.severity}:${right.finding.ruleId}:${right.finding.title}`,
-    ),
+  return [...groups.values()].sort(compareAdviceGroups);
+}
+
+function compareAdviceGroups(left: AdviceGroup, right: AdviceGroup): number {
+  const priority = adviceGroupPriority(left.finding) - adviceGroupPriority(right.finding);
+  if (priority !== 0) {
+    return priority;
+  }
+  return `${left.finding.severity}:${left.finding.ruleId}:${left.finding.title}`.localeCompare(
+    `${right.finding.severity}:${right.finding.ruleId}:${right.finding.title}`,
   );
+}
+
+function adviceGroupPriority(finding: TypeScriptHarnessFinding): number {
+  return severityPriority(finding.severity) * 100 + packPriority(finding.packId);
+}
+
+function severityPriority(severity: TypeScriptHarnessFinding["severity"]): number {
+  switch (severity) {
+    case "error":
+      return 0;
+    case "warning":
+      return 1;
+    case "info":
+      return 2;
+  }
+}
+
+function packPriority(packId: TypeScriptHarnessFinding["packId"]): number {
+  switch (packId) {
+    case "typescript.extension_policy":
+      return 0;
+    case "typescript.agent_policy":
+      return 1;
+    case "typescript.modularity":
+      return 2;
+    case "typescript.test_layout":
+      return 3;
+    case "typescript.semantic":
+      return 4;
+    case "typescript.project_policy":
+      return 5;
+    case "typescript.syntax":
+      return 6;
+    default:
+      return 9;
+  }
 }
 
 function renderRepairTask(
