@@ -113,6 +113,116 @@ test("explicit React enablement without dependency is an error-level blocking fi
   assert.match(snapshot, /react activation=config-enabled-missing-dependency/u);
 });
 
+test("React hook order violations are error-level structural findings", () => {
+  const root = reactProject("hook-order", {
+    packageJson: {
+      dependencies: { react: "^19.0.0" },
+    },
+    source: {
+      "hooks.tsx": [
+        'import { use, useEffect, useMemo, useState } from "react";',
+        "interface Props {",
+        "  readonly enabled: boolean;",
+        "  readonly items: readonly number[];",
+        "  readonly promise: Promise<string>;",
+        "}",
+        "export function BadHooks({ enabled, items, promise }: Props) {",
+        "  if (enabled) {",
+        "    useEffect(() => undefined, []);",
+        "  }",
+        "  for (const item of items) {",
+        "    useState(item);",
+        "  }",
+        "  if (!enabled) return null;",
+        "  const [count] = useState(0);",
+        "  const handler = () => {",
+        "    useMemo(() => count, [count]);",
+        "  };",
+        "  try {",
+        "    use(promise);",
+        "  } catch {",
+        "    return null;",
+        "  }",
+        "  return <button onClick={handler}>{count}</button>;",
+        "}",
+        "export function GoodUse({ enabled, promise }: Props) {",
+        "  if (enabled) {",
+        "    const value = use(promise);",
+        "    return <div>{value}</div>;",
+        "  }",
+        "  return null;",
+        "}",
+      ],
+    },
+  });
+
+  const report = runTypeScriptProjectHarness(root);
+  const advice = renderTypeScriptProjectHarnessAgentCompactText(report, { findings: "all" });
+  const finding = report.findings.find((candidate) => candidate.ruleId === "TS-EXT-REACT-R003");
+
+  assert.equal(isTypeScriptHarnessClean(report), false);
+  assert.equal(finding?.severity, "error");
+  assert.match(finding?.labels.react_hook_calls ?? "", /BadHooks:useEffect/u);
+  assert.match(finding?.labels.react_hook_calls ?? "", /BadHooks:useState/u);
+  assert.match(finding?.labels.react_hook_calls ?? "", /BadHooks:useMemo/u);
+  assert.match(finding?.labels.react_hook_calls ?? "", /BadHooks:use/u);
+  assert.doesNotMatch(finding?.labels.react_hook_calls ?? "", /GoodUse/u);
+  assert.match(finding?.labels.react_hook_violation_kinds ?? "", /conditional/u);
+  assert.match(finding?.labels.react_hook_violation_kinds ?? "", /loop/u);
+  assert.match(finding?.labels.react_hook_violation_kinds ?? "", /after-conditional-return/u);
+  assert.match(finding?.labels.react_hook_violation_kinds ?? "", /nested-function/u);
+  assert.match(finding?.labels.react_hook_violation_kinds ?? "", /try-catch-finally/u);
+  assert.match(
+    advice,
+    /\[TS-EXT-REACT-R003\] error x1: Move React hooks back to stable top-level call order/u,
+  );
+  assert.match(advice, /call hooks unconditionally at the top level/u);
+  assert.match(advice, /move conditions inside `useEffect`, `useMemo`/u);
+  assert.match(advice, /do not wrap React `use` in try\/catch/u);
+  assert.match(advice, /targets:\n   - @ src\/hooks\.tsx:\d+:\d+ hooks=BadHooks:useEffect/u);
+});
+
+test("React static component and hook factories produce compiler-readiness advice", () => {
+  const root = reactProject("static-definitions", {
+    packageJson: {
+      dependencies: { react: "^19.0.0" },
+    },
+    source: {
+      "static.tsx": [
+        "interface Props { readonly theme: string }",
+        "export function Parent({ theme }: Props) {",
+        "  function ThemedButton() {",
+        "    return <button className={theme}>ok</button>;",
+        "  }",
+        "  const useThemedLabel = () => theme;",
+        "  return <ThemedButton />;",
+        "}",
+      ],
+    },
+  });
+
+  const report = runTypeScriptProjectHarness(root);
+  const advice = renderTypeScriptProjectHarnessAgentCompactText(report);
+  const finding = report.findings.find((candidate) => candidate.ruleId === "TS-EXT-REACT-R004");
+
+  assert.equal(isTypeScriptHarnessClean(report), true);
+  assert.equal(finding?.severity, "info");
+  assert.match(finding?.labels.react_static_definitions ?? "", /Parent:ThemedButton/u);
+  assert.match(finding?.labels.react_static_definitions ?? "", /Parent:useThemedLabel/u);
+  assert.match(finding?.labels.react_static_definition_kinds ?? "", /nested-component/u);
+  assert.match(finding?.labels.react_static_definition_kinds ?? "", /nested-hook/u);
+  assert.match(
+    advice,
+    /\[TS-EXT-REACT-R004\] info x1: Hoist nested React components and hooks to module scope/u,
+  );
+  assert.match(advice, /hoist nested component and custom hook definitions to module scope/u);
+  assert.match(advice, /pass render-local values through props or explicit hook parameters/u);
+  assert.match(
+    advice,
+    /targets:\n   - @ src\/static\.tsx:\d+:\d+ definitions=Parent:ThemedButton/u,
+  );
+});
+
 function reactProject(
   name: string,
   options: {
@@ -143,7 +253,10 @@ function reactProject(
     path.join(root, "src", "react.d.ts"),
     [
       'declare module "react" {',
+      "  export function use<T>(promise: Promise<T>): T;",
       "  export function useEffect(effect: () => void | (() => void), deps?: readonly unknown[]): void;",
+      "  export function useMemo<T>(factory: () => T, deps?: readonly unknown[]): T;",
+      "  export function useState<T>(initial: T): readonly [T, (next: T) => void];",
       "}",
       "declare namespace JSX {",
       "  interface IntrinsicElements {",

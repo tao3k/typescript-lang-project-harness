@@ -101,6 +101,8 @@ function reasoningModuleFromRole(
     effectProductionBoundarySignals: moduleReport.effectProductionBoundarySignals,
     effectServiceMethods: moduleReport.effectServiceMethods,
     reactRenderPuritySignals: moduleReport.reactRenderPuritySignals,
+    reactHookCallSignals: moduleReport.reactHookCallSignals,
+    reactStaticDefinitionSignals: moduleReport.reactStaticDefinitionSignals,
   };
 }
 

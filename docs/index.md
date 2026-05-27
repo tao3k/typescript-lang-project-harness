@@ -62,6 +62,9 @@ entrypoint into a catch-all reference page.
 - [React Extension Render Purity M19 Plan](02_plans/217_react_extension_render_purity_m19_plan.md):
   stacked milestone for package-owned React activation, parser-native
   component/hook render-purity facts, and compact agent repair guidance.
+- [React High-Value Rules M20 Plan](02_plans/218_react_high_value_rules_m20_plan.md):
+  stacked milestone for parser-native Rules of Hooks structure findings and
+  static component/hook definition advice.
 
 ## 03_features: Functional Ledger
 

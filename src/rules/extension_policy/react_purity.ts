@@ -1,7 +1,9 @@
 import type {
   TypeScriptHarnessFinding,
   TypeScriptHarnessRule,
+  TypeScriptReactHookCallSignalFact,
   TypeScriptReactRenderPuritySignalFact,
+  TypeScriptReactStaticDefinitionSignalFact,
   TypeScriptReasoningModule,
   TypeScriptReasoningTree,
 } from "../../model.js";
@@ -24,6 +26,26 @@ export const TS_EXT_REACT_R002: TypeScriptHarnessRule = {
   title: "React render paths should stay pure for compiler optimization",
   requirement:
     "React components and hooks should keep render logic idempotent and side-effect free so React and React Compiler can safely re-render, pause, resume, and optimize them.",
+  labels: { surface: "extension", parser: "native-syntax", extension: "react" },
+};
+
+export const TS_EXT_REACT_R003: TypeScriptHarnessRule = {
+  ruleId: "TS-EXT-REACT-R003",
+  packId: "typescript.extension_policy",
+  severity: "error",
+  title: "React hooks must keep a stable top-level call order",
+  requirement:
+    "React relies on hooks being called from components and hooks in the same order on every render; hooks must not be called conditionally, in loops, after conditional returns, inside nested callbacks, or inside try/catch/finally blocks.",
+  labels: { surface: "extension", parser: "native-syntax", extension: "react" },
+};
+
+export const TS_EXT_REACT_R004: TypeScriptHarnessRule = {
+  ruleId: "TS-EXT-REACT-R004",
+  packId: "typescript.extension_policy",
+  severity: "info",
+  title: "React components and hooks should be static module-level definitions",
+  requirement:
+    "React components and hooks should be defined at module level rather than recreated inside render; nested definitions reset state, cause excessive work, and reduce React Compiler optimization coverage.",
   labels: { surface: "extension", parser: "native-syntax", extension: "react" },
 };
 
@@ -71,6 +93,28 @@ export function evaluateReactRenderPurityAdvice(
   );
 }
 
+export function evaluateReactHookCallFindings(
+  reasoningTree: TypeScriptReasoningTree,
+): TypeScriptHarnessFinding[] {
+  if (!reactPolicyIsActive(reasoningTree.packageExtensions)) {
+    return [];
+  }
+  return reactPolicySourceModules(reasoningTree).flatMap((moduleReport) =>
+    reactHookCallFindingsForModule(moduleReport),
+  );
+}
+
+export function evaluateReactStaticDefinitionAdvice(
+  reasoningTree: TypeScriptReasoningTree,
+): TypeScriptHarnessFinding[] {
+  if (!reactPolicyIsActive(reasoningTree.packageExtensions)) {
+    return [];
+  }
+  return reactPolicySourceModules(reasoningTree).flatMap((moduleReport) =>
+    reactStaticDefinitionAdviceForModule(moduleReport),
+  );
+}
+
 function reactRenderPurityAdviceForModule(
   moduleReport: TypeScriptReasoningModule,
 ): TypeScriptHarnessFinding[] {
@@ -110,6 +154,76 @@ function reactRenderPurityAdviceForModule(
   ];
 }
 
+function reactHookCallFindingsForModule(
+  moduleReport: TypeScriptReasoningModule,
+): TypeScriptHarnessFinding[] {
+  const first = moduleReport.reactHookCallSignals[0];
+  if (first === undefined) {
+    return [];
+  }
+  return [
+    {
+      ruleId: TS_EXT_REACT_R003.ruleId,
+      packId: TS_EXT_REACT_R003.packId,
+      severity: TS_EXT_REACT_R003.severity,
+      title: TS_EXT_REACT_R003.title,
+      summary: `React hook calls break stable render order: ${renderReactHookCallSignals(
+        moduleReport.reactHookCallSignals,
+      )}.`,
+      location: first.location,
+      requirement: TS_EXT_REACT_R003.requirement,
+      ...sourceLineField(first.sourceLine),
+      label: "move hook calls back to top-level component or hook scope",
+      labels: {
+        ...TS_EXT_REACT_R003.labels,
+        module_role: moduleReport.role,
+        react_hook_calls: renderReactHookCallTargets(moduleReport.reactHookCallSignals),
+        react_hook_violation_kinds: [
+          ...new Set(moduleReport.reactHookCallSignals.flatMap((signal) => signal.violationKinds)),
+        ]
+          .sort()
+          .join(","),
+      },
+    },
+  ];
+}
+
+function reactStaticDefinitionAdviceForModule(
+  moduleReport: TypeScriptReasoningModule,
+): TypeScriptHarnessFinding[] {
+  const first = moduleReport.reactStaticDefinitionSignals[0];
+  if (first === undefined) {
+    return [];
+  }
+  return [
+    {
+      ruleId: TS_EXT_REACT_R004.ruleId,
+      packId: TS_EXT_REACT_R004.packId,
+      severity: TS_EXT_REACT_R004.severity,
+      title: TS_EXT_REACT_R004.title,
+      summary: `React render path defines nested components or hooks: ${renderReactStaticDefinitionSignals(
+        moduleReport.reactStaticDefinitionSignals,
+      )}.`,
+      location: first.location,
+      requirement: TS_EXT_REACT_R004.requirement,
+      ...sourceLineField(first.sourceLine),
+      label: "hoist nested React component or hook definitions to module scope",
+      labels: {
+        ...TS_EXT_REACT_R004.labels,
+        module_role: moduleReport.role,
+        react_static_definitions: renderReactStaticDefinitionTargets(
+          moduleReport.reactStaticDefinitionSignals,
+        ),
+        react_static_definition_kinds: [
+          ...new Set(moduleReport.reactStaticDefinitionSignals.map((signal) => signal.signalKind)),
+        ]
+          .sort()
+          .join(","),
+      },
+    },
+  ];
+}
+
 function renderReactPuritySignals(
   signals: readonly TypeScriptReactRenderPuritySignalFact[],
 ): string {
@@ -124,6 +238,40 @@ function renderReactPurityTargets(
 ): string {
   return cappedNames(
     signals.map((signal) => `${signal.ownerName}:${signal.expression}`),
+    6,
+  );
+}
+
+function renderReactHookCallSignals(signals: readonly TypeScriptReactHookCallSignalFact[]): string {
+  return cappedNames(
+    signals.map(
+      (signal) => `${signal.ownerName}:${signal.hookName}:${signal.violationKinds.join("+")}`,
+    ),
+    6,
+  );
+}
+
+function renderReactHookCallTargets(signals: readonly TypeScriptReactHookCallSignalFact[]): string {
+  return cappedNames(
+    signals.map((signal) => `${signal.ownerName}:${signal.hookName}`),
+    6,
+  );
+}
+
+function renderReactStaticDefinitionSignals(
+  signals: readonly TypeScriptReactStaticDefinitionSignalFact[],
+): string {
+  return cappedNames(
+    signals.map((signal) => `${signal.ownerName}:${signal.nestedName}:${signal.signalKind}`),
+    6,
+  );
+}
+
+function renderReactStaticDefinitionTargets(
+  signals: readonly TypeScriptReactStaticDefinitionSignalFact[],
+): string {
+  return cappedNames(
+    signals.map((signal) => `${signal.ownerName}:${signal.nestedName}`),
     6,
   );
 }

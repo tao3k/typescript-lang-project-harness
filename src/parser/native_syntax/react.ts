@@ -1,17 +1,30 @@
 import ts from "typescript";
 
 import type {
+  TypeScriptReactHookCallSignalFact,
+  TypeScriptReactHookCallViolationKind,
   TypeScriptReactRenderOwnerKind,
   TypeScriptReactRenderPuritySignalFact,
   TypeScriptReactRenderPuritySignalKind,
+  TypeScriptReactStaticDefinitionSignalFact,
+  TypeScriptReactStaticDefinitionSignalKind,
 } from "../../model.js";
 import { locationForNode } from "../diagnostics.js";
-import { publicFunctionLikeDeclarations, sourceLineField } from "./helpers.js";
+import type { FunctionLikeWithBody } from "./helpers.js";
+import { bindingNameText, publicFunctionLikeDeclarations, sourceLineField } from "./helpers.js";
 
 interface ReactRenderOwner {
-  readonly node: ts.Node;
+  readonly node: FunctionLikeWithBody;
   readonly name: string;
   readonly ownerKind: TypeScriptReactRenderOwnerKind;
+}
+
+interface ReactHookCallContext {
+  readonly afterConditionalReturn: boolean;
+  readonly conditional: boolean;
+  readonly loop: boolean;
+  readonly nestedFunctionDepth: number;
+  readonly tryCatchFinally: boolean;
 }
 
 export function collectReactRenderPuritySignals(
@@ -19,6 +32,22 @@ export function collectReactRenderPuritySignals(
 ): TypeScriptReactRenderPuritySignalFact[] {
   return reactRenderOwners(sourceFile).flatMap((owner) =>
     reactRenderPuritySignalsForOwner(owner, sourceFile),
+  );
+}
+
+export function collectReactHookCallSignals(
+  sourceFile: ts.SourceFile,
+): TypeScriptReactHookCallSignalFact[] {
+  return reactRenderOwners(sourceFile).flatMap((owner) =>
+    reactHookCallSignalsForOwner(owner, sourceFile),
+  );
+}
+
+export function collectReactStaticDefinitionSignals(
+  sourceFile: ts.SourceFile,
+): TypeScriptReactStaticDefinitionSignalFact[] {
+  return reactRenderOwners(sourceFile).flatMap((owner) =>
+    reactStaticDefinitionSignalsForOwner(owner, sourceFile),
   );
 }
 
@@ -42,6 +71,84 @@ function reactRenderPuritySignalsForOwner(
     const signal = reactRenderPuritySignal(owner, ownerLine, node, sourceFile);
     if (signal !== undefined) {
       signals.push(signal);
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(owner.node);
+  return signals;
+}
+
+function reactHookCallSignalsForOwner(
+  owner: ReactRenderOwner,
+  sourceFile: ts.SourceFile,
+): TypeScriptReactHookCallSignalFact[] {
+  const ownerLine = locationForNode(sourceFile, owner.node).line;
+  const signals: TypeScriptReactHookCallSignalFact[] = [];
+  const visit = (node: ts.Node, context: ReactHookCallContext): void => {
+    if (isFunctionLikeBoundary(owner.node, node)) {
+      ts.forEachChild(node, (child) =>
+        visit(child, {
+          ...context,
+          nestedFunctionDepth: context.nestedFunctionDepth + 1,
+        }),
+      );
+      return;
+    }
+    if (ts.isCallExpression(node)) {
+      const hookName = reactHookCallName(node, sourceFile);
+      if (hookName !== undefined) {
+        const violationKinds = hookCallViolationKinds(hookName, context);
+        if (violationKinds.length > 0) {
+          signals.push({
+            ownerName: owner.name,
+            ownerLine,
+            ownerKind: owner.ownerKind,
+            hookName,
+            violationKinds,
+            location: locationForNode(sourceFile, node),
+            ...sourceLineField(sourceFile, node),
+          });
+        }
+      }
+    }
+    visitChildrenWithHookContext(node, context, visit);
+  };
+  visitOwnerBody(owner, (node, afterConditionalReturn) =>
+    visit(node, {
+      afterConditionalReturn,
+      conditional: false,
+      loop: false,
+      nestedFunctionDepth: 0,
+      tryCatchFinally: false,
+    }),
+  );
+  return signals;
+}
+
+function reactStaticDefinitionSignalsForOwner(
+  owner: ReactRenderOwner,
+  sourceFile: ts.SourceFile,
+): TypeScriptReactStaticDefinitionSignalFact[] {
+  const ownerLine = locationForNode(sourceFile, owner.node).line;
+  const signals: TypeScriptReactStaticDefinitionSignalFact[] = [];
+  const visit = (node: ts.Node): void => {
+    if (isFunctionLikeBoundary(owner.node, node)) {
+      const nestedName = functionLikeName(node, sourceFile);
+      const nestedKind = nestedName === undefined ? undefined : reactRenderOwnerKind(nestedName);
+      if (nestedName !== undefined && nestedKind !== undefined) {
+        signals.push(
+          reactStaticDefinitionSignal(owner, ownerLine, nestedName, nestedKind, node, sourceFile),
+        );
+      }
+    }
+    if (ts.isVariableDeclaration(node) && isFunctionLikeExpression(node.initializer)) {
+      const nestedName = bindingNameText(node.name, sourceFile);
+      const nestedKind = reactRenderOwnerKind(nestedName);
+      if (nestedKind !== undefined) {
+        signals.push(
+          reactStaticDefinitionSignal(owner, ownerLine, nestedName, nestedKind, node, sourceFile),
+        );
+      }
     }
     ts.forEachChild(node, visit);
   };
@@ -78,6 +185,181 @@ function reactRenderPuritySignal(
     );
   }
   return undefined;
+}
+
+function reactHookCallName(node: ts.CallExpression, sourceFile: ts.SourceFile): string | undefined {
+  const callee = callExpressionName(node, sourceFile);
+  const terminalName = callee.split(".").at(-1) ?? callee;
+  return terminalName === "use" || isReactHookName(terminalName) ? terminalName : undefined;
+}
+
+function hookCallViolationKinds(
+  hookName: string,
+  context: ReactHookCallContext,
+): readonly TypeScriptReactHookCallViolationKind[] {
+  const violations: TypeScriptReactHookCallViolationKind[] = [];
+  if (context.nestedFunctionDepth > 0) {
+    violations.push("nested-function");
+  }
+  if (context.tryCatchFinally) {
+    violations.push("try-catch-finally");
+  }
+  if (hookName !== "use") {
+    if (context.conditional) {
+      violations.push("conditional");
+    }
+    if (context.loop) {
+      violations.push("loop");
+    }
+    if (context.afterConditionalReturn) {
+      violations.push("after-conditional-return");
+    }
+  }
+  return [...new Set(violations)].sort();
+}
+
+function visitChildrenWithHookContext(
+  node: ts.Node,
+  context: ReactHookCallContext,
+  visit: (node: ts.Node, context: ReactHookCallContext) => void,
+): void {
+  if (ts.isIfStatement(node)) {
+    visit(node.expression, { ...context, conditional: true });
+    visit(node.thenStatement, { ...context, conditional: true });
+    if (node.elseStatement !== undefined) {
+      visit(node.elseStatement, { ...context, conditional: true });
+    }
+    return;
+  }
+  if (ts.isConditionalExpression(node) || isShortCircuitingBinaryExpression(node)) {
+    ts.forEachChild(node, (child) => visit(child, { ...context, conditional: true }));
+    return;
+  }
+  if (isLoopStatement(node)) {
+    ts.forEachChild(node, (child) => visit(child, { ...context, loop: true }));
+    return;
+  }
+  if (ts.isTryStatement(node)) {
+    ts.forEachChild(node, (child) => visit(child, { ...context, tryCatchFinally: true }));
+    return;
+  }
+  ts.forEachChild(node, (child) => visit(child, context));
+}
+
+function visitOwnerBody(
+  owner: ReactRenderOwner,
+  visit: (node: ts.Node, afterConditionalReturn: boolean) => void,
+): void {
+  const body = owner.node.body;
+  if (body === undefined) {
+    return;
+  }
+  if (!ts.isBlock(body)) {
+    visit(body, false);
+    return;
+  }
+  let afterConditionalReturn = false;
+  for (const statement of body.statements) {
+    visit(statement, afterConditionalReturn);
+    if (statementMayReturnConditionally(statement)) {
+      afterConditionalReturn = true;
+    }
+  }
+}
+
+function statementMayReturnConditionally(statement: ts.Statement): boolean {
+  if (ts.isIfStatement(statement)) {
+    return (
+      statementContainsReturn(statement.thenStatement) ||
+      statementContainsReturn(statement.elseStatement)
+    );
+  }
+  if (ts.isSwitchStatement(statement)) {
+    return statement.caseBlock.clauses.some((clause) =>
+      clause.statements.some((candidate) => statementContainsReturn(candidate)),
+    );
+  }
+  return false;
+}
+
+function statementContainsReturn(statement: ts.Statement | undefined): boolean {
+  if (statement === undefined) {
+    return false;
+  }
+  let containsReturn = false;
+  const visit = (node: ts.Node): void => {
+    if (containsReturn || isFunctionLikeNode(node)) {
+      return;
+    }
+    if (ts.isReturnStatement(node)) {
+      containsReturn = true;
+      return;
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(statement);
+  return containsReturn;
+}
+
+function isShortCircuitingBinaryExpression(node: ts.Node): node is ts.BinaryExpression {
+  return (
+    ts.isBinaryExpression(node) &&
+    (node.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken ||
+      node.operatorToken.kind === ts.SyntaxKind.BarBarToken ||
+      node.operatorToken.kind === ts.SyntaxKind.QuestionQuestionToken)
+  );
+}
+
+function isLoopStatement(node: ts.Node): boolean {
+  return (
+    ts.isForStatement(node) ||
+    ts.isForInStatement(node) ||
+    ts.isForOfStatement(node) ||
+    ts.isWhileStatement(node) ||
+    ts.isDoStatement(node)
+  );
+}
+
+function reactStaticDefinitionSignal(
+  owner: ReactRenderOwner,
+  ownerLine: number,
+  nestedName: string,
+  nestedKind: TypeScriptReactRenderOwnerKind,
+  node: ts.Node,
+  sourceFile: ts.SourceFile,
+): TypeScriptReactStaticDefinitionSignalFact {
+  return {
+    ownerName: owner.name,
+    ownerLine,
+    ownerKind: owner.ownerKind,
+    nestedName,
+    nestedKind,
+    signalKind: staticDefinitionSignalKind(nestedKind),
+    location: locationForNode(sourceFile, node),
+    ...sourceLineField(sourceFile, node),
+  };
+}
+
+function staticDefinitionSignalKind(
+  nestedKind: TypeScriptReactRenderOwnerKind,
+): TypeScriptReactStaticDefinitionSignalKind {
+  return nestedKind === "component" ? "nested-component" : "nested-hook";
+}
+
+function functionLikeName(node: ts.Node, sourceFile: ts.SourceFile): string | undefined {
+  if (ts.isFunctionDeclaration(node) || ts.isFunctionExpression(node)) {
+    return node.name?.text;
+  }
+  if (ts.isMethodDeclaration(node)) {
+    return node.name.getText(sourceFile);
+  }
+  return undefined;
+}
+
+function isFunctionLikeExpression(
+  node: ts.Expression | undefined,
+): node is ts.ArrowFunction | ts.FunctionExpression {
+  return node !== undefined && (ts.isArrowFunction(node) || ts.isFunctionExpression(node));
 }
 
 function reactSignal(
@@ -180,14 +462,17 @@ function expressionNameParts(expression: ts.Expression): readonly string[] {
 }
 
 function isFunctionLikeBoundary(root: ts.Node, node: ts.Node): boolean {
+  return node !== root && isFunctionLikeNode(node);
+}
+
+function isFunctionLikeNode(node: ts.Node): boolean {
   return (
-    node !== root &&
-    (ts.isFunctionDeclaration(node) ||
-      ts.isFunctionExpression(node) ||
-      ts.isArrowFunction(node) ||
-      ts.isMethodDeclaration(node) ||
-      ts.isConstructorDeclaration(node) ||
-      ts.isGetAccessorDeclaration(node) ||
-      ts.isSetAccessorDeclaration(node))
+    ts.isFunctionDeclaration(node) ||
+    ts.isFunctionExpression(node) ||
+    ts.isArrowFunction(node) ||
+    ts.isMethodDeclaration(node) ||
+    ts.isConstructorDeclaration(node) ||
+    ts.isGetAccessorDeclaration(node) ||
+    ts.isSetAccessorDeclaration(node)
   );
 }

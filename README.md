@@ -85,12 +85,13 @@ rule-pack severities, and promoting advisory rules by `blockingRuleIds`.
 `TS-SEM-*`, `TS-PROJ-R003`, `TS-PROJ-R004`, `TS-PROJ-R005`,
 `TS-PROJ-R006`, `TS-MOD-*`, `TS-TEST-*`, `TS-AGENT-*`,
 `TS-EXT-EFFECT-R002` through `TS-EXT-EFFECT-R010`, and
-`TS-EXT-REACT-R002` findings are shown to agents without failing the default
-gate. `TS-EXT-EFFECT-R001` and `TS-EXT-REACT-R001` are `error` because an
-explicit extension enablement that lacks its package dependency is a broken
-project configuration promise. Package metadata diagnostics cover both the
-project root package and TypeScript project reference packages, plus package
-metadata discovered from root workspace patterns. Modern TypeScript
+`TS-EXT-REACT-R002`/`TS-EXT-REACT-R004` findings are shown to agents without
+failing the default gate. `TS-EXT-EFFECT-R001`, `TS-EXT-REACT-R001`, and
+`TS-EXT-REACT-R003` are `error`: explicit extension enablement without its
+package dependency is a broken project configuration promise, and unstable
+Hook call order breaks React's render model. Package metadata diagnostics cover
+both the project root package and TypeScript project reference packages, plus
+package metadata discovered from root workspace patterns. Modern TypeScript
 project-shape advice also stays
 non-blocking: `TS-PROJ-R004` points out referenced package configs missing
 `composite` or `declaration`, and `TS-PROJ-R005` points out package
@@ -216,6 +217,17 @@ inputs, or Effect/domain boundaries, and to move browser writes into
 `useEffect` or event handlers with cleanup. It does not replace
 `eslint-plugin-react-hooks`, React Compiler diagnostics, framework compilers,
 or UI style policy.
+M20 adds the first high-value React correctness/compiler-readiness rules beyond
+purity. `TS-EXT-REACT-R003` is an error-level structural finding when active
+React projects call Hooks conditionally, in loops, after conditional returns,
+inside nested functions, or inside `try`/`catch`/`finally`; the special `use`
+API remains allowed in conditions and loops but is still reported inside
+`try`/`catch`/`finally` or nested callbacks. `TS-EXT-REACT-R004` stays
+non-blocking advice for nested component or custom Hook definitions inside
+render, guiding agents to hoist definitions to module scope and pass data
+through props or explicit hook parameters. Both rules consume parser-native TS
+AST facts rather than matching raw text or duplicating the whole React ESLint
+surface.
 
 For agent repair loops, `renderTypeScriptProjectHarnessAgentCompactText(report)`
 and `--agent-compact` emit task-oriented repair instructions, while

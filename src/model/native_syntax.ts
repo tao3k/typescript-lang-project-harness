@@ -180,6 +180,36 @@ export interface TypeScriptReactRenderPuritySignalFact {
   readonly sourceLine?: string;
 }
 
+export type TypeScriptReactHookCallViolationKind =
+  | "after-conditional-return"
+  | "conditional"
+  | "loop"
+  | "nested-function"
+  | "try-catch-finally";
+
+export interface TypeScriptReactHookCallSignalFact {
+  readonly ownerName: string;
+  readonly ownerLine: number;
+  readonly ownerKind: TypeScriptReactRenderOwnerKind;
+  readonly hookName: string;
+  readonly violationKinds: readonly TypeScriptReactHookCallViolationKind[];
+  readonly location: SourceLocation;
+  readonly sourceLine?: string;
+}
+
+export type TypeScriptReactStaticDefinitionSignalKind = "nested-component" | "nested-hook";
+
+export interface TypeScriptReactStaticDefinitionSignalFact {
+  readonly ownerName: string;
+  readonly ownerLine: number;
+  readonly ownerKind: TypeScriptReactRenderOwnerKind;
+  readonly nestedName: string;
+  readonly nestedKind: TypeScriptReactRenderOwnerKind;
+  readonly signalKind: TypeScriptReactStaticDefinitionSignalKind;
+  readonly location: SourceLocation;
+  readonly sourceLine?: string;
+}
+
 export type TypeScriptEffectServiceContainerKind = "interface" | "type" | "class" | "effect-tag";
 
 export interface TypeScriptEffectServiceMethodFact {

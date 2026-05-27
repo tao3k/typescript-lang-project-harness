@@ -13,7 +13,9 @@ import type {
   TypeScriptPublicDataFieldFact,
   TypeScriptPublicFunctionControlFlowFact,
   TypeScriptPublicFunctionParamFact,
+  TypeScriptReactHookCallSignalFact,
   TypeScriptReactRenderPuritySignalFact,
+  TypeScriptReactStaticDefinitionSignalFact,
   TypeScriptPublicTypeAliasFact,
   TypeScriptPublicTupleApiSurfaceFact,
 } from "../../model.js";
@@ -34,7 +36,11 @@ import { collectEffectConcurrencySignals } from "./effect_concurrency.js";
 import { collectEffectResourceScopeRisks } from "./effect_resources.js";
 import { collectEffectSchemaBoundarySignals } from "./effect_schema.js";
 import { collectEffectProductionBoundarySignals } from "./effect_production.js";
-import { collectReactRenderPuritySignals } from "./react.js";
+import {
+  collectReactHookCallSignals,
+  collectReactRenderPuritySignals,
+  collectReactStaticDefinitionSignals,
+} from "./react.js";
 
 export interface TypeScriptNativeSyntaxFacts {
   readonly publicFunctionParams: readonly TypeScriptPublicFunctionParamFact[];
@@ -52,6 +58,8 @@ export interface TypeScriptNativeSyntaxFacts {
   readonly effectProductionBoundarySignals: readonly TypeScriptEffectProductionBoundarySignalFact[];
   readonly effectServiceMethods: readonly TypeScriptEffectServiceMethodFact[];
   readonly reactRenderPuritySignals: readonly TypeScriptReactRenderPuritySignalFact[];
+  readonly reactHookCallSignals: readonly TypeScriptReactHookCallSignalFact[];
+  readonly reactStaticDefinitionSignals: readonly TypeScriptReactStaticDefinitionSignalFact[];
 }
 
 export function collectTypeScriptNativeSyntaxFacts(
@@ -73,5 +81,7 @@ export function collectTypeScriptNativeSyntaxFacts(
     effectProductionBoundarySignals: collectEffectProductionBoundarySignals(sourceFile),
     effectServiceMethods: collectEffectServiceMethods(sourceFile),
     reactRenderPuritySignals: collectReactRenderPuritySignals(sourceFile),
+    reactHookCallSignals: collectReactHookCallSignals(sourceFile),
+    reactStaticDefinitionSignals: collectReactStaticDefinitionSignals(sourceFile),
   };
 }

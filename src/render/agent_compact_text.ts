@@ -277,7 +277,9 @@ function renderTargetGroup(group: TargetOwnerGroup): string {
     group.first.labels.resource_scope ??
     group.first.labels.schema_boundary ??
     group.first.labels.production_boundary ??
-    group.first.labels.react_purity;
+    group.first.labels.react_purity ??
+    group.first.labels.react_hook_calls ??
+    group.first.labels.react_static_definitions;
   const suffix = surfaces === undefined || surfaces === "" ? "" : ` first=${surfaces}`;
   return `   - ${group.owner} x${group.count}${suffix}`;
 }
@@ -446,6 +448,10 @@ function targetDetailText(finding: TypeScriptHarnessFinding): string {
       return labelValue("io", finding.labels.production_boundary) ?? finding.label;
     case "TS-EXT-REACT-R002":
       return labelValue("purity", finding.labels.react_purity) ?? finding.label;
+    case "TS-EXT-REACT-R003":
+      return labelValue("hooks", finding.labels.react_hook_calls) ?? finding.label;
+    case "TS-EXT-REACT-R004":
+      return labelValue("definitions", finding.labels.react_static_definitions) ?? finding.label;
     case "TS-AGENT-R010":
       return labelValue("alias", finding.labels.alias) ?? finding.label;
     default:
