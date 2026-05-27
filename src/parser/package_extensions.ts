@@ -14,7 +14,22 @@ import {
 } from "./package_document.js";
 import type { ParsedPackageJsonDocument } from "./types.js";
 
-const EFFECT_EXTENSION_CAPABILITIES = ["typed-async", "domain-effects", "policy"] as const;
+const KNOWN_PACKAGE_EXTENSIONS = [
+  {
+    name: "effect",
+    displayName: "Effect",
+    packageName: "effect",
+    capabilities: ["typed-async", "domain-effects", "policy"],
+    configAliases: ["Effect"],
+  },
+  {
+    name: "react",
+    displayName: "React",
+    packageName: "react",
+    capabilities: ["components", "hooks", "compiler-readiness", "purity"],
+    configAliases: ["React"],
+  },
+] as const;
 
 const HARNESS_CONFIG_SOURCE_NAMES: readonly TypeScriptPackageExtensionConfigSource[] = [
   "typescriptProjectHarness",
@@ -25,39 +40,44 @@ const HARNESS_CONFIG_SOURCE_NAMES: readonly TypeScriptPackageExtensionConfigSour
 export function packageExtensionFacts(
   document: ParsedPackageJsonDocument,
 ): TypeScriptPackageExtensionFact[] {
-  const effectDependency = packageDependencyProperty(document, "effect");
-  const effectConfig = packageExtensionConfigProperty(document, "effect");
-  if (effectDependency === undefined && effectConfig === undefined) {
-    return [];
-  }
-  const activation =
-    effectConfig === undefined
-      ? "dependency"
-      : effectDependency === undefined
-        ? "config-enabled-missing-dependency"
-        : "config-enabled";
-  const location =
-    effectConfig === undefined
-      ? (effectDependency?.location ?? packageJsonPropertyLocation(document, "name"))
-      : effectConfig.location;
-  return [
-    {
-      name: "effect",
-      displayName: "Effect",
-      packageName: "effect",
-      activation,
-      coverage: "project",
-      capabilities: EFFECT_EXTENSION_CAPABILITIES,
-      location,
-      ...(effectDependency === undefined ? {} : { dependencySource: effectDependency.source }),
-      ...(effectConfig === undefined ? {} : { configSource: effectConfig.source }),
-    },
-  ];
+  return KNOWN_PACKAGE_EXTENSIONS.flatMap((extension) => {
+    const dependency = packageDependencyProperty(document, extension.packageName);
+    const config = packageExtensionConfigProperty(document, [
+      extension.name,
+      ...extension.configAliases,
+    ]);
+    if (dependency === undefined && config === undefined) {
+      return [];
+    }
+    const activation =
+      config === undefined
+        ? "dependency"
+        : dependency === undefined
+          ? "config-enabled-missing-dependency"
+          : "config-enabled";
+    const location =
+      config === undefined
+        ? (dependency?.location ?? packageJsonPropertyLocation(document, "name"))
+        : config.location;
+    return [
+      {
+        name: extension.name,
+        displayName: extension.displayName,
+        packageName: extension.packageName,
+        activation,
+        coverage: "project",
+        capabilities: extension.capabilities,
+        location,
+        ...(dependency === undefined ? {} : { dependencySource: dependency.source }),
+        ...(config === undefined ? {} : { configSource: config.source }),
+      },
+    ];
+  });
 }
 
 function packageExtensionConfigProperty(
   document: ParsedPackageJsonDocument,
-  extensionName: string,
+  extensionNames: readonly string[],
 ):
   | {
       readonly source: TypeScriptPackageExtensionConfigSource;
@@ -76,9 +96,10 @@ function packageExtensionConfigProperty(
     ) {
       continue;
     }
-    const extensionProperty =
-      jsonObjectProperty(extensionsProperty.initializer, extensionName) ??
-      jsonObjectProperty(extensionsProperty.initializer, "Effect");
+    const extensionsConfig = extensionsProperty.initializer;
+    const extensionProperty = extensionNames
+      .map((extensionName) => jsonObjectProperty(extensionsConfig, extensionName))
+      .find((candidate) => candidate !== undefined);
     if (extensionProperty === undefined) {
       continue;
     }

@@ -59,6 +59,9 @@ entrypoint into a catch-all reference page.
 - [Effect Production Observability M18 Plan](02_plans/216_effect_production_observability_m18_plan.md):
   stacked milestone for parser-owned Effect external IO observability and
   resilience advice, plus React docs research baseline.
+- [React Extension Render Purity M19 Plan](02_plans/217_react_extension_render_purity_m19_plan.md):
+  stacked milestone for package-owned React activation, parser-native
+  component/hook render-purity facts, and compact agent repair guidance.
 
 ## 03_features: Functional Ledger
 

@@ -57,13 +57,16 @@ for advisory rules; it does not mutate catalog severity.
 - `TS-EXT-EFFECT-R001`: when `package.json` explicitly enables the Effect
   extension, the `effect` dependency must be declared so the configured policy
   can run against a real project dependency.
+- `TS-EXT-REACT-R001`: when `package.json` explicitly enables the React
+  extension, the `react` dependency must be declared so the configured policy
+  can run against a real project dependency.
 
 ## Agent Advice Rules
 
 `TS-SEM-*`, `TS-PROJ-R003`, `TS-PROJ-R004`, `TS-PROJ-R005`,
 `TS-PROJ-R006`, `TS-MOD-*`, `TS-TEST-*`, `TS-AGENT-*`, and
-`TS-EXT-EFFECT-R002` through
-`TS-EXT-EFFECT-R010` rules are `info` findings. They are rendered by default
+`TS-EXT-EFFECT-R002` through `TS-EXT-EFFECT-R010` and `TS-EXT-REACT-R002`
+rules are `info` findings. They are rendered by default
 for repair agents but do not fail assertions unless a caller promotes them or
 uses the agent test-gate helper `assertTypeScriptProjectHarnessAgentClean()`.
 The agent test-gate helper renders grouped compact advice text so large
@@ -190,6 +193,15 @@ projects keep a bounded first reading surface for agents.
   resilience evidence (`Effect.retry*` or `Effect.timeout*`). Compact advice
   points agents toward stable span names, log/span attributes, duration or
   counter metrics, retries with `Schedule`, and timeouts.
+- `TS-EXT-REACT-R002`: when the React extension is active, exported React
+  components and hooks should keep render paths idempotent and free of browser
+  writes. Parser-native facts classify public PascalCase components and
+  `use*` hooks, then records obvious render-purity signals such as `new Date`,
+  `Date.now`, `Math.random`, and `document`/`window` assignment. Compact advice
+  tells agents to move non-idempotent work to lazy state, event handlers,
+  server/domain inputs, or Effect/domain boundaries, and to move browser writes
+  into `useEffect` or event handlers. This is React extension policy, not a
+  replacement for eslint-plugin-react-hooks or React Compiler diagnostics.
 
 ## Reasoning Tree Policy
 
