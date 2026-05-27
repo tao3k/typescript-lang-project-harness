@@ -30,8 +30,19 @@ import type {
   TypeScriptNativeDiagnostic,
   TypeScriptNativeDiagnosticRelatedInformation,
   TypeScriptNativeImportResolutionFact,
+  TypeScriptPackageBuildToolConfigSource,
+  TypeScriptPackageBuildToolDependencySource,
+  TypeScriptPackageBuildToolFact,
+  TypeScriptPackageBuildToolName,
+  TypeScriptPackageBuildToolSignalFact,
+  TypeScriptPackageBuildToolSignalKind,
   TypeScriptPackageImportOwnerFact,
   TypeScriptPackageEntryResolutionFact,
+  TypeScriptPackageExtensionActivation,
+  TypeScriptPackageExtensionConfigSource,
+  TypeScriptPackageExtensionDependencySource,
+  TypeScriptPackageExtensionFact,
+  TypeScriptPackageExtensionName,
   TypeScriptPathAliasFact,
   TypeScriptProjectHarnessAgentSnapshot,
   TypeScriptProjectHarnessAgentSnapshotPackage,
@@ -39,9 +50,22 @@ import type {
   TypeScriptProjectHarnessScope,
   TypeScriptProjectReferencePackageFact,
   TypeScriptProjectReferenceResolutionFact,
+  TypeScriptEffectErrorChannelKind,
+  TypeScriptEffectConcurrencySignalFact,
+  TypeScriptEffectConcurrencySignalKind,
+  TypeScriptEffectPromiseInteropRiskFact,
+  TypeScriptEffectPromiseInteropRiskKind,
+  TypeScriptEffectResourceScopeRiskFact,
+  TypeScriptEffectRuntimeCallFact,
+  TypeScriptEffectRuntimeCallKind,
+  TypeScriptEffectServiceContainerKind,
+  TypeScriptEffectServiceMethodFact,
+  TypeScriptPublicAsyncEffectSurfaceFact,
   TypeScriptPublicDataFieldFact,
+  TypeScriptPublicDiscriminatedUnionVariantFieldFact,
   TypeScriptPublicFunctionControlFlowFact,
   TypeScriptPublicFunctionParamFact,
+  TypeScriptPublicTypeAliasFact,
   TypeScriptPublicTupleApiSurfaceFact,
   TypeScriptReasoningDiagnosticFact,
   TypeScriptReasoningImportSummaryFact,
@@ -114,8 +138,19 @@ type PublicModelContract = readonly [
   TypeScriptNativeImportResolutionFact,
   TypeScriptNativeDiagnostic,
   TypeScriptNativeDiagnosticRelatedInformation,
+  TypeScriptPackageBuildToolConfigSource,
+  TypeScriptPackageBuildToolDependencySource,
+  TypeScriptPackageBuildToolFact,
+  TypeScriptPackageBuildToolName,
+  TypeScriptPackageBuildToolSignalFact,
+  TypeScriptPackageBuildToolSignalKind,
   TypeScriptPackageImportOwnerFact,
   TypeScriptPackageEntryResolutionFact,
+  TypeScriptPackageExtensionActivation,
+  TypeScriptPackageExtensionConfigSource,
+  TypeScriptPackageExtensionDependencySource,
+  TypeScriptPackageExtensionFact,
+  TypeScriptPackageExtensionName,
   TypeScriptPathAliasFact,
   TypeScriptProjectHarnessAgentSnapshot,
   TypeScriptProjectHarnessAgentSnapshotPackage,
@@ -123,9 +158,22 @@ type PublicModelContract = readonly [
   TypeScriptProjectHarnessScope,
   TypeScriptProjectReferencePackageFact,
   TypeScriptProjectReferenceResolutionFact,
+  TypeScriptEffectErrorChannelKind,
+  TypeScriptEffectConcurrencySignalFact,
+  TypeScriptEffectConcurrencySignalKind,
+  TypeScriptEffectPromiseInteropRiskFact,
+  TypeScriptEffectPromiseInteropRiskKind,
+  TypeScriptEffectResourceScopeRiskFact,
+  TypeScriptEffectRuntimeCallFact,
+  TypeScriptEffectRuntimeCallKind,
+  TypeScriptEffectServiceContainerKind,
+  TypeScriptEffectServiceMethodFact,
+  TypeScriptPublicAsyncEffectSurfaceFact,
   TypeScriptPublicDataFieldFact,
+  TypeScriptPublicDiscriminatedUnionVariantFieldFact,
   TypeScriptPublicFunctionControlFlowFact,
   TypeScriptPublicFunctionParamFact,
+  TypeScriptPublicTypeAliasFact,
   TypeScriptPublicTupleApiSurfaceFact,
   TypeScriptReasoningDiagnosticFact,
   TypeScriptReasoningImportSummaryFact,
@@ -175,7 +223,7 @@ type PublicModelContract = readonly [
 
 const publicModelContract: PublicModelContract | undefined = undefined;
 
-test("public facade exposes the stable M11 runtime surface", () => {
+test("public facade exposes the stable M13 runtime surface", () => {
   assert.deepEqual(Object.keys(api).sort(), [
     "DEFAULT_IGNORED_DIR_NAMES",
     "TypeScriptVerificationReportWriteError",
@@ -185,6 +233,7 @@ test("public facade exposes the stable M11 runtime surface", () => {
     "assertTypeScriptLangHarnessClean",
     "assertTypeScriptProjectHarnessAgentClean",
     "assertTypeScriptProjectHarnessClean",
+    "assertTypeScriptProjectHarnessEmbeddedClean",
     "blockingFindings",
     "buildTypeScriptProjectHarnessAgentSnapshot",
     "buildTypeScriptVerificationPerformanceIndex",
@@ -210,6 +259,7 @@ test("public facade exposes the stable M11 runtime surface", () => {
     "renderAssertionMessage",
     "renderTypeScriptProjectHarness",
     "renderTypeScriptProjectHarnessAdvice",
+    "renderTypeScriptProjectHarnessAgentCompactText",
     "renderTypeScriptProjectHarnessAgentSnapshot",
     "renderTypeScriptProjectHarnessJson",
     "renderTypeScriptReasoningTree",
@@ -227,6 +277,7 @@ test("public facade exposes the stable M11 runtime surface", () => {
     "runTypeScriptProjectHarness",
     "runTypeScriptProjectHarnessAgentSnapshot",
     "typeScriptAgentPolicyRules",
+    "typeScriptExtensionPolicyRules",
     "typeScriptModularityRules",
     "typeScriptProjectPolicyRules",
     "typeScriptRulePackDescriptors",
@@ -329,10 +380,22 @@ test("public agent-clean assertion surfaces advisory findings as test-gate feedb
     () => api.assertTypeScriptProjectHarnessAgentClean(root),
     (error: unknown) => {
       assert.ok(error instanceof Error);
-      assert.match(error.message, /\[TS-AGENT-R004\] info/u);
-      assert.match(error.message, /\[TS-AGENT-R005\] info/u);
-      assert.match(error.message, /Help:/u);
-      assert.match(error.message, /Contract:/u);
+      assert.match(error.message, /AgentCompactText: mode=advice findings=3 tasks=3/u);
+      assert.match(error.message, /Directive: edit listed targets/u);
+      assert.match(error.message, /RepairTasks:/u);
+      assert.match(error.message, /\[TS-AGENT-R004\] info x1: .+ task=1/u);
+      assert.match(error.message, /\[TS-AGENT-R005\] info x1: .+ task=2/u);
+      assert.match(error.message, /\[TS-AGENT-R006\] info x1: .+ task=3/u);
+      assert.match(error.message, /Public function exposes multiple flag parameters/u);
+      assert.match(error.message, /targets:\n   - @ src\/api\.ts/u);
+      assert.match(error.message, /fix:/u);
+      assert.doesNotMatch(error.message, /Contract:/u);
+      assert.doesNotMatch(error.message, /RuleIndex:/u);
+      assert.doesNotMatch(error.message, /Help:/u);
+      assert.doesNotMatch(error.message, /\n  rule:/u);
+      assert.doesNotMatch(error.message, /\n  problem:/u);
+      assert.doesNotMatch(error.message, /\n  facts:/u);
+      assert.doesNotMatch(error.message, /FindingGroups:/u);
       assert.doesNotMatch(error.message, /^\[ok\]/u);
       return true;
     },
@@ -343,6 +406,64 @@ test("public agent-clean assertion surfaces advisory findings as test-gate feedb
     "agent_policy",
   );
   api.assertTypeScriptProjectHarnessAgentClean(root, config);
+});
+
+test("public embedded assertion emits advice without failing info-only projects", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-embedded-clean-"));
+  writeAdviceOnlyProject(root);
+  const advice: string[] = [];
+
+  const report = api.assertTypeScriptProjectHarnessEmbeddedClean(root, {
+    writeAdvice: (message) => advice.push(message),
+  });
+
+  assert.equal(api.isTypeScriptHarnessClean(report), true);
+  assert.equal(advice.length, 1);
+  assert.match(advice[0] ?? "", /^AgentCompactText: mode=advice findings=3 tasks=3/u);
+  assert.match(advice[0] ?? "", /Directive: edit listed targets/u);
+});
+
+test("public embedded assertion defaults to a fast non-semantic policy pass", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-embedded-fast-"));
+  fs.mkdirSync(path.join(root, "src"));
+  fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ type: "module" }));
+  fs.writeFileSync(path.join(root, "tsconfig.json"), JSON.stringify({ include: ["src/**/*.ts"] }));
+  fs.writeFileSync(path.join(root, "src", "index.ts"), "export const bad: string = 1;\n");
+
+  const fullReport = api.runTypeScriptProjectHarness(root);
+  const embeddedFastReport = api.assertTypeScriptProjectHarnessEmbeddedClean(root, {
+    emitAdvice: false,
+  });
+  const embeddedSemanticReport = api.assertTypeScriptProjectHarnessEmbeddedClean(root, {
+    collectSemanticDiagnostics: true,
+    emitAdvice: false,
+  });
+
+  assert.ok(fullReport.findings.some((finding) => finding.ruleId === "TS-SEM-R001"));
+  assert.ok(embeddedFastReport.findings.every((finding) => finding.ruleId !== "TS-SEM-R001"));
+  assert.ok(embeddedSemanticReport.findings.some((finding) => finding.ruleId === "TS-SEM-R001"));
+});
+
+test("public agent compact text renderer can select blocking or all findings", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-agent-compact-"));
+  writeAdviceOnlyProject(root);
+
+  const report = api.runTypeScriptProjectHarness(root);
+  const blockingCompact = api.renderTypeScriptProjectHarnessAgentCompactText(report, {
+    findings: "blocking",
+  });
+  const allCompact = api.renderTypeScriptProjectHarnessAgentCompactText(report, {
+    findings: "all",
+    maxActionGroups: 1,
+    maxTargetExamples: 1,
+  });
+
+  assert.equal(blockingCompact, "");
+  assert.match(allCompact, /AgentCompactText: mode=all findings=3 tasks=3/u);
+  assert.match(allCompact, /RepairTasks:/u);
+  assert.match(allCompact, /targets:/u);
+  assert.match(allCompact, /\.\.\. \+2 repair tasks/u);
+  assert.doesNotMatch(allCompact, /FindingGroups:/u);
 });
 
 function writeAdviceOnlyProject(root: string): void {

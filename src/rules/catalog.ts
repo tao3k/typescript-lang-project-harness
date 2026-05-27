@@ -5,6 +5,7 @@ import { typeScriptProjectPolicyRules } from "./project_policy/pack.js";
 import { typeScriptSemanticRules } from "./semantic/pack.js";
 import { typeScriptSyntaxRules } from "./syntax/pack.js";
 import { typeScriptTestLayoutRules } from "./test_layout/pack.js";
+import { typeScriptExtensionPolicyRules } from "./extension_policy/pack.js";
 
 export const TYPE_SCRIPT_RULE_PACKS: readonly TypeScriptRulePack[] = [
   "syntax",
@@ -13,6 +14,7 @@ export const TYPE_SCRIPT_RULE_PACKS: readonly TypeScriptRulePack[] = [
   "modularity",
   "test_layout",
   "agent_policy",
+  "extension_policy",
 ];
 
 const PACK_DESCRIPTORS: readonly RulePackDescriptor[] = [
@@ -52,6 +54,12 @@ const PACK_DESCRIPTORS: readonly RulePackDescriptor[] = [
     domains: ["typescript", "agent", "repair"],
     defaultMode: "advisory",
   },
+  {
+    id: "typescript.extension_policy",
+    version: "0.1.0",
+    domains: ["typescript", "extensions", "effect", "agent"],
+    defaultMode: "blocking",
+  },
 ];
 
 export function typeScriptRulePackDescriptors(): readonly RulePackDescriptor[] {
@@ -78,5 +86,7 @@ function typeScriptRulePackRules(rulePack: TypeScriptRulePack): readonly TypeScr
       return typeScriptTestLayoutRules();
     case "agent_policy":
       return typeScriptAgentPolicyRules();
+    case "extension_policy":
+      return typeScriptExtensionPolicyRules();
   }
 }

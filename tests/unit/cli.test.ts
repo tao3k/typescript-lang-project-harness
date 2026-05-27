@@ -6,11 +6,26 @@ import test from "node:test";
 
 import { runCli } from "../../src/cli.js";
 
-test("CLI supports compact, JSON, and agent snapshot output modes", () => {
+test("CLI supports compact, JSON, agent compact, and agent snapshot output modes", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-cli-"));
   fs.mkdirSync(path.join(root, "src"));
   fs.writeFileSync(path.join(root, "tsconfig.json"), JSON.stringify({ include: ["src/**/*.ts"] }));
   fs.writeFileSync(path.join(root, "src", "index.ts"), "export const ok = 1;\n");
+
+  const adviceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-cli-advice-"));
+  fs.mkdirSync(path.join(adviceRoot, "src"));
+  fs.writeFileSync(
+    path.join(adviceRoot, "tsconfig.json"),
+    JSON.stringify({ include: ["src/**/*.ts"] }),
+  );
+  fs.writeFileSync(
+    path.join(adviceRoot, "src", "index.ts"),
+    [
+      "export function loadOwner(includeDrafts: boolean, forceRefresh: boolean) {",
+      "  return includeDrafts || forceRefresh;",
+      "}",
+    ].join("\n"),
+  );
 
   const compact = runCliCapture(["."], root);
   assert.equal(compact.exitCode, 0);
@@ -27,6 +42,12 @@ test("CLI supports compact, JSON, and agent snapshot output modes", () => {
   assert.equal(jsonReport.reasoningTree.runMode, "project");
   assert.equal(jsonReport.modules.length, 1);
 
+  const agentCompact = runCliCapture(["--agent-compact", "."], adviceRoot);
+  assert.equal(agentCompact.exitCode, 0);
+  assert.match(agentCompact.stdout, /^AgentCompactText: mode=all/u);
+  assert.match(agentCompact.stdout, /TS-AGENT-R004/u);
+  assert.match(agentCompact.stdout, /Directive: edit listed targets/u);
+
   const snapshot = runCliCapture(["--agent-snapshot", "."], root);
   assert.equal(snapshot.exitCode, 0);
   assert.match(snapshot.stdout, /^Modules: source=1 branches=1/u);
@@ -35,7 +56,7 @@ test("CLI supports compact, JSON, and agent snapshot output modes", () => {
     /OwnerBranches:\n - src\/index\.ts \[root, facade\] owner=src exports=ok/u,
   );
 
-  const invalid = runCliCapture(["--json", "--agent-snapshot", "."], root);
+  const invalid = runCliCapture(["--json", "--agent-compact", "."], root);
   assert.equal(invalid.exitCode, 2);
   assert.match(invalid.stderr, /cannot be combined/u);
 });

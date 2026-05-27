@@ -8,12 +8,22 @@ import {
   type TypeScriptHarnessFinding,
   type TypeScriptHarnessReport,
   type TypeScriptImportEdgeFact,
+  type TypeScriptPackageBuildToolFact,
+  type TypeScriptPackageExtensionFact,
   type TypeScriptProjectHarnessAgentSnapshot,
   type TypeScriptReasoningImportSummaryFact,
   type TypeScriptReasoningOwnerBranchFact,
   type TypeScriptReasoningOwnerDependencyFact,
   type TypeScriptReasoningTree,
 } from "./model.js";
+export {
+  renderTypeScriptProjectHarnessAdvice,
+  renderTypeScriptProjectHarnessAgentCompactText,
+} from "./render/agent_compact_text.js";
+export type {
+  TypeScriptAgentCompactTextFindingMode,
+  TypeScriptAgentCompactTextOptions,
+} from "./render/agent_compact_text.js";
 
 const MAX_AGENT_SNAPSHOT_BRANCH_LINES = 24;
 const MAX_AGENT_SNAPSHOT_CHILD_EDGES = 8;
@@ -51,6 +61,8 @@ export function renderTypeScriptReasoningTree(report: TypeScriptHarnessReport): 
     MAX_AGENT_SNAPSHOT_BRANCH_LINES,
     "owner branches",
   );
+  const extensionLines = renderExtensionLines(tree.packageExtensions);
+  const buildToolLines = renderBuildToolLines(tree.packageBuildTools);
   const ownerDependencyLines = renderOwnerDependencyLines(tree);
   const findingGroupLines = renderFindingGroups(tree, report.findings);
   const lines = [
@@ -62,6 +74,12 @@ export function renderTypeScriptReasoningTree(report: TypeScriptHarnessReport): 
       findingGroupLines.length,
     ),
   ];
+  if (extensionLines.length > 0) {
+    lines.push("Extensions:", ...extensionLines);
+  }
+  if (buildToolLines.length > 0) {
+    lines.push("BuildTools:", ...buildToolLines);
+  }
   if (branchLines.length > 0) {
     lines.push("OwnerBranches:", ...branchLines);
   }
@@ -91,14 +109,6 @@ export function renderTypeScriptProjectHarnessAgentSnapshot(
       includePackageHeading ? `pkg ${packagePath}\n${rendered}` : rendered,
     )
     .join("\n");
-}
-
-export function renderTypeScriptProjectHarnessAdvice(report: TypeScriptHarnessReport): string {
-  const advice = report.findings.filter((finding) => finding.severity === "info");
-  if (advice.length === 0) {
-    return "";
-  }
-  return advice.map((finding) => renderFinding(report, finding)).join("\n\n");
 }
 
 function renderModuleSummary(
@@ -143,6 +153,18 @@ function renderModuleSummary(
     tree.packageEntryResolutions.length,
     tree.packageEntryResolutions.length > 0,
   );
+  pushMetricIf(
+    parts,
+    "extensions",
+    tree.packageExtensions.length,
+    tree.packageExtensions.length > 0,
+  );
+  pushMetricIf(
+    parts,
+    "build-tools",
+    tree.packageBuildTools.length,
+    tree.packageBuildTools.length > 0,
+  );
   pushMetricIf(parts, "findings", findingGroupCount, findingGroupCount > 0);
   return `Modules: ${parts.join(" ")}`;
 }
@@ -175,6 +197,40 @@ function renderImportKind(importFact: {
   readonly isTypeOnly: boolean;
 }): string {
   return importFact.isTypeOnly ? `type-${importFact.kind}` : importFact.kind;
+}
+
+function renderExtensionLines(
+  extensions: readonly TypeScriptPackageExtensionFact[],
+): readonly string[] {
+  return extensions
+    .map((extension) => {
+      const configLabel =
+        extension.configSource === undefined ? "" : ` config=${extension.configSource}`;
+      return ` - ${extension.name} activation=${extension.activation} capabilities=${extension.capabilities.join(
+        ",",
+      )} coverage=${extension.coverage}${configLabel}`;
+    })
+    .sort((left, right) => left.localeCompare(right));
+}
+
+function renderBuildToolLines(
+  buildTools: readonly TypeScriptPackageBuildToolFact[],
+): readonly string[] {
+  return buildTools
+    .map((buildTool) => {
+      const parts = [
+        signalSummary("packages", buildTool.packageNames),
+        signalSummary("configs", buildTool.configFiles),
+        signalSummary("scripts", buildTool.scriptNames),
+      ].filter((part): part is string => part !== undefined);
+      const suffix = parts.length === 0 ? "" : ` ${parts.join(" ")}`;
+      return ` - ${buildTool.name} capabilities=${buildTool.capabilities.join(",")}${suffix}`;
+    })
+    .sort((left, right) => left.localeCompare(right));
+}
+
+function signalSummary(label: string, values: readonly string[]): string | undefined {
+  return values.length === 0 ? undefined : `${label}=${renderNameList(values)}`;
 }
 
 function isAgentSourceModule(moduleReport: TypeScriptReasoningTree["modules"][number]): boolean {

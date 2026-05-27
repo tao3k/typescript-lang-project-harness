@@ -57,8 +57,22 @@ TypeScript project references, workspace
 package metadata from root `workspaces`, package-root anchored module roles,
 module layers, module line counts, owner branches, owner dependencies, package
 entry owners, parser-native public API/data/control-flow facts,
+known package extension activation facts such as Effect,
 shadowed/orphaned source-shape counters, and import edges.
-Parser-visible package `bin` owners feed the `entrypoint` module role.
+Parser-visible package `bin` owners and TypeScript targets referenced by
+`package.json` scripts feed the `entrypoint` module role. When a package-owned
+entrypoint sits under `src/cli` or `src/bin`, that adapter tree is treated as
+entrypoint surface so project-wide Effect advice stays aimed at reusable source
+owners.
+Effect package config only declares activation. It does not expose per-file
+allowlists that can narrow project-wide coverage; parser-owned module roles are
+the only structural mechanism that keeps entrypoint surfaces out of reusable
+source-owner advice.
+Effect async/concurrency advice also starts in parser-native facts: the parser
+records Promise combinator fan-out, await-in-loop batch work, and Effect
+collection calls that omit explicit concurrency options. Rule packs consume
+those facts to produce low-noise agent instructions; they do not rescan source
+text to infer concurrency policy.
 Parser-visible `index.*`, `main.*`, config, and test file roles are matched by
 explicit module suffix lists, not dynamic regular-expression construction.
 Workspace package config facts are package-root local: a workspace package only
@@ -81,6 +95,16 @@ facts into the reasoning tree and enables only low-noise public API and
 algorithm-shape advice. Exported primitive data-field facts are available for
 future policies and downstream tools, but they do not create a default style or
 DTO gate.
+M13 adds parser-owned public async API facts and package-owned Effect extension
+activation facts. M14 adds parser-owned Effect runtime-call facts, public
+Effect service method return-type facts, parser-classified weak Effect
+error-channel facts, and parser-classified rejection-capable Promise interop
+facts. M15 adds parser-classified `Effect.acquireRelease` resource-scope facts.
+Extension rules consume those facts to advise on public async
+domain-effect boundaries, runtime execution boundaries, service/layer
+requirement boundaries, typed expected-error boundaries, and `tryPromise`
+interop/resource-scope boundaries; they do not read package metadata or
+TypeScript ASTs from the rule layer.
 
 The reasoning tree consumes parser-owned import resolution and diagnostic facts,
 including source syntax, TypeScript semantic, `tsconfig`, and package JSON
@@ -137,8 +161,8 @@ findings. Project-scoped policy stays quiet unless a project scope is available.
 ## Reasoning Tree
 
 `renderTypeScriptReasoningTree()` turns a report into a compact agent snapshot.
-It follows the Rust harness agent snapshot shape: `Modules:`, `OwnerBranches:`,
-`OwnerDependencies:`, and `FindingGroups:`. It renders reasoning-tree
+It follows the Rust harness agent snapshot shape: `Modules:`, `Extensions:`,
+`BuildTools:`, `OwnerBranches:`, `OwnerDependencies:`, and `FindingGroups:`. It renders reasoning-tree
 `ownerBranches` and `ownerDependencies` facts built from parser-owned module
 roles, source exports, import specifiers, TypeScript-native
 relative/path-alias/package/external import resolution, package-name import
@@ -189,13 +213,23 @@ replacement for `tsc`. Malformed `package.json` metadata is reported as
 project references, so the project harness can still produce a repair surface.
 Project-reference config shape and package-entry module-resolution shape are
 reported as `TS-PROJ-R004`/`TS-PROJ-R005` advice from parser-owned
-compiler-option facts, not package-manager or style policy. Modularity findings
-are `TS-MOD-*` ownership advice over the parser-owned reasoning tree, and test
-layout findings are `TS-TEST-*` advice over parser-owned module roles and
-configured test roots. M9 `TS-AGENT-R004` through `TS-AGENT-R008` surface
+compiler-option facts, not package-manager or style policy. Rspack build-tool
+visibility is reported as `TS-PROJ-R006` advice from parser-owned package
+dependency/script facts and config-file presence; it does not become a manifest
+dependency gate. Modularity findings are `TS-MOD-*` ownership advice over the
+parser-owned reasoning tree, and test layout findings are `TS-TEST-*` advice
+over parser-owned module roles and configured test roots. M9
+`TS-AGENT-R004` through `TS-AGENT-R008` surface
 parser-native public API and algorithm-shape advice as `info`, and M11
 `TS-AGENT-R009` surfaces conservative public data-shape advice from the same
-parser-native fact chain. Future
+parser-native fact chain. M12 adds parser-owned public type alias and
+discriminated-union payload facts for `TS-AGENT-R010` through `TS-AGENT-R012`,
+covering primitive semantic aliases, stringly state fields, and broad primitive
+union payloads without promoting them to blocking policy. M13 adds
+`TS-EXT-EFFECT-R001` as an `error` when package config explicitly enables the
+Effect extension but the `effect` dependency is missing, and
+`TS-EXT-EFFECT-R002` as project-wide `info` advice for active Effect projects
+whose public async domain APIs still expose raw Promise surfaces. Future
 `TS-MOD-*`, `TS-TEST-*`, and `TS-AGENT-*` rules should remain non-blocking
 unless a caller explicitly promotes them.
 

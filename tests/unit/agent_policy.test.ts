@@ -9,6 +9,7 @@ import {
   renderTypeScriptProjectHarness,
   runTypeScriptProjectHarness,
   typeScriptAgentPolicyRules,
+  typeScriptExtensionPolicyRules,
   typeScriptModularityRules,
   typeScriptRulePackDescriptors,
   typeScriptSemanticRules,
@@ -25,6 +26,7 @@ test("rule catalog keeps deterministic pack order and agent advice severity", ()
       "typescript.modularity:advisory",
       "typescript.test_layout:advisory",
       "typescript.agent_policy:advisory",
+      "typescript.extension_policy:blocking",
     ],
   );
   assert.deepEqual(
@@ -51,6 +53,22 @@ test("rule catalog keeps deterministic pack order and agent advice severity", ()
       "TS-AGENT-R007:info",
       "TS-AGENT-R008:info",
       "TS-AGENT-R009:info",
+      "TS-AGENT-R010:info",
+      "TS-AGENT-R011:info",
+      "TS-AGENT-R012:info",
+    ],
+  );
+  assert.deepEqual(
+    typeScriptExtensionPolicyRules().map((rule) => `${rule.ruleId}:${rule.severity}`),
+    [
+      "TS-EXT-EFFECT-R001:error",
+      "TS-EXT-EFFECT-R002:info",
+      "TS-EXT-EFFECT-R003:info",
+      "TS-EXT-EFFECT-R004:info",
+      "TS-EXT-EFFECT-R005:info",
+      "TS-EXT-EFFECT-R006:info",
+      "TS-EXT-EFFECT-R007:info",
+      "TS-EXT-EFFECT-R008:info",
     ],
   );
 });
@@ -91,6 +109,9 @@ test("agent policy reports unresolved project imports without blocking", () => {
       "TS-AGENT-R007",
       "TS-AGENT-R008",
       "TS-AGENT-R009",
+      "TS-AGENT-R010",
+      "TS-AGENT-R011",
+      "TS-AGENT-R012",
     ],
   );
   assert.deepEqual(
@@ -289,6 +310,65 @@ test("agent policy keeps model schema modules out of public data shape advice", 
       "  artifactPath: string;",
       "  observedAtMs: number;",
       "}",
+    ].join("\n"),
+  );
+
+  const report = runTypeScriptProjectHarness(root);
+
+  assert.equal(isTypeScriptHarnessClean(report), true);
+  assert.deepEqual(report.findings, []);
+});
+
+test("agent policy reports parser-native public type boundary advice without blocking", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-type-boundary-agent-"));
+  fs.mkdirSync(path.join(root, "src"));
+  fs.writeFileSync(path.join(root, "tsconfig.json"), JSON.stringify({ include: ["src/**/*.ts"] }));
+  fs.writeFileSync(
+    path.join(root, "src", "events.ts"),
+    [
+      "export type OwnerId = string;",
+      "export type OwnerState = 'created' | 'deleted';",
+      "export interface JobRecord {",
+      "  status: string;",
+      "  owner: OwnerId;",
+      "}",
+      "export type OwnerEvent =",
+      "  | { kind: 'created'; ownerId: string; requestId: string; timeoutMs: number }",
+      "  | { kind: 'deleted'; ownerId: string; reason: string };",
+    ].join("\n"),
+  );
+
+  const report = runTypeScriptProjectHarness(root);
+  const rendered = renderTypeScriptProjectHarness(report);
+
+  assert.equal(isTypeScriptHarnessClean(report), true);
+  assert.deepEqual(
+    report.findings.map((finding) => finding.ruleId),
+    ["TS-AGENT-R010", "TS-AGENT-R011", "TS-AGENT-R012"],
+  );
+  assert.match(rendered, /OwnerId/u);
+  assert.doesNotMatch(rendered, /OwnerState/u);
+  assert.match(rendered, /JobRecord/u);
+  assert.match(rendered, /status: string/u);
+  assert.match(rendered, /OwnerEvent/u);
+  assert.match(rendered, /created/u);
+  assert.match(rendered, /requestId: string/u);
+});
+
+test("agent policy keeps model schema modules out of public type boundary advice", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-type-boundary-model-"));
+  fs.mkdirSync(path.join(root, "src", "verification"), { recursive: true });
+  fs.writeFileSync(path.join(root, "tsconfig.json"), JSON.stringify({ include: ["src/**/*.ts"] }));
+  fs.writeFileSync(
+    path.join(root, "src", "verification", "model.ts"),
+    [
+      "export type OwnerId = string;",
+      "export interface SchemaFact {",
+      "  status: string;",
+      "}",
+      "export type SchemaEvent =",
+      "  | { kind: 'created'; ownerId: string; requestId: string }",
+      "  | { kind: 'deleted'; ownerId: string; reason: string };",
     ].join("\n"),
   );
 

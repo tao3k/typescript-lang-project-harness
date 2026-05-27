@@ -40,6 +40,19 @@ entrypoint into a catch-all reference page.
   test-gate assertion without changing default CLI blocking semantics.
 - [Public Data Shape Agent Advice M11 Plan](02_plans/209_public_data_shape_agent_advice_m11_plan.md):
   stacked milestone for conservative parser-native public data-shape advice.
+- [Type Boundary Quality M12 Plan](02_plans/210_type_boundary_quality_m12_plan.md):
+  stacked milestone for Rust-aligned parser-native type-boundary advice.
+- [Effect Extension Policy M13 Plan](02_plans/211_effect_extension_policy_m13_plan.md):
+  stacked milestone for package-owned Effect extension activation and
+  parser-native async domain-effect advice.
+- [Effect Policy Enrichment M14 Plan](02_plans/212_effect_policy_enrichment_m14_plan.md):
+  stacked milestone for parser-native Effect runtime and service/layer advice.
+- [Effect Resource Scope M15 Plan](02_plans/213_effect_resource_scope_m15_plan.md):
+  stacked milestone for parser-native Effect resource scope advice before PR
+  closure.
+- [Build Tool Rspack Surface M16 Plan](02_plans/214_build_tool_rspack_surface_plan.md):
+  stacked milestone for parser-owned Rspack/Rsbuild build-tool facts and
+  low-noise package-script advice.
 
 ## 03_features: Functional Ledger
 

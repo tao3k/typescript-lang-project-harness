@@ -1,4 +1,53 @@
+import type { TypeScriptPackageBuildToolFact } from "./model/build_tools.js";
+import type { TypeScriptPackageExtensionFact } from "./model/extensions.js";
+import type {
+  TypeScriptModuleReport,
+  TypeScriptModuleRole,
+  TypeScriptReasoningModule,
+} from "./model/module_facts.js";
 import type { TypeScriptVerificationPolicy } from "./verification/model.js";
+
+export type {
+  TypeScriptPackageBuildToolConfigSource,
+  TypeScriptPackageBuildToolDependencySource,
+  TypeScriptPackageBuildToolFact,
+  TypeScriptPackageBuildToolName,
+  TypeScriptPackageBuildToolSignalFact,
+  TypeScriptPackageBuildToolSignalKind,
+} from "./model/build_tools.js";
+export type {
+  TypeScriptEffectErrorChannelKind,
+  TypeScriptEffectConcurrencySignalFact,
+  TypeScriptEffectConcurrencySignalKind,
+  TypeScriptEffectRuntimeCallFact,
+  TypeScriptEffectRuntimeCallKind,
+  TypeScriptEffectPromiseInteropRiskFact,
+  TypeScriptEffectPromiseInteropRiskKind,
+  TypeScriptEffectResourceScopeRiskFact,
+  TypeScriptEffectServiceContainerKind,
+  TypeScriptEffectServiceMethodFact,
+  TypeScriptPublicAsyncEffectSurfaceFact,
+  TypeScriptPublicDataFieldFact,
+  TypeScriptPublicDiscriminatedUnionVariantFieldFact,
+  TypeScriptPublicFunctionControlFlowFact,
+  TypeScriptPublicFunctionParamFact,
+  TypeScriptPublicTupleApiSurfaceFact,
+  TypeScriptPublicTypeAliasFact,
+} from "./model/native_syntax.js";
+export type {
+  TypeScriptPackageExtensionActivation,
+  TypeScriptPackageExtensionConfigSource,
+  TypeScriptPackageExtensionCoverage,
+  TypeScriptPackageExtensionDependencySource,
+  TypeScriptPackageExtensionFact,
+  TypeScriptPackageExtensionName,
+} from "./model/extensions.js";
+export type {
+  TypeScriptModuleLayer,
+  TypeScriptModuleReport,
+  TypeScriptModuleRole,
+  TypeScriptReasoningModule,
+} from "./model/module_facts.js";
 
 export type TypeScriptDiagnosticSeverity = "info" | "warning" | "error";
 
@@ -17,7 +66,8 @@ export type TypeScriptRulePack =
   | "project_policy"
   | "modularity"
   | "test_layout"
-  | "agent_policy";
+  | "agent_policy"
+  | "extension_policy";
 
 export interface TypeScriptHarnessRule {
   readonly ruleId: string;
@@ -84,52 +134,6 @@ export interface TypeScriptExportFact {
   readonly location: SourceLocation;
 }
 
-export interface TypeScriptPublicFunctionParamFact {
-  readonly functionName: string;
-  readonly functionLine: number;
-  readonly paramName: string;
-  readonly typeText?: string;
-  readonly primitiveContractType?: string;
-  readonly flagContractType?: string;
-  readonly location: SourceLocation;
-  readonly sourceLine?: string;
-}
-
-export interface TypeScriptPublicTupleApiSurfaceFact {
-  readonly functionName: string;
-  readonly functionLine: number;
-  readonly surfaceName: string;
-  readonly typeText: string;
-  readonly elementContractTypes: readonly string[];
-  readonly location: SourceLocation;
-  readonly sourceLine?: string;
-}
-
-export interface TypeScriptPublicDataFieldFact {
-  readonly typeKind: "interface" | "type" | "class";
-  readonly typeName: string;
-  readonly typeLine: number;
-  readonly fieldName: string;
-  readonly typeText?: string;
-  readonly primitiveContractType?: string;
-  readonly flagContractType?: string;
-  readonly location: SourceLocation;
-  readonly sourceLine?: string;
-}
-
-export interface TypeScriptPublicFunctionControlFlowFact {
-  readonly functionName: string;
-  readonly functionLine: number;
-  readonly lineSpan: number;
-  readonly statementCount: number;
-  readonly branchCount: number;
-  readonly loopCount: number;
-  readonly maxNestingDepth: number;
-  readonly maxBlockStatementCount: number;
-  readonly location: SourceLocation;
-  readonly sourceLine?: string;
-}
-
 export interface TypeScriptNativeDiagnosticRelatedInformation {
   readonly code: number;
   readonly source?: string;
@@ -141,24 +145,6 @@ export interface TypeScriptNativeDiagnosticRelatedInformation {
 
 export interface TypeScriptNativeDiagnostic extends TypeScriptNativeDiagnosticRelatedInformation {
   readonly relatedInformation: readonly TypeScriptNativeDiagnosticRelatedInformation[];
-}
-
-export interface TypeScriptModuleReport {
-  readonly path: string;
-  readonly isValid: boolean;
-  readonly scriptKind: "ts" | "tsx" | "mts" | "cts" | "js" | "jsx" | "mjs" | "cjs" | "unknown";
-  readonly isDeclarationFile: boolean;
-  readonly hasIntentDoc: boolean;
-  readonly lineCount: number;
-  readonly diagnostics: readonly TypeScriptNativeDiagnostic[];
-  readonly semanticDiagnostics: readonly TypeScriptNativeDiagnostic[];
-  readonly imports: readonly TypeScriptImportFact[];
-  readonly importResolutions: readonly TypeScriptNativeImportResolutionFact[];
-  readonly exports: readonly TypeScriptExportFact[];
-  readonly publicFunctionParams: readonly TypeScriptPublicFunctionParamFact[];
-  readonly publicTupleApiSurfaces: readonly TypeScriptPublicTupleApiSurfaceFact[];
-  readonly publicDataFields: readonly TypeScriptPublicDataFieldFact[];
-  readonly publicFunctionControlFlows: readonly TypeScriptPublicFunctionControlFlowFact[];
 }
 
 export interface TypeScriptPathAliasFact {
@@ -254,6 +240,8 @@ export interface PackageJsonFacts {
   readonly scripts: readonly PackageJsonScriptFact[];
   readonly workspaces: readonly PackageJsonWorkspaceFact[];
   readonly workspacePackages: readonly TypeScriptWorkspacePackageFact[];
+  readonly packageExtensions: readonly TypeScriptPackageExtensionFact[];
+  readonly packageBuildTools: readonly TypeScriptPackageBuildToolFact[];
   readonly scriptNames: readonly string[];
   readonly workspacePatterns: readonly string[];
   readonly diagnostics: readonly TypeScriptNativeDiagnostic[];
@@ -283,26 +271,6 @@ export interface TypeScriptHarnessConfig {
   readonly verificationPolicy: TypeScriptVerificationPolicy;
 }
 
-export type TypeScriptModuleRole =
-  | "source"
-  | "test"
-  | "config"
-  | "declaration"
-  | "facade"
-  | "entrypoint"
-  | "unknown";
-
-export type TypeScriptModuleLayer =
-  | "parser"
-  | "reasoning"
-  | "policy"
-  | "render"
-  | "model"
-  | "harness"
-  | "test"
-  | "config"
-  | "unknown";
-
 export interface TypeScriptImportEdgeFact {
   readonly fromPath: string;
   readonly moduleSpecifier: string;
@@ -311,24 +279,6 @@ export interface TypeScriptImportEdgeFact {
   readonly location: SourceLocation;
   readonly resolution: TypeScriptNativeImportResolutionFact["resolution"];
   readonly toPath?: string;
-}
-
-export interface TypeScriptReasoningModule {
-  readonly path: string;
-  readonly role: TypeScriptModuleRole;
-  readonly layer: TypeScriptModuleLayer;
-  readonly isValid: boolean;
-  readonly hasIntentDoc: boolean;
-  readonly lineCount: number;
-  readonly syntaxDiagnosticCount: number;
-  readonly semanticDiagnosticCount: number;
-  readonly exportNames: readonly string[];
-  readonly typeOnlyExportNames: readonly string[];
-  readonly importSpecifiers: readonly string[];
-  readonly publicFunctionParams: readonly TypeScriptPublicFunctionParamFact[];
-  readonly publicTupleApiSurfaces: readonly TypeScriptPublicTupleApiSurfaceFact[];
-  readonly publicDataFields: readonly TypeScriptPublicDataFieldFact[];
-  readonly publicFunctionControlFlows: readonly TypeScriptPublicFunctionControlFlowFact[];
 }
 
 export interface TypeScriptReasoningDiagnosticFact {
@@ -430,6 +380,8 @@ export interface TypeScriptReasoningTree {
   readonly packageBins: readonly PackageJsonEntryFact[];
   readonly packageScripts: readonly PackageJsonScriptFact[];
   readonly packageWorkspaces: readonly PackageJsonWorkspaceFact[];
+  readonly packageExtensions: readonly TypeScriptPackageExtensionFact[];
+  readonly packageBuildTools: readonly TypeScriptPackageBuildToolFact[];
   readonly workspacePackages: readonly TypeScriptWorkspacePackageFact[];
   readonly workspacePatterns: readonly string[];
   readonly projectReferencePackages: readonly TypeScriptProjectReferencePackageFact[];

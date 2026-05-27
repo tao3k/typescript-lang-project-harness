@@ -54,6 +54,15 @@ default. Package metadata diagnostics include root, TypeScript
 project-reference, and workspace package files and are produced through
 TypeScript's JSON parser. Package scripts and workspaces are parser-owned
 orientation facts, not package-manager policy.
+Known extension activation, such as Effect, is also parser-owned. The parser
+may derive `packageExtensions` from package dependency fields and
+`typescriptProjectHarness.extensions`, but rule packs consume only the typed
+extension fact.
+Known build-tool visibility, such as Rspack/Rsbuild, follows the same boundary.
+The parser derives `packageBuildTools` from known dependency names, package
+scripts, config files, and optional `typescriptProjectHarness.buildTools`
+config. Rule packs consume that typed fact for low-noise agent advice; they do
+not parse shell scripts as a package-manager policy or replace bundler tooling.
 
 `assertTypeScriptProjectHarnessClean()` follows the same blocking-only
 semantics. `assertTypeScriptProjectHarnessAgentClean()` is the test-gate variant
@@ -61,6 +70,12 @@ for agent repair loops: it first enforces configured-blocking findings, then
 fails with the compact advice renderer when visible `info` advice remains. It
 does not bypass policy config; disabled rules, disabled packs, and severity
 overrides are applied before the test-gate assertion sees findings.
+`assertTypeScriptProjectHarnessEmbeddedClean()` is the npm test/check embedded
+variant. It fails only on blocking findings and emits compact advice by
+default. To keep test suites from running a second full type-check after `tsc`,
+it defaults to skipping TypeScript semantic diagnostic collection while still
+using native parser/project facts; callers can opt back in with
+`collectSemanticDiagnostics: true`.
 
 `verificationPolicy` is also part of `TypeScriptHarnessConfig`. It owns
 profile hints, receipts, waivers, task contract overrides, responsibility task
@@ -101,10 +116,11 @@ inspect.
 
 Reports always include a reasoning tree assembled from parser-owned facts.
 `renderTypeScriptReasoningTree(report)` renders the Rust-style agent snapshot
-shape: `Modules:`, `OwnerBranches:`, `OwnerDependencies:`, and
-`FindingGroups:`. It summarizes module roles, exports, path-alias/package
+shape: `Modules:`, `Extensions:`, `BuildTools:`, `OwnerBranches:`,
+`OwnerDependencies:`, and `FindingGroups:`. It summarizes module roles, exports, path-alias/package
 edges, package-name import owners, project-reference/workspace owner
-provenance, package entry owners, and Rust-style source-shape counters such as
+provenance, package entry owners, known package extension/build-tool facts, and
+Rust-style source-shape counters such as
 `shadowed=` and `orphaned=` while omitting singleton and zero-value boilerplate.
 Explicit-path reports use the same grouping surface, with diagnostics grouped
 under `FindingGroups:` when rule findings exist. Full TypeScript diagnostic
@@ -122,13 +138,14 @@ findings.
 
 ## Public Facade
 
-Consumers should import from the package root. The root facade exposes the M11
+Consumers should import from the package root. The root facade exposes the M13
 contract: parser entrypoints, project/explicit runners, project snapshot
 helpers, assertion helpers, compact/JSON/reasoning renderers, rule catalog
 functions, policy config helpers, verification profile-index builders/renderers,
 verification planners/renderers, verification task-index builders/renderers,
 verification report-bundle builders/renderers, report writer helpers, and model
 types, including `TypeScriptHarnessRunMode`, `TypeScriptRulePack`,
-parser-native public API/data/control-flow fact types, and verification
-policy/task model types. Reasoning builders, rule evaluators, and verification
-internals remain internal implementation details.
+parser-native public API/data/control-flow fact types, M12 type-boundary fact
+types, Effect extension fact types, and verification policy/task model types.
+Reasoning builders, rule evaluators, and verification internals remain internal
+implementation details.

@@ -10,6 +10,7 @@ functions:
 - `typeScriptModularityRules()`
 - `typeScriptTestLayoutRules()`
 - `typeScriptAgentPolicyRules()`
+- `typeScriptExtensionPolicyRules()`
 - `typeScriptRulePackRuleIds()`
 
 ## Default Rule Packs
@@ -22,12 +23,14 @@ Default project execution runs these packs:
 4. `typescript.modularity`
 5. `typescript.test_layout`
 6. `typescript.agent_policy`
+7. `typescript.extension_policy`
 
 The implementation enforces parser-native syntax and project rules, then
 surfaces native semantic diagnostics, module-graph, test-layout, and
-agent-repair advice as non-blocking findings from parser-owned facts. New rules
-should be added only after the parser layer exposes the native facts they
-require.
+agent-repair advice from parser-owned facts. Extension policy is downstream of
+package extension activation facts and parser-native source facts; it must not
+read manifests or TypeScript ASTs directly. New rules should be added only
+after the parser layer exposes the native facts they require.
 
 ## Policy Configuration
 
@@ -51,14 +54,20 @@ for advisory rules; it does not mutate catalog severity.
 - `TS-PROJ-R001`: TypeScript project runs should have a `tsconfig.json`.
 - `TS-PROJ-R002`: `tsconfig.json` must parse through TypeScript's native config
   parser.
+- `TS-EXT-EFFECT-R001`: when `package.json` explicitly enables the Effect
+  extension, the `effect` dependency must be declared so the configured policy
+  can run against a real project dependency.
 
 ## Agent Advice Rules
 
-`TS-SEM-*`, `TS-PROJ-R003`, `TS-PROJ-R004`, `TS-PROJ-R005`, `TS-MOD-*`,
-`TS-TEST-*`, and `TS-AGENT-*` rules are `info` findings. They are rendered by
-default for repair agents but do not fail assertions unless a caller promotes
-them or uses the agent test-gate helper
-`assertTypeScriptProjectHarnessAgentClean()`.
+`TS-SEM-*`, `TS-PROJ-R003`, `TS-PROJ-R004`, `TS-PROJ-R005`,
+`TS-PROJ-R006`, `TS-MOD-*`, `TS-TEST-*`, `TS-AGENT-*`, and
+`TS-EXT-EFFECT-R002` through
+`TS-EXT-EFFECT-R008` rules are `info` findings. They are rendered by default
+for repair agents but do not fail assertions unless a caller promotes them or
+uses the agent test-gate helper `assertTypeScriptProjectHarnessAgentClean()`.
+The agent test-gate helper renders grouped compact advice text so large
+projects keep a bounded first reading surface for agents.
 
 - `TS-SEM-R001`: TypeScript `Program` semantic diagnostics should be visible
   from parser-native facts, including stable TypeScript diagnostic codes,
@@ -76,6 +85,10 @@ them or uses the agent test-gate helper
   effective TypeScript `moduleResolution` of `node16`, `nodenext`, or `bundler`.
   The value comes from TypeScript compiler-option facts, including defaults
   implied by `module`, not raw JSON string matching.
+- `TS-PROJ-R006`: projects with parser-visible Rspack package/config facts
+  should expose that build surface through package scripts. This helps agents
+  run `npm run build` or `npm run check` without adding ad-hoc local gate
+  scripts, and it remains non-blocking advice.
 - `TS-MOD-R001`: production source, facade, entrypoint, and config modules
   should not depend on parser-visible test owners.
 - `TS-MOD-R002`: package project modules should stay below their layer line
@@ -110,6 +123,56 @@ them or uses the agent test-gate helper
   or boolean mode fields unless the raw DTO boundary is explicit. Harness
   model-layer modules, including nested `src/**/model.ts` schema modules, stay
   outside this advice surface.
+- `TS-AGENT-R010`: public semantic type aliases such as `OwnerId = string`
+  should use a branded type, opaque wrapper, or named domain object so agents
+  do not treat the alias as a real type boundary. Literal-union catalog aliases
+  such as `Status = "pending" | "done"` are accepted.
+- `TS-AGENT-R011`: public data models should avoid raw string state, status,
+  kind, mode, phase, type, tag, or category fields when a string-literal union,
+  public enum, branded type, or typed catalog boundary would preserve the
+  finite state space.
+- `TS-AGENT-R012`: public discriminated-union variants should avoid broad
+  primitive semantic payloads when named domain types or named payload objects
+  would preserve event and command invariants.
+- `TS-EXT-EFFECT-R002`: when the Effect extension is active, public source APIs
+  that expose async domain work should prefer `Effect.Effect<A, E, R>` return
+  types over raw `Promise` or implicit async Promise surfaces. Promise interop
+  remains valid at adapters and runtime boundaries. Activation is project-wide:
+  an `effect` dependency or explicit Effect config asks the harness to guide
+  agents toward `Effect.Effect<Success, DomainError, Requirements>`,
+  `Effect.tryPromise({ try: () => promise, catch: (cause) => ... })`, and
+  entrypoint/adapter-only `Effect.run*` execution. Explicit Effect config only
+  enables the project-wide extension; it cannot provide per-file allowlists that
+  suppress source-owner findings.
+- `TS-EXT-EFFECT-R003`: when the Effect extension is active, source modules
+  should return Effect descriptions and leave `Effect.run*` / `Runtime.run*`
+  execution to entrypoint, framework adapter, or managed runtime integration
+  boundaries. Runtime adapters are parser-visible facts, not allowlists: package
+  `bin`/script targets and exported HTTP middleware factories with native server
+  imports can be classified as entrypoints by the reasoning tree.
+- `TS-EXT-EFFECT-R004`: when public Effect service method signatures expose a
+  non-`never` requirements type, the service API should usually move that
+  dependency into Layer/runtime construction so consumers do not inherit
+  implementation wiring through every method.
+- `TS-EXT-EFFECT-R005`: when public Effect APIs expose primitive, `any`,
+  `unknown`, or `void` error channels, the API should use a tagged/domain error
+  type so recovery intent remains visible to agents and `catchTag` style
+  handling.
+- `TS-EXT-EFFECT-R006`: when public Effect APIs wrap `async`, `throw`, or
+  `Promise.reject` callbacks with `Effect.promise`, they should use
+  `Effect.tryPromise` with explicit domain error mapping.
+- `TS-EXT-EFFECT-R007`: when public Effect APIs construct resources with
+  `Effect.acquireRelease` without a local `Effect.scoped` boundary, they should
+  make scope closure explicit or document the exported resource boundary.
+- `TS-EXT-EFFECT-R008`: when Effect projects own async batch work, they should
+  declare concurrency and failure policy through Effect collection combinators.
+  Parser-native facts detect `Promise.all` / `Promise.race` style fan-out,
+  await-in-loop batch work, and Effect collection combinators such as
+  `Effect.forEach` / `Effect.all` that omit `{ concurrency: ... }`. Compact
+  advice points agents toward `Effect.forEach(items, item => workEffect(item),
+{ concurrency: n })`, `Effect.all(effects, { concurrency: n })`, named
+  project concurrency budgets, and explicit fail-fast, validation, partition,
+  or `Effect.allSuccesses` semantics.
 
 ## Reasoning Tree Policy
 
@@ -124,10 +187,12 @@ to parser-visible owners when possible, including common `outDir` to
 source-root mappings. Package entry advice points at the JSON AST location for
 the exact `exports`, `imports`, or `bin` target when available, including
 conditional package target branches.
-Parser-visible `bin` targets also mark the owner module as an `entrypoint`.
-Package scripts, workspace patterns, and resolved workspace package metadata
-are rendered as orientation facts; they remain non-blocking and do not become
-package-manager policy.
+Parser-visible `bin` targets and TypeScript targets referenced by package
+scripts also mark the owner module as an `entrypoint`; when those targets live
+under `src/cli` or `src/bin`, sibling adapter modules in that tree inherit the
+entrypoint role. Package scripts, workspace patterns, and resolved workspace
+package metadata are rendered as orientation facts; they remain non-blocking
+and do not become package-manager policy.
 Package-name dependency rows include whether the package owner came from a
 TypeScript project reference or a workspace package fact, so agents can edit the
 right owner boundary without guessing.
@@ -136,7 +201,21 @@ reasoning module. Active agent policy uses those facts for public API and
 algorithm-shape repair hints. M11 adds the first data-shape hint from those
 facts: it reports only source data surfaces with at least three semantic
 primitive fields, and skips the `model` layer so schema/fact definitions do not
-become generic DTO style findings.
+become generic DTO style findings. M12 extends the same parser-owned surface
+with public primitive type alias facts and discriminated-union variant payload
+facts, then keeps the resulting type-boundary advice low-noise and `info` by
+default. It does not replace `tsc` exhaustiveness checks or ESLint naming
+policy.
+M13 adds known extension activation facts. The parser may read package
+dependency fields only to derive `packageExtensions` for a known extension such
+as Effect. That fact can activate extension policy and snapshot capability
+lines, but it does not expose a generic manifest dependency model and it does
+not create package-manager gates.
+M16 adds parser-owned build-tool facts for Rspack/Rsbuild-family projects. The
+parser may read known package dependency names, package scripts, config-file
+presence, and optional `typescriptProjectHarness.buildTools` config to produce
+`packageBuildTools` facts. Policy consumes only those typed facts and keeps the
+result as agent orientation/advice.
 When TypeScript selects JavaScript through `allowJs`, parser-visible `.js`,
 `.jsx`, `.mjs`, and `.cjs` files participate in the same module-role policy as
 TypeScript files.
@@ -145,8 +224,8 @@ orientation metrics. They may appear as `shadowed=` and `orphaned=` counters in
 agent snapshots, but they do not create default rule findings in M3.
 
 `renderTypeScriptReasoningTree()` exposes those facts as Rust-style agent
-snapshot text: `Modules:`, `OwnerBranches:`, `OwnerDependencies:`, and
-`FindingGroups:`. It groups diagnostics by rule id and owner path instead of
+snapshot text: `Modules:`, `Extensions:`, `BuildTools:`, `OwnerBranches:`,
+`OwnerDependencies:`, and `FindingGroups:`. It groups diagnostics by rule id and owner path instead of
 rendering full diagnostic cards. Full TypeScript diagnostic codes, source
 lines, and related information remain available in the default compact finding
 renderer and JSON output. The snapshot is not a style report and it does not

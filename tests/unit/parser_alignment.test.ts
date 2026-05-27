@@ -6,7 +6,7 @@ import test from "node:test";
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 
-test("M2 keeps TypeScript-native facts owned by the parser layer", () => {
+test("parser-first alignment keeps TypeScript-native facts owned by the parser layer", () => {
   const sources = sourceFiles(path.join(projectRoot, "src"));
   const parserSources = sources.filter(isParserLayerSource);
   const parserText = readAll(parserSources);
@@ -36,7 +36,7 @@ test("M2 keeps TypeScript-native facts owned by the parser layer", () => {
   }
 });
 
-test("M2 runner, rule, and render layers stay downstream of the reasoning tree", () => {
+test("runner, rule, and render layers stay downstream of the reasoning tree", () => {
   const runner = readProjectFile("src/runner.ts");
   assertIncludes(runner, "const reasoningTree = buildTypeScriptReasoningTree(scope, modules);");
   assertIncludes(runner, "const findings = evaluateDefaultRulePacks(reasoningTree, config);");
@@ -95,7 +95,7 @@ test("M2 runner, rule, and render layers stay downstream of the reasoning tree",
   assertNoAny(rules, ["reasoningTree.edges"], "src/rules");
 });
 
-test("M2 source and snapshot model exclude manifest dependency policy", () => {
+test("source and snapshot model exclude manifest dependency policy gates", () => {
   const sourceText = readAll(sourceFiles(path.join(projectRoot, "src")));
   const goldenSnapshot = readProjectFile("tests/snapshots/agent_snapshot_project.snap");
 
@@ -114,12 +114,13 @@ test("M2 source and snapshot model exclude manifest dependency policy", () => {
       "packageDependencyFacts",
       "dependencyNames",
       "packageDependencies",
-      "devDependencies",
-      "peerDependencies",
-      "optionalDependencies",
     ],
     "src",
   );
+  assertIncludes(sourceText, "packageExtensions");
+  assertIncludes(sourceText, "TypeScriptPackageExtensionFact");
+  assertIncludes(sourceText, "packageBuildTools");
+  assertIncludes(sourceText, "TypeScriptPackageBuildToolFact");
   assertNoAny(
     goldenSnapshot,
     [
@@ -133,7 +134,7 @@ test("M2 source and snapshot model exclude manifest dependency policy", () => {
   );
 });
 
-test("M2 compact snapshot design is the active documentation contract", () => {
+test("compact snapshot design is the active documentation contract", () => {
   const compactDoc = readProjectFile("docs/03_features/204_compact_agent_snapshot.md");
   assertIncludes(compactDoc, "OwnerBranches");
   assertIncludes(compactDoc, "OwnerDependencies");

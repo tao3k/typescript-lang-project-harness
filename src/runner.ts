@@ -12,7 +12,10 @@ import {
 import { defaultTypeScriptHarnessConfig } from "./config.js";
 import { buildExplicitTypeScriptReasoningTree, buildTypeScriptReasoningTree } from "./reasoning.js";
 import { evaluateDefaultRulePacks } from "./rules.js";
-import { renderAssertionMessage, renderTypeScriptProjectHarnessAdvice } from "./render.js";
+import {
+  renderAssertionMessage,
+  renderTypeScriptProjectHarnessAgentCompactText,
+} from "./render.js";
 import {
   advisoryFindings,
   isTypeScriptHarnessClean,
@@ -22,16 +25,32 @@ import {
   type TypeScriptProjectHarnessAgentSnapshotPackage,
 } from "./model.js";
 
+export interface TypeScriptProjectHarnessEmbeddedOptions {
+  readonly config?: TypeScriptHarnessConfig;
+  readonly collectSemanticDiagnostics?: boolean;
+  readonly emitAdvice?: boolean;
+  readonly writeAdvice?: (message: string) => unknown;
+}
+
+interface TypeScriptProjectHarnessRunOptions {
+  readonly collectSemanticDiagnostics?: boolean;
+}
+
 export function runTypeScriptProjectHarness(
   projectRootInput: string | URL,
   config: TypeScriptHarnessConfig = defaultTypeScriptHarnessConfig(),
+  options: TypeScriptProjectHarnessRunOptions = {},
 ): TypeScriptHarnessReport {
   const projectRoot = pathFromInput(projectRootInput);
   if (!fs.existsSync(projectRoot)) {
     throw new Error(`project root does not exist: ${projectRoot}`);
   }
   const scope = readProjectScope(projectRoot, config);
-  const modules = parseTypeScriptProjectFiles(scope, projectFileNames(scope, config));
+  const parseOptions =
+    options.collectSemanticDiagnostics === undefined
+      ? {}
+      : { collectSemanticDiagnostics: options.collectSemanticDiagnostics };
+  const modules = parseTypeScriptProjectFiles(scope, projectFileNames(scope, config), parseOptions);
   const reasoningTree = buildTypeScriptReasoningTree(scope, modules);
   const findings = evaluateDefaultRulePacks(reasoningTree, config);
   return {
@@ -112,7 +131,31 @@ export function assertTypeScriptProjectHarnessAgentClean(
 ): TypeScriptHarnessReport {
   const report = assertTypeScriptProjectHarnessClean(projectRootInput, config);
   if (advisoryFindings(report).length > 0) {
-    throw new Error(renderTypeScriptProjectHarnessAdvice(report));
+    throw new Error(renderTypeScriptProjectHarnessAgentCompactText(report));
+  }
+  return report;
+}
+
+export function assertTypeScriptProjectHarnessEmbeddedClean(
+  projectRootInput: string | URL,
+  options: TypeScriptProjectHarnessEmbeddedOptions = {},
+): TypeScriptHarnessReport {
+  const report = runTypeScriptProjectHarness(
+    projectRootInput,
+    options.config ?? defaultTypeScriptHarnessConfig(),
+    { collectSemanticDiagnostics: options.collectSemanticDiagnostics ?? false },
+  );
+  if (!isTypeScriptHarnessClean(report)) {
+    throw new Error(renderAssertionMessage(report));
+  }
+  if (options.emitAdvice !== false) {
+    const advice = renderTypeScriptProjectHarnessAgentCompactText(report, {
+      findings: "advice",
+    });
+    if (advice) {
+      const writeAdvice = options.writeAdvice ?? ((message: string) => console.error(message));
+      writeAdvice(advice);
+    }
   }
   return report;
 }

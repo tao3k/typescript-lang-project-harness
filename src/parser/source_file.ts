@@ -55,7 +55,15 @@ export function moduleReportFromSourceFile(
     publicFunctionParams: nativeSyntaxFacts.publicFunctionParams,
     publicTupleApiSurfaces: nativeSyntaxFacts.publicTupleApiSurfaces,
     publicDataFields: nativeSyntaxFacts.publicDataFields,
+    publicTypeAliases: nativeSyntaxFacts.publicTypeAliases,
+    publicDiscriminatedUnionVariantFields: nativeSyntaxFacts.publicDiscriminatedUnionVariantFields,
     publicFunctionControlFlows: nativeSyntaxFacts.publicFunctionControlFlows,
+    publicAsyncEffectSurfaces: nativeSyntaxFacts.publicAsyncEffectSurfaces,
+    effectRuntimeCalls: nativeSyntaxFacts.effectRuntimeCalls,
+    effectPromiseInteropRisks: nativeSyntaxFacts.effectPromiseInteropRisks,
+    effectResourceScopeRisks: nativeSyntaxFacts.effectResourceScopeRisks,
+    effectConcurrencySignals: nativeSyntaxFacts.effectConcurrencySignals,
+    effectServiceMethods: nativeSyntaxFacts.effectServiceMethods,
   };
 }
 

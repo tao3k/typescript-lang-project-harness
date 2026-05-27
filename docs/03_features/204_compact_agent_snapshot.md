@@ -24,7 +24,11 @@ The output uses the same section grammar as the Rust harness agent snapshot:
 
 ```text
 pkg <path>
-Modules: source=<n> roots=<n> branches=<n> deps=<n> shadowed=<n> orphaned=<n> paths=<n> refs=<n> workspaces=<n> package-owners=<n> findings=<n>
+Modules: source=<n> roots=<n> branches=<n> deps=<n> shadowed=<n> orphaned=<n> paths=<n> refs=<n> workspaces=<n> package-owners=<n> extensions=<n> build-tools=<n> findings=<n>
+Extensions:
+ - <extension> activation=<state> capabilities=<name,...> config=<source>
+BuildTools:
+ - <tool> capabilities=<name,...> packages=<name,...> configs=<file,...> scripts=<name,...>
 OwnerBranches:
  - <path> [<roles>] owner=<owner> imports=<resolution:count,...> exports=<names> -> <edge-kind:path,...>
 OwnerDependencies:
@@ -44,6 +48,14 @@ boilerplate is omitted.
 ## Semantics
 
 - `Modules:` summarizes parser-visible non-test modules.
+- `Extensions:` lists known package extension activation facts such as Effect.
+  It is emitted only when the parser has a known extension fact. Capability
+  names are compact labels for agent orientation, not an installed package
+  inventory.
+- `BuildTools:` lists known parser-owned build-tool facts such as Rspack or
+  Rsbuild. It is emitted only when package dependencies, package scripts,
+  config files, or explicit harness config make that tool visible. It is not a
+  bundler audit and does not replace `tsc` or framework build checks.
 - `shadowed=` counts parser-visible TypeScript source owners that have more
   than one source shape for the same owner namespace, such as a file owner and
   an `index.*` directory owner, unless one shape explicitly re-exports the
@@ -67,6 +79,15 @@ boilerplate is omitted.
   parser-visible TypeScript owners.
 - `FindingGroups:` groups deterministic rule findings by severity, rule id, and
   title instead of repeating full diagnostic cards.
+- Agent-clean assertion failures use `RepairTasks:` instead of the snapshot's
+  `FindingGroups:` summary. Each task starts with a Rust-style compact header:
+  `[rule] severity x<count>: repair intent (problem; facts: parser evidence)`.
+  The body only keeps concrete `fix:` steps and capped `@ path:line:column`
+  target examples. JSON remains a tool surface, not an agent repair surface.
+- `renderTypeScriptProjectHarnessAgentCompactText(report, options)` is the
+  public agent text interface. It defaults to visible advice and can select
+  `findings: "advice"`, `"blocking"`, or `"all"` when a caller wants a
+  different compact repair surface.
 - TypeScript test modules are omitted from owner-branch and owner-dependency
   orientation unless a future parser fact makes a test owner explicitly useful.
 
@@ -77,6 +98,8 @@ boilerplate is omitted.
 - Do not render `dependencies`, `devDependencies`, `peerDependencies`, or
   `optionalDependencies`; those are package-manager policy, not TypeScript
   owner reasoning.
+- Known extension facts may render compact activation state, such as
+  `effect activation=dependency`, without rendering package dependency fields.
 - Package-name imports may render as `--package-name/<kind>-->` owner
   dependencies when they resolve to a parser-visible TypeScript project
   reference or workspace package. That is import-owner dependency orientation,

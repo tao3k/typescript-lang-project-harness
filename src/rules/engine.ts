@@ -11,6 +11,7 @@ import { evaluateProjectPolicyRules } from "./project_policy/pack.js";
 import { evaluateSemanticRules } from "./semantic/pack.js";
 import { evaluateSyntaxRules } from "./syntax/pack.js";
 import { evaluateTestLayoutRules } from "./test_layout/pack.js";
+import { evaluateExtensionPolicyRules } from "./extension_policy/pack.js";
 
 export function evaluateDefaultRulePacks(
   reasoningTree: TypeScriptReasoningTree,
@@ -24,6 +25,7 @@ export function evaluateDefaultRulePacks(
       ...evaluateModularityRules(reasoningTree),
       ...evaluateTestLayoutRules(reasoningTree),
       ...evaluateAgentPolicyRules(reasoningTree),
+      ...evaluateExtensionPolicyRules(reasoningTree),
     ],
     config,
   );

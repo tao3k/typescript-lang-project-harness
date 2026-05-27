@@ -16,12 +16,13 @@ export function reasoningModules(
   modules: readonly TypeScriptModuleReport[],
   entrypointOwnerPaths: ReadonlySet<string>,
 ): TypeScriptReasoningModule[] {
+  const entrypointOwnerRoots = packageEntrypointOwnerRoots(scope.projectRoot, entrypointOwnerPaths);
   return modules
     .map((moduleReport) =>
       reasoningModuleFromRole(
         scope.projectRoot,
         moduleReport,
-        moduleRole(scope, moduleReport, entrypointOwnerPaths),
+        moduleRole(scope, moduleReport, entrypointOwnerPaths, entrypointOwnerRoots),
       ),
     )
     .sort((left, right) => left.path.localeCompare(right.path));
@@ -48,6 +49,23 @@ export function packageBinOwnerPaths(
   );
 }
 
+export function packageEntrypointOwnerPaths(
+  scope: TypeScriptProjectHarnessScope,
+  packageEntryResolutions: readonly TypeScriptPackageEntryResolutionFact[],
+  modulePaths: ReadonlySet<string>,
+): ReadonlySet<string> {
+  const ownerPaths = new Set(packageBinOwnerPaths(packageEntryResolutions));
+  for (const script of scope.packageJson.scripts) {
+    for (const target of packageScriptEntrypointTargets(script.command)) {
+      const resolved = resolveProjectModuleTarget(scope, target, modulePaths);
+      if (resolved !== undefined) {
+        ownerPaths.add(resolved);
+      }
+    }
+  }
+  return ownerPaths;
+}
+
 function reasoningModuleFromRole(
   projectRoot: string,
   moduleReport: TypeScriptModuleReport,
@@ -71,7 +89,15 @@ function reasoningModuleFromRole(
     publicFunctionParams: moduleReport.publicFunctionParams,
     publicTupleApiSurfaces: moduleReport.publicTupleApiSurfaces,
     publicDataFields: moduleReport.publicDataFields,
+    publicTypeAliases: moduleReport.publicTypeAliases,
+    publicDiscriminatedUnionVariantFields: moduleReport.publicDiscriminatedUnionVariantFields,
     publicFunctionControlFlows: moduleReport.publicFunctionControlFlows,
+    publicAsyncEffectSurfaces: moduleReport.publicAsyncEffectSurfaces,
+    effectRuntimeCalls: moduleReport.effectRuntimeCalls,
+    effectPromiseInteropRisks: moduleReport.effectPromiseInteropRisks,
+    effectResourceScopeRisks: moduleReport.effectResourceScopeRisks,
+    effectConcurrencySignals: moduleReport.effectConcurrencySignals,
+    effectServiceMethods: moduleReport.effectServiceMethods,
   };
 }
 
@@ -110,6 +136,7 @@ function moduleLayer(
   }
   if (
     relativePath === "src/model.ts" ||
+    relativePath.startsWith(`src${path.sep}model${path.sep}`) ||
     (relativePath.startsWith(`src${path.sep}`) && path.basename(relativePath) === "model.ts")
   ) {
     return "model";
@@ -124,6 +151,7 @@ function moduleRole(
   scope: TypeScriptProjectHarnessScope,
   moduleReport: TypeScriptModuleReport,
   entrypointOwnerPaths: ReadonlySet<string>,
+  entrypointOwnerRoots: readonly string[],
 ): TypeScriptModuleRole {
   if (moduleReport.isDeclarationFile) {
     return "declaration";
@@ -136,7 +164,12 @@ function moduleRole(
   if (isConfigFileName(fileName)) {
     return "config";
   }
-  if (isEntryPointPath(filePath) || entrypointOwnerPaths.has(filePath)) {
+  if (
+    isEntryPointPath(filePath) ||
+    isRuntimeAdapterEntrypoint(moduleReport) ||
+    entrypointOwnerPaths.has(filePath) ||
+    isInsideAny(filePath, entrypointOwnerRoots)
+  ) {
     return "entrypoint";
   }
   if (isFacadePath(scope, filePath)) {
@@ -160,7 +193,7 @@ function explicitModuleRole(moduleReport: TypeScriptModuleReport): TypeScriptMod
   if (isConfigFileName(fileName)) {
     return "config";
   }
-  if (isEntryPointPath(filePath)) {
+  if (isEntryPointPath(filePath) || isRuntimeAdapterEntrypoint(moduleReport)) {
     return "entrypoint";
   }
   if (moduleFileNames("index").includes(fileName)) {
@@ -175,6 +208,145 @@ function isEntryPointPath(filePath: string): boolean {
     return true;
   }
   return path.basename(path.dirname(filePath)) === "bin";
+}
+
+function isRuntimeAdapterEntrypoint(moduleReport: TypeScriptModuleReport): boolean {
+  return (
+    moduleReport.imports.some((importFact) =>
+      isRuntimeAdapterImportSpecifier(importFact.moduleSpecifier),
+    ) && moduleReport.exports.some((exportFact) => isRuntimeAdapterExportName(exportFact.name))
+  );
+}
+
+function isRuntimeAdapterImportSpecifier(moduleSpecifier: string): boolean {
+  return (
+    moduleSpecifier === "node:http" ||
+    moduleSpecifier === "node:https" ||
+    moduleSpecifier === "http" ||
+    moduleSpecifier === "https" ||
+    moduleSpecifier === "express" ||
+    moduleSpecifier === "fastify" ||
+    moduleSpecifier === "hono" ||
+    moduleSpecifier === "@hono/node-server"
+  );
+}
+
+function isRuntimeAdapterExportName(exportName: string): boolean {
+  const normalized = exportName.toLowerCase();
+  return (
+    normalized.includes("middleware") ||
+    normalized.endsWith("handler") ||
+    normalized.endsWith("server") ||
+    normalized.includes("route") ||
+    normalized.includes("api")
+  );
+}
+
+function packageEntrypointOwnerRoots(
+  projectRoot: string,
+  entrypointOwnerPaths: ReadonlySet<string>,
+): string[] {
+  const roots = new Set<string>();
+  for (const ownerPath of entrypointOwnerPaths) {
+    const relativePath = path.relative(projectRoot, ownerPath);
+    const parts = relativePath.split(path.sep);
+    if (parts[0] === "src" && parts[1] === "cli") {
+      roots.add(path.join(projectRoot, "src", "cli"));
+    }
+    if (parts[0] === "src" && parts[1] === "bin") {
+      roots.add(path.join(projectRoot, "src", "bin"));
+    }
+    if (path.basename(path.dirname(ownerPath)) === "bin") {
+      roots.add(path.dirname(ownerPath));
+    }
+  }
+  return [...roots].sort();
+}
+
+function packageScriptEntrypointTargets(command: string): string[] {
+  return commandTokens(command).filter(isScriptEntrypointTarget);
+}
+
+function commandTokens(command: string): string[] {
+  const tokens: string[] = [];
+  let current = "";
+  let quote: "'" | '"' | undefined;
+  for (const char of command) {
+    if (quote !== undefined) {
+      if (char === quote) {
+        quote = undefined;
+      } else {
+        current += char;
+      }
+      continue;
+    }
+    if (char === "'" || char === '"') {
+      quote = char;
+      continue;
+    }
+    if (char === " " || char === "\t" || char === "\n") {
+      if (current.length > 0) {
+        tokens.push(current);
+        current = "";
+      }
+      continue;
+    }
+    current += char;
+  }
+  if (current.length > 0) {
+    tokens.push(current);
+  }
+  return tokens;
+}
+
+function isScriptEntrypointTarget(token: string): boolean {
+  if (token.startsWith("-") || token.includes("=") || token.includes("$")) {
+    return false;
+  }
+  return MODULE_FILE_EXTENSIONS.some((extension) => token.endsWith(extension));
+}
+
+function resolveProjectModuleTarget(
+  scope: TypeScriptProjectHarnessScope,
+  target: string,
+  modulePaths: ReadonlySet<string>,
+): string | undefined {
+  const direct = resolveCandidatePath(path.resolve(scope.projectRoot, target), modulePaths);
+  if (direct !== undefined) {
+    return direct;
+  }
+  const outDir = scope.config.compilerOptions.outDir;
+  if (outDir === undefined) {
+    return undefined;
+  }
+  const outputPath = path.resolve(scope.projectRoot, target);
+  const relativeOutput = path.relative(outDir, outputPath);
+  if (relativeOutput.startsWith("..") || path.isAbsolute(relativeOutput)) {
+    return undefined;
+  }
+  const sourceBase = scope.config.compilerOptions.rootDir ?? scope.projectRoot;
+  return resolveCandidatePath(path.resolve(sourceBase, relativeOutput), modulePaths);
+}
+
+function resolveCandidatePath(
+  candidatePath: string,
+  modulePaths: ReadonlySet<string>,
+): string | undefined {
+  if (modulePaths.has(candidatePath)) {
+    return candidatePath;
+  }
+  const extensionStart = candidatePath.length - path.extname(candidatePath).length;
+  const candidateStem =
+    extensionStart === candidatePath.length
+      ? candidatePath
+      : candidatePath.slice(0, extensionStart);
+  for (const extension of MODULE_FILE_EXTENSIONS) {
+    const withoutExtension = `${candidateStem}${extension}`;
+    if (modulePaths.has(withoutExtension)) {
+      return withoutExtension;
+    }
+  }
+  return undefined;
 }
 
 function isFacadePath(scope: TypeScriptProjectHarnessScope, filePath: string): boolean {

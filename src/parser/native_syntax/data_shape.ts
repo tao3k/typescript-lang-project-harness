@@ -1,6 +1,10 @@
 import ts from "typescript";
 
-import type { TypeScriptPublicDataFieldFact } from "../../model.js";
+import type {
+  TypeScriptPublicDataFieldFact,
+  TypeScriptPublicDiscriminatedUnionVariantFieldFact,
+  TypeScriptPublicTypeAliasFact,
+} from "../../model.js";
 import { locationForNode } from "../diagnostics.js";
 import {
   isExported,
@@ -44,6 +48,47 @@ export function collectPublicDataFields(
   return facts;
 }
 
+export function collectPublicTypeAliases(
+  sourceFile: ts.SourceFile,
+): TypeScriptPublicTypeAliasFact[] {
+  return sourceFile.statements.flatMap((statement) => {
+    if (!ts.isTypeAliasDeclaration(statement) || !isExported(statement)) {
+      return [];
+    }
+    const typeInfo = typeContractInfo(statement.type, sourceFile);
+    if (typeInfo.primitiveContractType === undefined && typeInfo.flagContractType === undefined) {
+      return [];
+    }
+    return [
+      {
+        aliasName: statement.name.text,
+        targetTypeText: statement.type.getText(sourceFile),
+        ...typeInfo,
+        location: locationForNode(sourceFile, statement),
+        ...sourceLineField(sourceFile, statement),
+      },
+    ];
+  });
+}
+
+export function collectPublicDiscriminatedUnionVariantFields(
+  sourceFile: ts.SourceFile,
+): TypeScriptPublicDiscriminatedUnionVariantFieldFact[] {
+  return sourceFile.statements.flatMap((statement) => {
+    if (!ts.isTypeAliasDeclaration(statement) || !isExported(statement)) {
+      return [];
+    }
+    const unionMembers = unionTypeMembers(statement.type);
+    if (unionMembers.length < 2) {
+      return [];
+    }
+    const unionLine = locationForNode(sourceFile, statement).line;
+    return unionMembers.flatMap((member) =>
+      publicDiscriminatedUnionVariantFieldFacts(sourceFile, statement.name.text, unionLine, member),
+    );
+  });
+}
+
 function publicPropertyFact(
   sourceFile: ts.SourceFile,
   typeKind: TypeScriptPublicDataFieldFact["typeKind"],
@@ -69,6 +114,94 @@ function publicPropertyFact(
       ...sourceLineField(sourceFile, member),
     },
   ];
+}
+
+function publicDiscriminatedUnionVariantFieldFacts(
+  sourceFile: ts.SourceFile,
+  unionName: string,
+  unionLine: number,
+  member: ts.TypeLiteralNode,
+): readonly TypeScriptPublicDiscriminatedUnionVariantFieldFact[] {
+  const discriminant = discriminantProperty(sourceFile, member);
+  if (discriminant === undefined) {
+    return [];
+  }
+  const variantLine = locationForNode(sourceFile, member).line;
+  return member.members.flatMap((candidate) => {
+    if (!ts.isPropertySignature(candidate)) {
+      return [];
+    }
+    const fieldName = propertyNameText(candidate.name, sourceFile);
+    if (fieldName === discriminant.name) {
+      return [];
+    }
+    const typeInfo = typeContractInfo(candidate.type, sourceFile);
+    if (typeInfo.primitiveContractType === undefined && typeInfo.flagContractType === undefined) {
+      return [];
+    }
+    return [
+      {
+        unionName,
+        unionLine,
+        variantName: discriminant.value,
+        variantLine,
+        discriminantName: discriminant.name,
+        fieldName,
+        ...typeInfo,
+        location: locationForNode(sourceFile, candidate),
+        ...sourceLineField(sourceFile, candidate),
+      },
+    ];
+  });
+}
+
+function unionTypeMembers(typeNode: ts.TypeNode): readonly ts.TypeLiteralNode[] {
+  if (!ts.isUnionTypeNode(typeNode)) {
+    return [];
+  }
+  return typeNode.types.flatMap((member) => {
+    if (ts.isTypeLiteralNode(member)) {
+      return [member];
+    }
+    if (ts.isParenthesizedTypeNode(member) && ts.isTypeLiteralNode(member.type)) {
+      return [member.type];
+    }
+    return [];
+  });
+}
+
+function discriminantProperty(
+  sourceFile: ts.SourceFile,
+  member: ts.TypeLiteralNode,
+): { readonly name: string; readonly value: string } | undefined {
+  for (const candidate of member.members) {
+    if (!ts.isPropertySignature(candidate) || candidate.type === undefined) {
+      continue;
+    }
+    const name = propertyNameText(candidate.name, sourceFile);
+    if (!isDiscriminantFieldName(name)) {
+      continue;
+    }
+    const value = stringLiteralTypeValue(candidate.type);
+    if (value !== undefined) {
+      return { name, value };
+    }
+  }
+  return undefined;
+}
+
+function stringLiteralTypeValue(typeNode: ts.TypeNode): string | undefined {
+  if (!ts.isLiteralTypeNode(typeNode)) {
+    return undefined;
+  }
+  const literal = typeNode.literal;
+  return ts.isStringLiteral(literal) || ts.isNoSubstitutionTemplateLiteral(literal)
+    ? literal.text
+    : undefined;
+}
+
+function isDiscriminantFieldName(name: string): boolean {
+  return ["kind", "type", "status", "state", "mode", "phase", "tag", "category"].includes(name);
 }
 
 function publicClassPropertyFact(

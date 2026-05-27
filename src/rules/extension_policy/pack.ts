@@ -1,0 +1,476 @@
+import type {
+  TypeScriptHarnessFinding,
+  TypeScriptHarnessRule,
+  TypeScriptEffectPromiseInteropRiskFact,
+  TypeScriptEffectResourceScopeRiskFact,
+  TypeScriptEffectRuntimeCallFact,
+  TypeScriptEffectServiceMethodFact,
+  TypeScriptPublicAsyncEffectSurfaceFact,
+  TypeScriptReasoningModule,
+  TypeScriptReasoningTree,
+} from "../../model.js";
+import { evaluateEffectConcurrencyAdvice, TS_EXT_EFFECT_R008 } from "./effect_concurrency.js";
+import {
+  effectPolicyIsActive,
+  effectPolicySourceModules,
+  sourceModules,
+} from "./effect_modules.js";
+
+export const TS_EXT_EFFECT_R001: TypeScriptHarnessRule = {
+  ruleId: "TS-EXT-EFFECT-R001",
+  packId: "typescript.extension_policy",
+  severity: "error",
+  title: "Effect extension enablement requires the Effect dependency",
+  requirement:
+    "When package.json enables the Effect extension, the project should declare the effect package so the configured typed async domain-effect policy can run against real source dependencies.",
+  labels: { surface: "extension", parser: "package-json", extension: "effect" },
+};
+
+export const TS_EXT_EFFECT_R002: TypeScriptHarnessRule = {
+  ruleId: "TS-EXT-EFFECT-R002",
+  packId: "typescript.extension_policy",
+  severity: "info",
+  title: "Effect extension expects typed async domain effects",
+  requirement:
+    "When the Effect extension is active, public source APIs that expose async domain work should return Effect.Effect instead of raw Promise surfaces.",
+  labels: { surface: "extension", parser: "native-syntax", extension: "effect" },
+};
+
+export const TS_EXT_EFFECT_R003: TypeScriptHarnessRule = {
+  ruleId: "TS-EXT-EFFECT-R003",
+  packId: "typescript.extension_policy",
+  severity: "info",
+  title: "Effect runtime execution should stay at entrypoint boundaries",
+  requirement:
+    "Effect.run* and Runtime.run* execute Effect descriptions; source modules should normally return Effect values and leave execution to parser-owned entrypoint or runtime integration modules.",
+  labels: { surface: "extension", parser: "native-syntax", extension: "effect" },
+};
+
+export const TS_EXT_EFFECT_R004: TypeScriptHarnessRule = {
+  ruleId: "TS-EXT-EFFECT-R004",
+  packId: "typescript.extension_policy",
+  severity: "info",
+  title: "Effect service methods should hide implementation requirements",
+  requirement:
+    "Public Effect service method signatures should usually expose Effect<Success, Error, never>; dependencies belong in layer/runtime construction rather than leaking through each service method.",
+  labels: { surface: "extension", parser: "native-syntax", extension: "effect" },
+};
+
+export const TS_EXT_EFFECT_R005: TypeScriptHarnessRule = {
+  ruleId: "TS-EXT-EFFECT-R005",
+  packId: "typescript.extension_policy",
+  severity: "info",
+  title: "Effect error channels should use typed domain errors",
+  requirement:
+    "Public Effect APIs should use typed domain or tagged error values in the Error channel; primitive, any, unknown, or void error channels hide recovery intent from agents and from Effect.catchTag style handling.",
+  labels: { surface: "extension", parser: "native-syntax", extension: "effect" },
+};
+
+export const TS_EXT_EFFECT_R006: TypeScriptHarnessRule = {
+  ruleId: "TS-EXT-EFFECT-R006",
+  packId: "typescript.extension_policy",
+  severity: "info",
+  title: "Effect.promise should not hide rejection-capable interop",
+  requirement:
+    "Public Effect APIs should use Effect.tryPromise with domain error mapping when Promise interop can reject, throw, or resume from an async callback.",
+  labels: { surface: "extension", parser: "native-syntax", extension: "effect" },
+};
+
+export const TS_EXT_EFFECT_R007: TypeScriptHarnessRule = {
+  ruleId: "TS-EXT-EFFECT-R007",
+  packId: "typescript.extension_policy",
+  severity: "info",
+  title: "Effect resources should have an explicit Scope boundary",
+  requirement:
+    "Public Effect APIs that construct resources with Effect.acquireRelease should make Scope closure explicit with Effect.scoped or a documented resource boundary.",
+  labels: { surface: "extension", parser: "native-syntax", extension: "effect" },
+};
+
+export function typeScriptExtensionPolicyRules(): readonly TypeScriptHarnessRule[] {
+  return [
+    TS_EXT_EFFECT_R001,
+    TS_EXT_EFFECT_R002,
+    TS_EXT_EFFECT_R003,
+    TS_EXT_EFFECT_R004,
+    TS_EXT_EFFECT_R005,
+    TS_EXT_EFFECT_R006,
+    TS_EXT_EFFECT_R007,
+    TS_EXT_EFFECT_R008,
+  ];
+}
+
+export function evaluateExtensionPolicyRules(
+  reasoningTree: TypeScriptReasoningTree,
+): TypeScriptHarnessFinding[] {
+  return [
+    ...evaluateEffectConfigurationFindings(reasoningTree),
+    ...evaluateEffectAsyncSurfaceAdvice(reasoningTree),
+    ...evaluateEffectRuntimeBoundaryAdvice(reasoningTree),
+    ...evaluateEffectServiceRequirementAdvice(reasoningTree),
+    ...evaluateEffectTypedErrorAdvice(reasoningTree),
+    ...evaluateEffectPromiseInteropAdvice(reasoningTree),
+    ...evaluateEffectResourceScopeAdvice(reasoningTree),
+    ...evaluateEffectConcurrencyAdvice(reasoningTree),
+  ].sort((left, right) => findingSortKey(left).localeCompare(findingSortKey(right)));
+}
+
+function evaluateEffectConfigurationFindings(
+  reasoningTree: TypeScriptReasoningTree,
+): TypeScriptHarnessFinding[] {
+  return reasoningTree.packageExtensions.flatMap((extension) => {
+    if (
+      extension.name !== "effect" ||
+      extension.activation !== "config-enabled-missing-dependency"
+    ) {
+      return [];
+    }
+    return [
+      {
+        ruleId: TS_EXT_EFFECT_R001.ruleId,
+        packId: TS_EXT_EFFECT_R001.packId,
+        severity: TS_EXT_EFFECT_R001.severity,
+        title: TS_EXT_EFFECT_R001.title,
+        summary:
+          "package.json enables the Effect extension, but the effect package is not declared in the package dependency fields.",
+        location: extension.location,
+        requirement: TS_EXT_EFFECT_R001.requirement,
+        label: "declare effect before enforcing Effect extension policy",
+        labels: {
+          ...TS_EXT_EFFECT_R001.labels,
+          activation: extension.activation,
+          capabilities: extension.capabilities.join(","),
+          config: extension.configSource ?? "package.json",
+          repair: "add effect and keep typescriptProjectHarness.extensions.effect enabled",
+        },
+      },
+    ];
+  });
+}
+
+function evaluateEffectAsyncSurfaceAdvice(
+  reasoningTree: TypeScriptReasoningTree,
+): TypeScriptHarnessFinding[] {
+  if (!effectPolicyIsActive(reasoningTree.packageExtensions)) {
+    return [];
+  }
+  return sourceModules(reasoningTree).flatMap((moduleReport) =>
+    effectAsyncSurfaceAdviceForModule(moduleReport),
+  );
+}
+
+function effectAsyncSurfaceAdviceForModule(
+  moduleReport: TypeScriptReasoningModule,
+): TypeScriptHarnessFinding[] {
+  const rawAsyncSurfaces = moduleReport.publicAsyncEffectSurfaces.filter(
+    (surface) => !surface.returnsEffect && (surface.isAsync || surface.returnsPromise),
+  );
+  const first = rawAsyncSurfaces[0];
+  if (first === undefined) {
+    return [];
+  }
+  return [
+    {
+      ruleId: TS_EXT_EFFECT_R002.ruleId,
+      packId: TS_EXT_EFFECT_R002.packId,
+      severity: TS_EXT_EFFECT_R002.severity,
+      title: TS_EXT_EFFECT_R002.title,
+      summary: `Effect extension is active, but public async APIs expose raw Promise surfaces: ${renderAsyncSurfaceNames(
+        rawAsyncSurfaces,
+      )}.`,
+      location: first.location,
+      requirement: TS_EXT_EFFECT_R002.requirement,
+      ...sourceLineField(first.sourceLine),
+      label: "public async API should use Effect boundary",
+      labels: {
+        ...TS_EXT_EFFECT_R002.labels,
+        module_role: moduleReport.role,
+        async_surfaces: rawAsyncSurfaces.map((surface) => surface.functionName).join(","),
+      },
+    },
+  ];
+}
+
+function evaluateEffectRuntimeBoundaryAdvice(
+  reasoningTree: TypeScriptReasoningTree,
+): TypeScriptHarnessFinding[] {
+  if (!effectPolicyIsActive(reasoningTree.packageExtensions)) {
+    return [];
+  }
+  return sourceModules(reasoningTree).flatMap((moduleReport) =>
+    effectRuntimeBoundaryAdviceForModule(moduleReport),
+  );
+}
+
+function effectRuntimeBoundaryAdviceForModule(
+  moduleReport: TypeScriptReasoningModule,
+): TypeScriptHarnessFinding[] {
+  const first = moduleReport.effectRuntimeCalls[0];
+  if (first === undefined) {
+    return [];
+  }
+  return [
+    {
+      ruleId: TS_EXT_EFFECT_R003.ruleId,
+      packId: TS_EXT_EFFECT_R003.packId,
+      severity: TS_EXT_EFFECT_R003.severity,
+      title: TS_EXT_EFFECT_R003.title,
+      summary: `Effect runtime execution appears inside a ${moduleReport.role} module: ${renderRuntimeCallNames(
+        moduleReport.effectRuntimeCalls,
+      )}.`,
+      location: first.location,
+      requirement: TS_EXT_EFFECT_R003.requirement,
+      ...sourceLineField(first.sourceLine),
+      label: "move Effect execution to an entrypoint or adapter boundary",
+      labels: {
+        ...TS_EXT_EFFECT_R003.labels,
+        module_role: moduleReport.role,
+        runtime_calls: moduleReport.effectRuntimeCalls.map((call) => call.callee).join(","),
+      },
+    },
+  ];
+}
+
+function evaluateEffectServiceRequirementAdvice(
+  reasoningTree: TypeScriptReasoningTree,
+): TypeScriptHarnessFinding[] {
+  if (!effectPolicyIsActive(reasoningTree.packageExtensions)) {
+    return [];
+  }
+  return effectPolicySourceModules(reasoningTree).flatMap((moduleReport) =>
+    effectServiceRequirementAdviceForModule(moduleReport),
+  );
+}
+
+function effectServiceRequirementAdviceForModule(
+  moduleReport: TypeScriptReasoningModule,
+): TypeScriptHarnessFinding[] {
+  return moduleReport.effectServiceMethods
+    .filter((method) => requirementTypeLeaks(method.requirementsTypeText))
+    .map((method) => ({
+      ruleId: TS_EXT_EFFECT_R004.ruleId,
+      packId: TS_EXT_EFFECT_R004.packId,
+      severity: TS_EXT_EFFECT_R004.severity,
+      title: TS_EXT_EFFECT_R004.title,
+      summary: `Effect service method ${method.containerName}.${method.methodName} exposes requirements ${method.requirementsTypeText}.`,
+      location: method.location,
+      requirement: TS_EXT_EFFECT_R004.requirement,
+      ...sourceLineField(method.sourceLine),
+      label: "move service dependencies into Layer construction",
+      labels: {
+        ...TS_EXT_EFFECT_R004.labels,
+        container_kind: method.containerKind,
+        container: method.containerName,
+        method: method.methodName,
+        requirements: method.requirementsTypeText ?? "unknown",
+      },
+    }));
+}
+
+function evaluateEffectTypedErrorAdvice(
+  reasoningTree: TypeScriptReasoningTree,
+): TypeScriptHarnessFinding[] {
+  if (!effectPolicyIsActive(reasoningTree.packageExtensions)) {
+    return [];
+  }
+  return sourceModules(reasoningTree).flatMap((moduleReport) =>
+    effectTypedErrorAdviceForModule(moduleReport),
+  );
+}
+
+function effectTypedErrorAdviceForModule(
+  moduleReport: TypeScriptReasoningModule,
+): TypeScriptHarnessFinding[] {
+  const weakFunctionSurfaces = moduleReport.publicAsyncEffectSurfaces.filter(
+    (surface) => surface.returnsEffect && surface.errorChannelKind === "weak",
+  );
+  const weakServiceMethods = moduleReport.effectServiceMethods.filter(
+    (method) => method.errorChannelKind === "weak",
+  );
+  const firstFunctionSurface = weakFunctionSurfaces[0];
+  const firstServiceMethod = weakServiceMethods[0];
+  const location = firstFunctionSurface?.location ?? firstServiceMethod?.location;
+  if (location === undefined) {
+    return [];
+  }
+  return [
+    {
+      ruleId: TS_EXT_EFFECT_R005.ruleId,
+      packId: TS_EXT_EFFECT_R005.packId,
+      severity: TS_EXT_EFFECT_R005.severity,
+      title: TS_EXT_EFFECT_R005.title,
+      summary: `Public Effect APIs expose weak error channels: ${renderWeakErrorSurfaces(
+        weakFunctionSurfaces,
+        weakServiceMethods,
+      )}.`,
+      location,
+      requirement: TS_EXT_EFFECT_R005.requirement,
+      ...sourceLineField(firstFunctionSurface?.sourceLine ?? firstServiceMethod?.sourceLine),
+      label: "use typed Effect error channels",
+      labels: {
+        ...TS_EXT_EFFECT_R005.labels,
+        module_role: moduleReport.role,
+        error_surfaces: [
+          ...weakFunctionSurfaces.map((surface) => surface.functionName),
+          ...weakServiceMethods.map((method) => `${method.containerName}.${method.methodName}`),
+        ].join(","),
+      },
+    },
+  ];
+}
+
+function evaluateEffectPromiseInteropAdvice(
+  reasoningTree: TypeScriptReasoningTree,
+): TypeScriptHarnessFinding[] {
+  if (!effectPolicyIsActive(reasoningTree.packageExtensions)) {
+    return [];
+  }
+  return sourceModules(reasoningTree).flatMap((moduleReport) =>
+    effectPromiseInteropAdviceForModule(moduleReport),
+  );
+}
+
+function effectPromiseInteropAdviceForModule(
+  moduleReport: TypeScriptReasoningModule,
+): TypeScriptHarnessFinding[] {
+  const first = moduleReport.effectPromiseInteropRisks[0];
+  if (first === undefined) {
+    return [];
+  }
+  return [
+    {
+      ruleId: TS_EXT_EFFECT_R006.ruleId,
+      packId: TS_EXT_EFFECT_R006.packId,
+      severity: TS_EXT_EFFECT_R006.severity,
+      title: TS_EXT_EFFECT_R006.title,
+      summary: `Effect.promise wraps rejection-capable interop in public APIs: ${renderPromiseInteropRisks(
+        moduleReport.effectPromiseInteropRisks,
+      )}.`,
+      location: first.location,
+      requirement: TS_EXT_EFFECT_R006.requirement,
+      ...sourceLineField(first.sourceLine),
+      label: "use Effect.tryPromise for rejection-capable interop",
+      labels: {
+        ...TS_EXT_EFFECT_R006.labels,
+        module_role: moduleReport.role,
+        promise_interop: moduleReport.effectPromiseInteropRisks
+          .map((risk) => risk.ownerName)
+          .join(","),
+      },
+    },
+  ];
+}
+
+function evaluateEffectResourceScopeAdvice(
+  reasoningTree: TypeScriptReasoningTree,
+): TypeScriptHarnessFinding[] {
+  if (!effectPolicyIsActive(reasoningTree.packageExtensions)) {
+    return [];
+  }
+  return sourceModules(reasoningTree).flatMap((moduleReport) =>
+    effectResourceScopeAdviceForModule(moduleReport),
+  );
+}
+
+function effectResourceScopeAdviceForModule(
+  moduleReport: TypeScriptReasoningModule,
+): TypeScriptHarnessFinding[] {
+  const first = moduleReport.effectResourceScopeRisks[0];
+  if (first === undefined) {
+    return [];
+  }
+  return [
+    {
+      ruleId: TS_EXT_EFFECT_R007.ruleId,
+      packId: TS_EXT_EFFECT_R007.packId,
+      severity: TS_EXT_EFFECT_R007.severity,
+      title: TS_EXT_EFFECT_R007.title,
+      summary: `Effect.acquireRelease appears without a local Scope boundary in public APIs: ${renderResourceScopeRisks(
+        moduleReport.effectResourceScopeRisks,
+      )}.`,
+      location: first.location,
+      requirement: TS_EXT_EFFECT_R007.requirement,
+      ...sourceLineField(first.sourceLine),
+      label: "make Effect resource scope explicit",
+      labels: {
+        ...TS_EXT_EFFECT_R007.labels,
+        module_role: moduleReport.role,
+        resource_scope: moduleReport.effectResourceScopeRisks
+          .map((risk) => risk.ownerName)
+          .join(","),
+      },
+    },
+  ];
+}
+
+function renderAsyncSurfaceNames(
+  surfaces: readonly TypeScriptPublicAsyncEffectSurfaceFact[],
+): string {
+  const names = surfaces
+    .map((surface) => `${surface.functionName}:${surface.returnTypeText ?? "implicit Promise"}`)
+    .slice(0, 6);
+  const suffix = surfaces.length > names.length ? `,+${surfaces.length - names.length}` : "";
+  return `${names.join(", ")}${suffix}`;
+}
+
+function renderRuntimeCallNames(calls: readonly TypeScriptEffectRuntimeCallFact[]): string {
+  return cappedNames(
+    calls.map((call) => `${call.callee}:${call.callKind}`),
+    6,
+  );
+}
+
+function renderWeakErrorSurfaces(
+  functionSurfaces: readonly TypeScriptPublicAsyncEffectSurfaceFact[],
+  serviceMethods: readonly TypeScriptEffectServiceMethodFact[],
+): string {
+  return cappedNames(
+    [
+      ...functionSurfaces.map(
+        (surface) => `${surface.functionName}:${surface.errorTypeText ?? "unknown"}`,
+      ),
+      ...serviceMethods.map(
+        (method) =>
+          `${method.containerName}.${method.methodName}:${method.errorTypeText ?? "unknown"}`,
+      ),
+    ],
+    6,
+  );
+}
+
+function renderPromiseInteropRisks(
+  risks: readonly TypeScriptEffectPromiseInteropRiskFact[],
+): string {
+  return cappedNames(
+    risks.map((risk) => `${risk.ownerName}:${risk.riskKinds.join("+")}`),
+    6,
+  );
+}
+
+function renderResourceScopeRisks(risks: readonly TypeScriptEffectResourceScopeRiskFact[]): string {
+  return cappedNames(
+    risks.map((risk) => risk.ownerName),
+    6,
+  );
+}
+
+function requirementTypeLeaks(requirementsTypeText: string | undefined): boolean {
+  if (requirementsTypeText === undefined) {
+    return false;
+  }
+  const normalized = requirementsTypeText.replaceAll(" ", "");
+  return normalized !== "" && normalized !== "never";
+}
+
+function cappedNames(names: readonly string[], max: number): string {
+  const selected = names.slice(0, max);
+  const suffix = names.length > selected.length ? `,+${names.length - selected.length}` : "";
+  return `${selected.join(", ")}${suffix}`;
+}
+
+function findingSortKey(finding: TypeScriptHarnessFinding): string {
+  return `${finding.ruleId}\0${finding.location.path ?? ""}\0${finding.location.line}\0${finding.summary}`;
+}
+
+function sourceLineField(sourceLine: string | undefined): { readonly sourceLine?: string } {
+  return sourceLine === undefined ? {} : { sourceLine };
+}
