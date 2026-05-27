@@ -99,12 +99,15 @@ M13 adds parser-owned public async API facts and package-owned Effect extension
 activation facts. M14 adds parser-owned Effect runtime-call facts, public
 Effect service method return-type facts, parser-classified weak Effect
 error-channel facts, and parser-classified rejection-capable Promise interop
-facts. M15 adds parser-classified `Effect.acquireRelease` resource-scope facts.
-Extension rules consume those facts to advise on public async
+facts. M15 adds parser-classified `Effect.acquireRelease` resource-scope facts
+and Effect concurrency/failure-policy signals. M17 adds parser-classified JSON
+boundary facts for `JSON.parse` and `response.json()` plus local Effect Schema
+decode evidence. Extension rules consume those facts to advise on public async
 domain-effect boundaries, runtime execution boundaries, service/layer
-requirement boundaries, typed expected-error boundaries, and `tryPromise`
-interop/resource-scope boundaries; they do not read package metadata or
-TypeScript ASTs from the rule layer.
+requirement boundaries, typed expected-error boundaries, `tryPromise`
+interop/resource-scope boundaries, concurrency boundaries, and Schema
+validation boundaries; they do not read package metadata or TypeScript ASTs
+from the rule layer.
 
 The reasoning tree consumes parser-owned import resolution and diagnostic facts,
 including source syntax, TypeScript semantic, `tsconfig`, and package JSON
@@ -229,9 +232,12 @@ union payloads without promoting them to blocking policy. M13 adds
 `TS-EXT-EFFECT-R001` as an `error` when package config explicitly enables the
 Effect extension but the `effect` dependency is missing, and
 `TS-EXT-EFFECT-R002` as project-wide `info` advice for active Effect projects
-whose public async domain APIs still expose raw Promise surfaces. Future
-`TS-MOD-*`, `TS-TEST-*`, and `TS-AGENT-*` rules should remain non-blocking
-unless a caller explicitly promotes them.
+whose public async domain APIs still expose raw Promise surfaces.
+`TS-EXT-EFFECT-R003` through `TS-EXT-EFFECT-R009` remain non-blocking Effect
+capability advice over parser-owned runtime, service, error-channel,
+Promise-interop, resource, concurrency, and Schema facts. Future `TS-MOD-*`,
+`TS-TEST-*`, and `TS-AGENT-*` rules should remain non-blocking unless a caller
+explicitly promotes them.
 
 ## Non-Goals
 

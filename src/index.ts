@@ -53,6 +53,8 @@ export type {
   TypeScriptEffectResourceScopeRiskFact,
   TypeScriptEffectRuntimeCallFact,
   TypeScriptEffectRuntimeCallKind,
+  TypeScriptEffectSchemaBoundarySignalFact,
+  TypeScriptEffectSchemaBoundarySignalKind,
   TypeScriptEffectServiceContainerKind,
   TypeScriptEffectServiceMethodFact,
   TypeScriptPublicAsyncEffectSurfaceFact,

@@ -21,6 +21,8 @@ export type {
   TypeScriptEffectConcurrencySignalKind,
   TypeScriptEffectRuntimeCallFact,
   TypeScriptEffectRuntimeCallKind,
+  TypeScriptEffectSchemaBoundarySignalFact,
+  TypeScriptEffectSchemaBoundarySignalKind,
   TypeScriptEffectPromiseInteropRiskFact,
   TypeScriptEffectPromiseInteropRiskKind,
   TypeScriptEffectResourceScopeRiskFact,
