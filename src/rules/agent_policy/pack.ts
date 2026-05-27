@@ -7,7 +7,13 @@ import type {
   TypeScriptReasoningModule,
   TypeScriptReasoningTree,
 } from "../../model.js";
-import { TS_AGENT_R009, evaluateNativeDataShapeAdvice } from "./data_shape.js";
+import {
+  TS_AGENT_R009,
+  TS_AGENT_R010,
+  TS_AGENT_R011,
+  TS_AGENT_R012,
+  evaluateNativeDataShapeAdvice,
+} from "./data_shape.js";
 
 const TS_AGENT_R001: TypeScriptHarnessRule = {
   ruleId: "TS-AGENT-R001",
@@ -100,6 +106,9 @@ export function typeScriptAgentPolicyRules(): readonly TypeScriptHarnessRule[] {
     TS_AGENT_R007,
     TS_AGENT_R008,
     TS_AGENT_R009,
+    TS_AGENT_R010,
+    TS_AGENT_R011,
+    TS_AGENT_R012,
   ];
 }
 

@@ -22,12 +22,14 @@ For a compact repair surface:
 
 ```ts
 import {
+  renderTypeScriptProjectHarnessAgentCompactText,
   renderTypeScriptProjectHarness,
   runTypeScriptProjectHarness,
 } from "typescript-lang-project-harness";
 
 const report = runTypeScriptProjectHarness(".");
 console.log(renderTypeScriptProjectHarness(report));
+console.log(renderTypeScriptProjectHarnessAgentCompactText(report));
 ```
 
 The CLI runs the same project harness:
@@ -57,8 +59,9 @@ Default project execution runs these packs in descriptor order:
 4. `typescript.modularity`
 5. `typescript.test_layout`
 6. `typescript.agent_policy`
+7. `typescript.extension_policy`
 
-The current M9 surface implements the native parser boundary, source syntax
+The current surface implements the native parser boundary, source syntax
 diagnostics, native TypeScript `Program` semantic diagnostics with TypeScript
 diagnostic codes, parseable `tsconfig.json` policy, TypeScript JSON AST-backed
 package/config facts, reasoning-tree snapshots, project-level workspace
@@ -69,10 +72,14 @@ It also includes Rust-aligned policy configuration for disabling single rules,
 disabling built-in rule packs, overriding single-rule severities, overriding
 rule-pack severities, and promoting advisory rules by `blockingRuleIds`.
 `TS-SEM-*`, `TS-PROJ-R003`, `TS-PROJ-R004`, `TS-PROJ-R005`, `TS-MOD-*`,
-`TS-TEST-*`, and `TS-AGENT-*` findings are shown to agents without failing the
-default gate. Package metadata diagnostics cover both the project root package
-and TypeScript project reference packages, plus package metadata discovered from
-root workspace patterns. Modern TypeScript project-shape advice also stays
+`TS-TEST-*`, `TS-AGENT-*`, and `TS-EXT-EFFECT-R002` through
+`TS-EXT-EFFECT-R007` findings are shown to agents without failing the default
+gate. `TS-EXT-EFFECT-R001` is `error` because an
+explicit Effect enablement that lacks the `effect` dependency is a broken
+project configuration promise. Package metadata diagnostics cover both the
+project root package and TypeScript project reference packages, plus package
+metadata discovered from root workspace patterns. Modern TypeScript
+project-shape advice also stays
 non-blocking: `TS-PROJ-R004` points out referenced package configs missing
 `composite` or `declaration`, and `TS-PROJ-R005` points out package
 `exports`/`imports` when the effective TypeScript `moduleResolution` is not
@@ -97,6 +104,41 @@ clusters of semantic primitive fields such as `ownerId`, `requestUrl`,
 `timeoutMs`, or boolean mode fields. It remains `info` and excludes model
 schema modules so the harness does not mistake its own fact model contracts for
 application DTO drift.
+M12 extends that Rust-aligned type-quality surface with parser-native public
+type alias and discriminated-union payload facts. `TS-AGENT-R010` through
+`TS-AGENT-R012` stay advisory and catch primitive semantic type aliases,
+stringly state/status/kind fields, and primitive semantic payloads on public
+discriminated-union variants. Literal-union catalog aliases such as
+`type Status = "pending" | "done"` remain accepted typed boundaries.
+M13 adds the first package-owned extension policy for Effect. The parser reads
+known extension activation facts from `package.json`: an `effect` dependency
+auto-activates the Effect extension, and
+`typescriptProjectHarness.extensions.effect = "enable"` declares an explicit
+project commitment. Explicit enablement without the `effect` dependency emits
+`TS-EXT-EFFECT-R001` as an `error`, while active Effect projects get
+non-blocking `TS-EXT-EFFECT-R002` advice when public source APIs expose raw
+Promise or implicit async Promise surfaces instead of `Effect.Effect<A, E, R>`.
+Effect activation is intentionally project-wide: adding `effect` means the
+harness should guide agents to migrate public async domain APIs toward
+`Effect.Effect<Success, DomainError, Requirements>`, `Effect.tryPromise`
+interop, and `Effect.run*` execution only at entrypoint or adapter boundaries.
+This is extension policy, not a manifest dependency gate.
+M14 enriches that extension from the current Effect docs without widening it
+into a style linter. Parser-native facts now record `Effect.run*` /
+`Runtime.run*` execution calls and public Effect service method return types.
+`TS-EXT-EFFECT-R003` advises when runtime execution appears inside source
+modules instead of entrypoint or adapter boundaries, and `TS-EXT-EFFECT-R004`
+advises when public service methods leak non-`never` requirements that should
+usually move into Layer/runtime construction. The same parser fact path now
+classifies weak public Effect error channels, so `TS-EXT-EFFECT-R005` can nudge
+primitive, `any`, `unknown`, or `void` error types toward tagged/domain errors
+without treating ordinary `Error` as a blocking project violation.
+`TS-EXT-EFFECT-R006` adds parser-native Promise interop advice: public Effect
+APIs that wrap `async`, `throw`, or `Promise.reject` callbacks with
+`Effect.promise` should use `Effect.tryPromise` with a domain error mapping.
+M15 closes the pre-PR Effect enrichment with resource-scope advice:
+`TS-EXT-EFFECT-R007` reports public source owners that construct
+`Effect.acquireRelease` resources without a local `Effect.scoped` boundary.
 The verification lane now includes M5 task planning, M6 profile-index drafts,
 M7 report obligations, and M8 Rust VAS-aligned artifact surfaces: configured
 skill task-index JSON, performance-index JSON, report-bundle manifest JSON, a
@@ -112,8 +154,8 @@ workspace or project-reference package facts are present, the CLI groups each
 package scope under a compact `pkg <path>` heading and runs that package from
 its own `package.json` anchor and local `tsconfig.json`. Each package snapshot
 starts with `Modules:` and then renders
-`OwnerBranches:`, `OwnerDependencies:`, and `FindingGroups:` when those
-sections are non-empty. The renderer consumes reasoning-tree `ownerBranches`
+`Extensions:`, `OwnerBranches:`, `OwnerDependencies:`, and `FindingGroups:`
+when those sections are non-empty. The renderer consumes reasoning-tree `ownerBranches`
 and `ownerDependencies` rather than rediscovering owner structure from raw
 source or raw import edges.
 Owner branches summarize module roles, exports, type-only re-exports,
@@ -133,6 +175,8 @@ Full TypeScript diagnostic codes, source lines, related information, compiler
 options, package metadata, scripts, workspace facts, and detailed parser reports
 remain available through the default compact findings and JSON report instead
 of being repeated in the agent snapshot.
+Extension facts are rendered only as compact capability and activation lines;
+raw dependency fields stay out of the snapshot.
 Explicit-path runs also attach a minimal reasoning tree, so syntax diagnostics
 flow through the same reasoning-tree policy and compact snapshot path even when
 no project scope is available.
@@ -190,17 +234,17 @@ block naming the required bundle artifacts.
 
 ## Public API Contract
 
-The package facade exports the M11 library surface: runners, project agent
+The package facade exports the M13 library surface: runners, project agent
 snapshot helpers, assertion helpers, parser entrypoints,
 compact/JSON/reasoning renderers, rule catalog functions, policy config helper
 functions, verification policy helpers, profile-index builders/renderers,
 verification planners/renderers, task-index and performance-index
 builders/renderers, report-bundle builders/renderers, report writer helpers,
 and report model types, including parser-native public API/data/control-flow
-fact types. Internals such as reasoning-tree builders, rule-pack evaluators,
-and verification internals stay private so downstream tools depend on
-parser-owned facts and stable rendered output instead of implementation
-modules.
+fact types, M12 type-boundary facts, and Effect extension fact types. Internals such as reasoning-tree
+builders, rule-pack evaluators, and verification internals stay private so
+downstream tools depend on parser-owned facts and stable rendered output
+instead of implementation modules.
 
 ## CI
 

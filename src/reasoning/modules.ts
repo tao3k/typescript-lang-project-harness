@@ -71,7 +71,14 @@ function reasoningModuleFromRole(
     publicFunctionParams: moduleReport.publicFunctionParams,
     publicTupleApiSurfaces: moduleReport.publicTupleApiSurfaces,
     publicDataFields: moduleReport.publicDataFields,
+    publicTypeAliases: moduleReport.publicTypeAliases,
+    publicDiscriminatedUnionVariantFields: moduleReport.publicDiscriminatedUnionVariantFields,
     publicFunctionControlFlows: moduleReport.publicFunctionControlFlows,
+    publicAsyncEffectSurfaces: moduleReport.publicAsyncEffectSurfaces,
+    effectRuntimeCalls: moduleReport.effectRuntimeCalls,
+    effectPromiseInteropRisks: moduleReport.effectPromiseInteropRisks,
+    effectResourceScopeRisks: moduleReport.effectResourceScopeRisks,
+    effectServiceMethods: moduleReport.effectServiceMethods,
   };
 }
 
@@ -110,6 +117,7 @@ function moduleLayer(
   }
   if (
     relativePath === "src/model.ts" ||
+    relativePath.startsWith(`src${path.sep}model${path.sep}`) ||
     (relativePath.startsWith(`src${path.sep}`) && path.basename(relativePath) === "model.ts")
   ) {
     return "model";

@@ -67,6 +67,10 @@ the reasoning tree.
 Package scripts, workspace patterns, and resolved workspace package metadata
 should also stay parser-owned orientation facts; do not turn them into
 package-manager policy inside this harness.
+Known extension activation facts are the narrow exception to the no-manifest
+policy rule: the parser may read package dependency fields only to derive a
+typed `packageExtensions` fact such as Effect activation. Rule packs must
+consume that fact instead of reading package metadata directly.
 JavaScript files should enter reports only through TypeScript's native project
 selection, such as `allowJs`; do not widen fallback discovery with ad hoc JS
 scanning.
@@ -78,6 +82,13 @@ they exceed their layer line budgets.
 Rule packs should stay in the `src/rules/` pack structure: catalog metadata,
 the engine, and individual pack modules are separate concerns. `src/rules.ts`
 is a facade, not the policy implementation body.
+Extension policies belong in `src/rules/extension_policy/`. They may inspect
+reasoning-tree extension facts and parser-native Effect facts such as public
+async API surfaces, runtime execution calls, and public service method return
+types, including parser-classified Effect error-channel strength and
+rejection-capable Promise interop risks, plus resource scope risks from
+`Effect.acquireRelease`, but they must not import `typescript`, parse package
+files, or implement general package-manager checks.
 
 ## Verification Policy Boundary
 
@@ -116,6 +127,8 @@ Use `assertTypeScriptProjectHarnessAgentClean()` for test-gate self-apply paths
 that should expose advice as repair feedback. Keep
 `assertTypeScriptProjectHarnessClean()` blocking-only so library callers can
 choose when advisory output should fail their tests.
+Agent-clean failures must stay compact: group advice by rule and cap
+first-finding detail instead of dumping every advisory card or raw JSON.
 M6 semantic diagnostics, modularity advice, test-layout advice, package
 metadata diagnostics, and agent advice are rendered by default but remain
 `info`; do not promote advisory findings to blocking without an explicit policy
@@ -136,12 +149,13 @@ Compact renderers must normalize diagnostic message path mentions under the
 reasoning-tree project root, because TypeScript diagnostic text can include
 host absolute paths even when diagnostic locations are already structured.
 Snapshot rendering should stay Rust-aligned: cap long branch and child-edge
-surfaces, group owner dependency fan-in/fan-out when useful, and do not render
-empty child-edge placeholders.
+surfaces, group owner dependency fan-in/fan-out when useful, render compact
+`Extensions:` activation lines only when present, and do not render empty
+child-edge placeholders.
 
 ## Public API Contract
 
-The package root is the supported M11 import surface. Tests in
+The package root is the supported M13 import surface. Tests in
 `tests/unit/public_api.test.ts` lock the runtime facade, type exports, and public
 agent snapshot behavior. Do not export internal reasoning builders, rule-pack
 evaluators, or verification internals unless they become an intentional library

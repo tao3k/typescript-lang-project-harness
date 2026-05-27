@@ -18,8 +18,12 @@ configured parser/reasoning facts
   existing CLI exit-code contract.
 - Make the agent-clean helper fail after configured-blocking findings are
   handled when visible `info` advice remains.
-- Render the failure with `renderTypeScriptProjectHarnessAdvice()` so test
-  output is compact repair feedback, not JSON or an expanded report.
+- Render the failure with `renderTypeScriptProjectHarnessAgentCompactText()` so
+  test output is compact repair feedback, not JSON or an expanded report.
+  `renderTypeScriptProjectHarnessAdvice()` remains a compatibility alias for
+  advice-only compact text. The first agent surface is `RepairTasks:` with
+  explicit `fix:` steps and target locators; rule ids are metadata, not the
+  primary instruction.
 - Respect policy config before the assertion checks advice. Disabled rules,
   disabled rule packs, severity overrides, and blocking-rule promotions should
   all behave exactly as they do in ordinary project runs.

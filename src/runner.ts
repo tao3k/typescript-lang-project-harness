@@ -12,7 +12,10 @@ import {
 import { defaultTypeScriptHarnessConfig } from "./config.js";
 import { buildExplicitTypeScriptReasoningTree, buildTypeScriptReasoningTree } from "./reasoning.js";
 import { evaluateDefaultRulePacks } from "./rules.js";
-import { renderAssertionMessage, renderTypeScriptProjectHarnessAdvice } from "./render.js";
+import {
+  renderAssertionMessage,
+  renderTypeScriptProjectHarnessAgentCompactText,
+} from "./render.js";
 import {
   advisoryFindings,
   isTypeScriptHarnessClean,
@@ -112,7 +115,7 @@ export function assertTypeScriptProjectHarnessAgentClean(
 ): TypeScriptHarnessReport {
   const report = assertTypeScriptProjectHarnessClean(projectRootInput, config);
   if (advisoryFindings(report).length > 0) {
-    throw new Error(renderTypeScriptProjectHarnessAdvice(report));
+    throw new Error(renderTypeScriptProjectHarnessAgentCompactText(report));
   }
   return report;
 }

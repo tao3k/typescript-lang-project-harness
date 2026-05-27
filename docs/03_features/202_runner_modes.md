@@ -54,6 +54,10 @@ default. Package metadata diagnostics include root, TypeScript
 project-reference, and workspace package files and are produced through
 TypeScript's JSON parser. Package scripts and workspaces are parser-owned
 orientation facts, not package-manager policy.
+Known extension activation, such as Effect, is also parser-owned. The parser
+may derive `packageExtensions` from package dependency fields and
+`typescriptProjectHarness.extensions`, but rule packs consume only the typed
+extension fact.
 
 `assertTypeScriptProjectHarnessClean()` follows the same blocking-only
 semantics. `assertTypeScriptProjectHarnessAgentClean()` is the test-gate variant
@@ -101,10 +105,11 @@ inspect.
 
 Reports always include a reasoning tree assembled from parser-owned facts.
 `renderTypeScriptReasoningTree(report)` renders the Rust-style agent snapshot
-shape: `Modules:`, `OwnerBranches:`, `OwnerDependencies:`, and
+shape: `Modules:`, `Extensions:`, `OwnerBranches:`, `OwnerDependencies:`, and
 `FindingGroups:`. It summarizes module roles, exports, path-alias/package
 edges, package-name import owners, project-reference/workspace owner
-provenance, package entry owners, and Rust-style source-shape counters such as
+provenance, package entry owners, known package extension activation, and
+Rust-style source-shape counters such as
 `shadowed=` and `orphaned=` while omitting singleton and zero-value boilerplate.
 Explicit-path reports use the same grouping surface, with diagnostics grouped
 under `FindingGroups:` when rule findings exist. Full TypeScript diagnostic
@@ -122,13 +127,14 @@ findings.
 
 ## Public Facade
 
-Consumers should import from the package root. The root facade exposes the M11
+Consumers should import from the package root. The root facade exposes the M13
 contract: parser entrypoints, project/explicit runners, project snapshot
 helpers, assertion helpers, compact/JSON/reasoning renderers, rule catalog
 functions, policy config helpers, verification profile-index builders/renderers,
 verification planners/renderers, verification task-index builders/renderers,
 verification report-bundle builders/renderers, report writer helpers, and model
 types, including `TypeScriptHarnessRunMode`, `TypeScriptRulePack`,
-parser-native public API/data/control-flow fact types, and verification
-policy/task model types. Reasoning builders, rule evaluators, and verification
-internals remain internal implementation details.
+parser-native public API/data/control-flow fact types, M12 type-boundary fact
+types, Effect extension fact types, and verification policy/task model types.
+Reasoning builders, rule evaluators, and verification internals remain internal
+implementation details.

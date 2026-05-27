@@ -18,7 +18,12 @@ import {
 import { runCli } from "../../src/cli.js";
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
-const snapshotSectionOrder = ["OwnerBranches:", "OwnerDependencies:", "FindingGroups:"] as const;
+const snapshotSectionOrder = [
+  "Extensions:",
+  "OwnerBranches:",
+  "OwnerDependencies:",
+  "FindingGroups:",
+] as const;
 
 test("agent snapshot matches the golden project reasoning surface", () => {
   const fixtureRoot = path.join(projectRoot, "tests", "fixtures", "agent_snapshot_project");
@@ -217,6 +222,7 @@ function snapshotReport(
       packageBins: [],
       packageScripts: [],
       packageWorkspaces: [],
+      packageExtensions: [],
       workspacePackages: [],
       workspacePatterns: [],
       projectReferencePackages: [],
@@ -238,7 +244,14 @@ function snapshotReport(
         publicFunctionParams: [],
         publicTupleApiSurfaces: [],
         publicDataFields: [],
+        publicTypeAliases: [],
+        publicDiscriminatedUnionVariantFields: [],
         publicFunctionControlFlows: [],
+        publicAsyncEffectSurfaces: [],
+        effectRuntimeCalls: [],
+        effectPromiseInteropRisks: [],
+        effectResourceScopeRisks: [],
+        effectServiceMethods: [],
       })),
       ownerBranches,
       ownerDependencies,
@@ -460,6 +473,7 @@ function diagnosticReport(
       packageBins: [],
       packageScripts: [],
       packageWorkspaces: [],
+      packageExtensions: [],
       workspacePackages: [],
       workspacePatterns: [],
       projectReferencePackages: [],
@@ -492,7 +506,14 @@ function diagnosticReport(
           publicFunctionParams: [],
           publicTupleApiSurfaces: [],
           publicDataFields: [],
+          publicTypeAliases: [],
+          publicDiscriminatedUnionVariantFields: [],
           publicFunctionControlFlows: [],
+          publicAsyncEffectSurfaces: [],
+          effectRuntimeCalls: [],
+          effectPromiseInteropRisks: [],
+          effectResourceScopeRisks: [],
+          effectServiceMethods: [],
         },
       ],
       ownerBranches: [],

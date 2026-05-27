@@ -27,6 +27,11 @@ export type {
   TypeScriptNativeImportResolutionFact,
   TypeScriptPackageImportOwnerFact,
   TypeScriptPackageEntryResolutionFact,
+  TypeScriptPackageExtensionActivation,
+  TypeScriptPackageExtensionConfigSource,
+  TypeScriptPackageExtensionDependencySource,
+  TypeScriptPackageExtensionFact,
+  TypeScriptPackageExtensionName,
   TypeScriptPathAliasFact,
   TypeScriptProjectHarnessAgentSnapshot,
   TypeScriptProjectHarnessAgentSnapshotPackage,
@@ -34,9 +39,20 @@ export type {
   TypeScriptProjectHarnessScope,
   TypeScriptProjectReferencePackageFact,
   TypeScriptProjectReferenceResolutionFact,
+  TypeScriptEffectErrorChannelKind,
+  TypeScriptEffectPromiseInteropRiskFact,
+  TypeScriptEffectPromiseInteropRiskKind,
+  TypeScriptEffectResourceScopeRiskFact,
+  TypeScriptEffectRuntimeCallFact,
+  TypeScriptEffectRuntimeCallKind,
+  TypeScriptEffectServiceContainerKind,
+  TypeScriptEffectServiceMethodFact,
+  TypeScriptPublicAsyncEffectSurfaceFact,
   TypeScriptPublicDataFieldFact,
+  TypeScriptPublicDiscriminatedUnionVariantFieldFact,
   TypeScriptPublicFunctionControlFlowFact,
   TypeScriptPublicFunctionParamFact,
+  TypeScriptPublicTypeAliasFact,
   TypeScriptPublicTupleApiSurfaceFact,
   TypeScriptReasoningDiagnosticFact,
   TypeScriptReasoningImportSummaryFact,
@@ -85,12 +101,17 @@ export {
 export {
   renderAssertionMessage,
   renderTypeScriptProjectHarness,
+  renderTypeScriptProjectHarnessAgentCompactText,
   renderTypeScriptProjectHarnessAgentSnapshot,
   renderTypeScriptProjectHarnessAdvice,
   renderTypeScriptProjectHarnessJson,
   renderTypeScriptReasoningTree,
 } from "./render.js";
-export type { TypeScriptRenderOptions } from "./render.js";
+export type {
+  TypeScriptAgentCompactTextFindingMode,
+  TypeScriptAgentCompactTextOptions,
+  TypeScriptRenderOptions,
+} from "./render.js";
 export {
   assertTypeScriptProjectHarnessAgentClean,
   assertTypeScriptLangHarnessClean,
@@ -102,6 +123,7 @@ export {
 } from "./runner.js";
 export {
   typeScriptAgentPolicyRules,
+  typeScriptExtensionPolicyRules,
   typeScriptModularityRules,
   typeScriptProjectPolicyRules,
   typeScriptRulePackDescriptors,
