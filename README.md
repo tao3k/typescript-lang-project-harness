@@ -122,6 +122,10 @@ Effect activation is intentionally project-wide: adding `effect` means the
 harness should guide agents to migrate public async domain APIs toward
 `Effect.Effect<Success, DomainError, Requirements>`, `Effect.tryPromise`
 interop, and `Effect.run*` execution only at entrypoint or adapter boundaries.
+Package-owned CLI adapters are recognized from parser-owned `bin` facts and
+from TypeScript targets named in `package.json` scripts, so agent advice stays
+focused on source/domain owners instead of asking benchmark or command handlers
+to masquerade as reusable domain APIs.
 This is extension policy, not a manifest dependency gate.
 M14 enriches that extension from the current Effect docs without widening it
 into a style linter. Parser-native facts now record `Effect.run*` /
@@ -199,10 +203,11 @@ When `tsconfig.json` selects JavaScript through `allowJs`, parser reports keep
 native `js`, `jsx`, `mjs`, and `cjs` script kinds and reasoning edges can point
 back to those parser-visible owners.
 Those parser-visible JavaScript modules participate in the same module roles:
-facade `index.*`, entrypoint `main.*`/package `bin`, config files, source, and
-test files.
-Parser-visible package `bin` owners are rendered as `entrypoint` modules so CLI
-surfaces are visible without filename guessing.
+facade `index.*`, entrypoint `main.*`/package-owned CLI adapters, config files,
+source, and test files.
+Parser-visible package `bin` owners and package-script TypeScript targets are
+rendered as `entrypoint` modules so CLI surfaces are visible without filename
+guessing.
 The parser recognizes TypeScript's granular type-only forms such as
 `import { type T }`, `export { type T } from`, and `import("./module")` type
 queries before the reasoning tree renders them as compact edges.

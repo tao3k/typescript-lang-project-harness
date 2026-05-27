@@ -59,7 +59,11 @@ module layers, module line counts, owner branches, owner dependencies, package
 entry owners, parser-native public API/data/control-flow facts,
 known package extension activation facts such as Effect,
 shadowed/orphaned source-shape counters, and import edges.
-Parser-visible package `bin` owners feed the `entrypoint` module role.
+Parser-visible package `bin` owners and TypeScript targets referenced by
+`package.json` scripts feed the `entrypoint` module role. When a package-owned
+entrypoint sits under `src/cli` or `src/bin`, that adapter tree is treated as
+entrypoint surface so project-wide Effect advice stays aimed at reusable source
+owners.
 Parser-visible `index.*`, `main.*`, config, and test file roles are matched by
 explicit module suffix lists, not dynamic regular-expression construction.
 Workspace package config facts are package-root local: a workspace package only

@@ -169,10 +169,12 @@ to parser-visible owners when possible, including common `outDir` to
 source-root mappings. Package entry advice points at the JSON AST location for
 the exact `exports`, `imports`, or `bin` target when available, including
 conditional package target branches.
-Parser-visible `bin` targets also mark the owner module as an `entrypoint`.
-Package scripts, workspace patterns, and resolved workspace package metadata
-are rendered as orientation facts; they remain non-blocking and do not become
-package-manager policy.
+Parser-visible `bin` targets and TypeScript targets referenced by package
+scripts also mark the owner module as an `entrypoint`; when those targets live
+under `src/cli` or `src/bin`, sibling adapter modules in that tree inherit the
+entrypoint role. Package scripts, workspace patterns, and resolved workspace
+package metadata are rendered as orientation facts; they remain non-blocking
+and do not become package-manager policy.
 Package-name dependency rows include whether the package owner came from a
 TypeScript project reference or a workspace package fact, so agents can edit the
 right owner boundary without guessing.

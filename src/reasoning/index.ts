@@ -5,7 +5,11 @@ import type {
 } from "../model.js";
 import { moduleDiagnostics, reasoningDiagnostics } from "./diagnostics.js";
 import { importEdges } from "./import_edges.js";
-import { explicitReasoningModules, packageBinOwnerPaths, reasoningModules } from "./modules.js";
+import {
+  explicitReasoningModules,
+  packageEntrypointOwnerPaths,
+  reasoningModules,
+} from "./modules.js";
 import { ownerBranches, ownerDependencies } from "./owner_facts.js";
 import {
   resolvePackageImportOwners,
@@ -21,7 +25,11 @@ export function buildTypeScriptReasoningTree(
 ): TypeScriptReasoningTree {
   const modulePaths = new Set(modules.map((moduleReport) => moduleReport.path));
   const packageEntryResolutions = resolvePackageEntries(scope, modulePaths);
-  const entrypointOwnerPaths = packageBinOwnerPaths(packageEntryResolutions);
+  const entrypointOwnerPaths = packageEntrypointOwnerPaths(
+    scope,
+    packageEntryResolutions,
+    modulePaths,
+  );
   const reasoningModuleFacts = reasoningModules(scope, modules, entrypointOwnerPaths);
   const edges = modules
     .flatMap((moduleReport) => importEdges(moduleReport, modulePaths))

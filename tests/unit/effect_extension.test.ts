@@ -256,6 +256,62 @@ test("Effect runtime execution advice stays out of entrypoints", () => {
   );
 });
 
+test("Effect policy treats package script TypeScript targets as entrypoint adapters", () => {
+  const root = effectProject("script-entrypoint", {
+    packageJson: {
+      dependencies: { effect: "^3.0.0" },
+      scripts: {
+        bench: 'RUN_LIVE=1 jiti src/cli/bench.ts --live "$@"',
+      },
+    },
+    source: {
+      "cli/bench.ts": [
+        'import { Effect } from "effect";',
+        "declare const program: Effect.Effect<void, Error>;",
+        "export function runBench(): Promise<void> {",
+        "  return Effect.runPromise(program);",
+        "}",
+      ],
+      "cli/bench-helper.ts": [
+        "export async function prepareBench(): Promise<string> {",
+        "  return 'ready';",
+        "}",
+      ],
+      "domain.ts": [
+        "export async function loadDomainOwner(): Promise<string> {",
+        "  return 'owner';",
+        "}",
+      ],
+    },
+  });
+
+  const report = runTypeScriptProjectHarness(root);
+  const roleByPath = new Map(
+    report.reasoningTree.modules.map((moduleReport) => [
+      path.relative(root, moduleReport.path),
+      moduleReport.role,
+    ]),
+  );
+
+  assert.equal(isTypeScriptHarnessClean(report), true);
+  assert.equal(roleByPath.get("src/cli/bench.ts"), "entrypoint");
+  assert.equal(roleByPath.get("src/cli/bench-helper.ts"), "entrypoint");
+  assert.equal(roleByPath.get("src/domain.ts"), "source");
+  assert.deepEqual(
+    report.findings
+      .filter((finding) => finding.ruleId.startsWith("TS-EXT-EFFECT"))
+      .map((finding) =>
+        [
+          finding.ruleId,
+          finding.severity,
+          path.relative(root, finding.location.path ?? ""),
+          finding.labels.module_role ?? "",
+        ].join(":"),
+      ),
+    ["TS-EXT-EFFECT-R002:info:src/domain.ts:source"],
+  );
+});
+
 test("Effect service methods with requirement leaks receive layer-boundary advice", () => {
   const root = effectProject("service-requirements", {
     packageJson: {
@@ -429,6 +485,7 @@ function effectProject(
   );
   if (isSourceFileMap(options.source)) {
     for (const [fileName, source] of Object.entries(options.source)) {
+      fs.mkdirSync(path.dirname(path.join(root, "src", fileName)), { recursive: true });
       fs.writeFileSync(path.join(root, "src", fileName), sourceText(source));
     }
   } else {
