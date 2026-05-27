@@ -130,6 +130,11 @@ Use `assertTypeScriptProjectHarnessAgentClean()` for test-gate self-apply paths
 that should expose advice as repair feedback. Keep
 `assertTypeScriptProjectHarnessClean()` blocking-only so library callers can
 choose when advisory output should fail their tests.
+Use `assertTypeScriptProjectHarnessEmbeddedClean()` for downstream npm
+test/check integration. Its default pass skips semantic diagnostic collection
+for speed and expects `tsc --noEmit` to own type-check failure; pass
+`collectSemanticDiagnostics: true` only when a test needs semantic advice from
+the harness itself.
 Agent-clean failures must stay compact: group advice by rule and cap
 first-finding detail instead of dumping every advisory card or raw JSON.
 M6 semantic diagnostics, modularity advice, test-layout advice, package

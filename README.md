@@ -50,7 +50,11 @@ Use `typescript-project-harness --agent-compact .` from downstream
 instructions without adding a project-local runner script. For `npm test` or
 `npm check` embedded in a test framework, use
 `assertTypeScriptProjectHarnessEmbeddedClean()`; it prints compact agent advice
-by default and fails only on blocking findings. Use
+by default and fails only on blocking findings. The embedded assertion defaults
+to a fast non-semantic pass because `tsc --noEmit` or the test framework should
+own type-check failure; callers can set `collectSemanticDiagnostics: true` when
+they want the embedded assertion to also collect TypeScript semantic diagnostic
+advice. Use
 `assertTypeScriptProjectHarnessAgentClean()` only when agent-facing advice
 should fail the test gate. The default `assertTypeScriptProjectHarnessClean()`
 and CLI exit code remain blocking-only, so `info` advice can stay visible

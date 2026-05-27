@@ -27,20 +27,30 @@ import {
 
 export interface TypeScriptProjectHarnessEmbeddedOptions {
   readonly config?: TypeScriptHarnessConfig;
+  readonly collectSemanticDiagnostics?: boolean;
   readonly emitAdvice?: boolean;
   readonly writeAdvice?: (message: string) => unknown;
+}
+
+interface TypeScriptProjectHarnessRunOptions {
+  readonly collectSemanticDiagnostics?: boolean;
 }
 
 export function runTypeScriptProjectHarness(
   projectRootInput: string | URL,
   config: TypeScriptHarnessConfig = defaultTypeScriptHarnessConfig(),
+  options: TypeScriptProjectHarnessRunOptions = {},
 ): TypeScriptHarnessReport {
   const projectRoot = pathFromInput(projectRootInput);
   if (!fs.existsSync(projectRoot)) {
     throw new Error(`project root does not exist: ${projectRoot}`);
   }
   const scope = readProjectScope(projectRoot, config);
-  const modules = parseTypeScriptProjectFiles(scope, projectFileNames(scope, config));
+  const parseOptions =
+    options.collectSemanticDiagnostics === undefined
+      ? {}
+      : { collectSemanticDiagnostics: options.collectSemanticDiagnostics };
+  const modules = parseTypeScriptProjectFiles(scope, projectFileNames(scope, config), parseOptions);
   const reasoningTree = buildTypeScriptReasoningTree(scope, modules);
   const findings = evaluateDefaultRulePacks(reasoningTree, config);
   return {
@@ -130,10 +140,14 @@ export function assertTypeScriptProjectHarnessEmbeddedClean(
   projectRootInput: string | URL,
   options: TypeScriptProjectHarnessEmbeddedOptions = {},
 ): TypeScriptHarnessReport {
-  const report = assertTypeScriptProjectHarnessClean(
+  const report = runTypeScriptProjectHarness(
     projectRootInput,
     options.config ?? defaultTypeScriptHarnessConfig(),
+    { collectSemanticDiagnostics: options.collectSemanticDiagnostics ?? false },
   );
+  if (!isTypeScriptHarnessClean(report)) {
+    throw new Error(renderAssertionMessage(report));
+  }
   if (options.emitAdvice !== false) {
     const advice = renderTypeScriptProjectHarnessAgentCompactText(report, {
       findings: "advice",

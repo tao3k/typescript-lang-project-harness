@@ -69,8 +69,10 @@ export function projectFileNames(
 export function parseTypeScriptProjectFiles(
   scope: TypeScriptProjectHarnessScope,
   fileNames: readonly string[],
+  options: { readonly collectSemanticDiagnostics?: boolean } = {},
 ): TypeScriptModuleReport[] {
   const programInputs = readTypeScriptProgramInputs(scope);
+  const collectSemanticDiagnostics = options.collectSemanticDiagnostics ?? true;
   const rootNames = [...fileNames].map((fileName) => path.resolve(fileName)).sort();
   const host = ts.createCompilerHost(programInputs.options, true);
   const createProgramOptions: ts.CreateProgramOptions = {
@@ -93,6 +95,13 @@ export function parseTypeScriptProjectFiles(
     if (sourceFile === undefined) {
       return parseTypeScriptSourceFile(fileName);
     }
+    const semanticDiagnostics = collectSemanticDiagnostics
+      ? program
+          .getSemanticDiagnostics(sourceFile)
+          .map((diagnostic) =>
+            nativeDiagnosticFromTsDiagnostic(diagnostic, fileName, sourceFile.text),
+          )
+      : [];
     return moduleReportFromSourceFile(
       sourceFile,
       program
@@ -100,11 +109,7 @@ export function parseTypeScriptProjectFiles(
         .map((diagnostic) =>
           nativeDiagnosticFromTsDiagnostic(diagnostic, fileName, sourceFile.text),
         ),
-      program
-        .getSemanticDiagnostics(sourceFile)
-        .map((diagnostic) =>
-          nativeDiagnosticFromTsDiagnostic(diagnostic, fileName, sourceFile.text),
-        ),
+      semanticDiagnostics,
       collectImportFacts(sourceFile).map((importFact) =>
         resolveNativeImportFact(
           scope,

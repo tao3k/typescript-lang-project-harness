@@ -70,6 +70,12 @@ for agent repair loops: it first enforces configured-blocking findings, then
 fails with the compact advice renderer when visible `info` advice remains. It
 does not bypass policy config; disabled rules, disabled packs, and severity
 overrides are applied before the test-gate assertion sees findings.
+`assertTypeScriptProjectHarnessEmbeddedClean()` is the npm test/check embedded
+variant. It fails only on blocking findings and emits compact advice by
+default. To keep test suites from running a second full type-check after `tsc`,
+it defaults to skipping TypeScript semantic diagnostic collection while still
+using native parser/project facts; callers can opt back in with
+`collectSemanticDiagnostics: true`.
 
 `verificationPolicy` is also part of `TypeScriptHarnessConfig`. It owns
 profile hints, receipts, waivers, task contract overrides, responsibility task

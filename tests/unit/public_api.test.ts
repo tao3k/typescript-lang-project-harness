@@ -419,6 +419,27 @@ test("public embedded assertion emits advice without failing info-only projects"
   assert.match(advice[0] ?? "", /Directive: edit listed targets/u);
 });
 
+test("public embedded assertion defaults to a fast non-semantic policy pass", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-embedded-fast-"));
+  fs.mkdirSync(path.join(root, "src"));
+  fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ type: "module" }));
+  fs.writeFileSync(path.join(root, "tsconfig.json"), JSON.stringify({ include: ["src/**/*.ts"] }));
+  fs.writeFileSync(path.join(root, "src", "index.ts"), "export const bad: string = 1;\n");
+
+  const fullReport = api.runTypeScriptProjectHarness(root);
+  const embeddedFastReport = api.assertTypeScriptProjectHarnessEmbeddedClean(root, {
+    emitAdvice: false,
+  });
+  const embeddedSemanticReport = api.assertTypeScriptProjectHarnessEmbeddedClean(root, {
+    collectSemanticDiagnostics: true,
+    emitAdvice: false,
+  });
+
+  assert.ok(fullReport.findings.some((finding) => finding.ruleId === "TS-SEM-R001"));
+  assert.ok(embeddedFastReport.findings.every((finding) => finding.ruleId !== "TS-SEM-R001"));
+  assert.ok(embeddedSemanticReport.findings.some((finding) => finding.ruleId === "TS-SEM-R001"));
+});
+
 test("public agent compact text renderer can select blocking or all findings", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-agent-compact-"));
   writeAdviceOnlyProject(root);
