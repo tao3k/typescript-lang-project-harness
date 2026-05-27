@@ -19,7 +19,7 @@ The implementation was calibrated against the Effect website docs snapshot at
 - `getting-started/importing-effect.mdx`: install the `effect` package and
   import `Effect` from `effect` or `effect/Effect`.
 - `getting-started/the-effect-type.mdx`: `Effect<Success, Error,
-  Requirements>` models success, expected errors, and requirements.
+Requirements>` models success, expected errors, and requirements.
 - `additional-resources/effect-vs-promise.mdx`: Promise is eager and lacks
   typed error/context channels; Effect is lazy, typed, repeatable, and supports
   structured concurrency.

@@ -1,7 +1,5 @@
 {
-  "references": [
-    { "path": "./packages/core" }
-  ],
+  "references": [{ "path": "./packages/core" }],
   "compilerOptions": {
     "module": "NodeNext",
     "moduleResolution": "NodeNext",

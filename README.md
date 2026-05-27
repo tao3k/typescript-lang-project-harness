@@ -284,13 +284,14 @@ development:
 npm ci
 npm run check
 npm run lint
+npm run format:check
 npm test
 npm run harness
 git diff --check
 ```
 
 The workflow uses the repository `package-lock.json`, Node 24, npm cache, and
-the npm-pinned `oxlint` binary so CI does not rely on a developer shell.
+the npm-pinned `oxlint` and `oxfmt` binaries so CI does not rely on a developer shell.
 
 ## Docs
 

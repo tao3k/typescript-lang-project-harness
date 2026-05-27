@@ -18,7 +18,7 @@ The policy is calibrated against `Effect-TS/website` docs at
 - `runtime.mdx`: `Runtime.run*` and `Effect.run*` execute Effect descriptions,
   and `ManagedRuntime` is used at top-level/framework integration boundaries.
 - `error-management/expected-errors.mdx`: `Effect<Success, Error,
-  Requirements>` exposes errors in the second type parameter and requirements
+Requirements>` exposes errors in the second type parameter and requirements
   in the third type parameter; the docs recommend tagged errors for precise
   recovery with `_tag`, `catchTag`, and `catchTags`.
 - `getting-started/creating-effects.mdx`: `Effect.promise` is for Promise

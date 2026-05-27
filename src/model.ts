@@ -1,19 +1,5 @@
-import type {
-  TypeScriptPackageBuildToolConfigSource,
-  TypeScriptPackageBuildToolDependencySource,
-  TypeScriptPackageBuildToolFact,
-  TypeScriptPackageBuildToolName,
-  TypeScriptPackageBuildToolSignalFact,
-  TypeScriptPackageBuildToolSignalKind,
-} from "./model/build_tools.js";
-import type {
-  TypeScriptPackageExtensionActivation,
-  TypeScriptPackageExtensionConfigSource,
-  TypeScriptPackageExtensionCoverage,
-  TypeScriptPackageExtensionDependencySource,
-  TypeScriptPackageExtensionFact,
-  TypeScriptPackageExtensionName,
-} from "./model/extensions.js";
+import type { TypeScriptPackageBuildToolFact } from "./model/build_tools.js";
+import type { TypeScriptPackageExtensionFact } from "./model/extensions.js";
 import type {
   TypeScriptModuleReport,
   TypeScriptModuleRole,

@@ -2,29 +2,31 @@
   "name": "typescript-lang-project-harness",
   "version": "0.1.0",
   "private": true,
-  "type": "module",
   "description": "Project-level TypeScript language harness with native parser facts and compact diagnostics for agents",
   "license": "Apache-2.0",
   "bin": {
     "typescript-project-harness": "./dist/src/bin/typescript-project-harness.js"
-  },
-  "exports": {
-    ".": {
-      "types": "./dist/src/index.d.ts",
-      "import": "./dist/src/index.js"
-    }
   },
   "files": [
     "dist",
     "README.md",
     "docs"
   ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/src/index.js"
+    }
+  },
   "scripts": {
     "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
     "build": "npm run clean && tsc -p tsconfig.json",
     "check": "tsc -p tsconfig.json --noEmit",
     "prepare": "npm run build",
-    "lint": "oxlint",
+    "format": "oxfmt --write .",
+    "format:check": "oxfmt --check .",
+    "lint": "oxlint .",
     "test": "npm run build && node --test \"dist/tests/**/*.test.js\"",
     "harness": "npm run build && node dist/src/bin/typescript-project-harness.js ."
   },
@@ -33,6 +35,7 @@
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
-    "oxlint": "^1.62.0"
+    "oxfmt": "^0.52.0",
+    "oxlint": "^1.67.0"
   }
 }

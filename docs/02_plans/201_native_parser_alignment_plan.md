@@ -22,7 +22,6 @@ raw source text.
 ## M2 Parser-First Workplan
 
 1. Native parser fact layer
-
    - Keep `ts.createSourceFile`, `ts.createProgram`, `ts.parseJsonText`,
      `ts.readConfigFile`, `ts.parseJsonConfigFileContent`, and
      `ts.resolveModuleName` isolated in the parser layer.
@@ -35,7 +34,6 @@ raw source text.
      AST locations.
 
 2. Reasoning tree projection
-
    - Treat the reasoning tree as the first policy surface. Project runs anchor
      at the nearest parent `package.json`, then carry runner mode, roots,
      compiler facts, package facts, diagnostics, module roles, module layers,
@@ -46,7 +44,6 @@ raw source text.
      begin in the parser layer.
 
 3. Low-noise agent policy
-
    - Keep structural parser failures blocking only when they truly break the
      project surface: TypeScript syntax, missing project config guidance, and
      malformed `tsconfig`.
@@ -56,7 +53,6 @@ raw source text.
      precise enough to point at the right owner or JSON location.
 
 4. Compact agent output
-
    - Keep compact output as the default human/agent surface; JSON remains for
      tools.
    - The agent snapshot should follow the Rust harness shape: `Modules:`,
@@ -66,7 +62,6 @@ raw source text.
      default compact renderer and JSON output.
 
 5. Self-apply validation
-
    - Boundary tests must prove only the parser layer imports `typescript` and
      that rules/renderers consume reasoning-tree facts.
    - The repository must pass its own default harness and advice surface with

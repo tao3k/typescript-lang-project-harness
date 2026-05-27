@@ -5,7 +5,8 @@
 ```shell
 direnv exec . npm install
 direnv exec . npm run check
-direnv exec . oxlint
+direnv exec . npm run lint
+direnv exec . npm run format:check
 direnv exec . npm test
 direnv exec . npm run harness
 direnv exec . git diff --check
