@@ -157,7 +157,10 @@ projects keep a bounded first reading surface for agents.
   execution to entrypoint, framework adapter, or managed runtime integration
   boundaries. Runtime adapters are parser-visible facts, not allowlists: package
   `bin`/script targets and exported HTTP middleware factories with native server
-  imports can be classified as entrypoints by the reasoning tree.
+  imports can be classified as entrypoints by the reasoning tree. React Query
+  `queryFn` and `mutationFn` callbacks are also parser-owned runtime integration
+  boundaries when the AST shows a real `useQuery`/`useMutation` options object;
+  ordinary React component render code remains a source owner.
 - `TS-EXT-EFFECT-R004`: when public Effect service method signatures expose a
   non-`never` requirements type, the service API should usually move that
   dependency into Layer/runtime construction so consumers do not inherit

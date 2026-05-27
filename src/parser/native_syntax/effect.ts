@@ -3,12 +3,14 @@ import ts from "typescript";
 import type {
   TypeScriptEffectPromiseInteropRiskFact,
   TypeScriptEffectPromiseInteropRiskKind,
+  TypeScriptEffectRuntimeBoundaryKind,
   TypeScriptEffectRuntimeCallFact,
   TypeScriptEffectRuntimeCallKind,
   TypeScriptEffectServiceContainerKind,
   TypeScriptEffectServiceMethodFact,
 } from "../../model.js";
 import { locationForNode } from "../diagnostics.js";
+import { effectRuntimeBoundaryKind } from "./effect_runtime_boundary.js";
 import { effectTypeParts } from "./effect_type.js";
 import {
   bindingNameText,
@@ -102,9 +104,16 @@ function effectRuntimeCall(
   return {
     callee: `${receiver.getText(sourceFile)}.${methodName}`,
     callKind,
+    ...runtimeBoundaryKindField(effectRuntimeBoundaryKind(node, sourceFile)),
     location: locationForNode(sourceFile, node.expression.name),
     ...sourceLineField(sourceFile, node),
   };
+}
+
+function runtimeBoundaryKindField(
+  runtimeBoundaryKind: TypeScriptEffectRuntimeBoundaryKind | undefined,
+): { readonly runtimeBoundaryKind?: TypeScriptEffectRuntimeBoundaryKind } {
+  return runtimeBoundaryKind === undefined ? {} : { runtimeBoundaryKind };
 }
 
 function effectRuntimeCallKind(

@@ -143,9 +143,12 @@ from TypeScript targets named in `package.json` scripts. Parser-visible HTTP
 middleware factories are also treated as runtime adapter entrypoints when their
 native import/export facts show a server adapter boundary, so agent advice stays
 focused on source/domain owners instead of asking benchmark, command, or HTTP
-handlers to return Effect values. The package config can enable the extension,
-but it cannot narrow coverage with per-file allowlists; reusable source owners
-remain visible to the policy until their public async surfaces move to Effect.
+handlers to return Effect values. React Query `queryFn` and `mutationFn`
+callbacks are treated as framework runtime integration boundaries when the AST
+shows a real `useQuery`/`useMutation` options object, without making the whole
+React component an entrypoint. The package config can enable the extension, but
+it cannot narrow coverage with per-file allowlists; reusable source owners remain
+visible to the policy until their public async surfaces move to Effect.
 M15 also gives agents performance-oriented Effect guidance for async batches:
 parser-native facts detect `Promise.all` fan-out, await-in-loop batch work, and
 Effect collection combinators that omit a concurrency budget. The compact

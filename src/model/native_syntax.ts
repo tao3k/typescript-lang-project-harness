@@ -91,9 +91,12 @@ export type TypeScriptEffectRuntimeCallKind =
   | "runtime-module"
   | "runtime-instance";
 
+export type TypeScriptEffectRuntimeBoundaryKind = "react-query-callback";
+
 export interface TypeScriptEffectRuntimeCallFact {
   readonly callee: string;
   readonly callKind: TypeScriptEffectRuntimeCallKind;
+  readonly runtimeBoundaryKind?: TypeScriptEffectRuntimeBoundaryKind;
   readonly location: SourceLocation;
   readonly sourceLine?: string;
 }

@@ -105,6 +105,10 @@ boundary facts for `JSON.parse` and `response.json()` plus local Effect Schema
 decode evidence. M18 adds parser-classified production boundary facts for
 public external IO owners that use `Effect.tryPromise`, `Effect.promise`,
 `Effect.async`, or `fetch` without both observability and resilience evidence.
+M21 keeps that parser-first boundary while recognizing React Query `queryFn` and
+`mutationFn` callbacks as framework runtime integration points for
+`Effect.run*`, based on native object-literal/call-expression structure rather
+than package-config allowlists.
 Extension rules consume those facts to advise on public async
 domain-effect boundaries, runtime execution boundaries, service/layer
 requirement boundaries, typed expected-error boundaries, `tryPromise`
