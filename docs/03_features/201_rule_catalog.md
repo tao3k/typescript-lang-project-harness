@@ -147,7 +147,9 @@ projects keep a bounded first reading surface for agents.
 - `TS-EXT-EFFECT-R003`: when the Effect extension is active, source modules
   should return Effect descriptions and leave `Effect.run*` / `Runtime.run*`
   execution to entrypoint, framework adapter, or managed runtime integration
-  boundaries.
+  boundaries. Runtime adapters are parser-visible facts, not allowlists: package
+  `bin`/script targets and exported HTTP middleware factories with native server
+  imports can be classified as entrypoints by the reasoning tree.
 - `TS-EXT-EFFECT-R004`: when public Effect service method signatures expose a
   non-`never` requirements type, the service API should usually move that
   dependency into Layer/runtime construction so consumers do not inherit

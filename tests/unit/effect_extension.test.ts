@@ -313,6 +313,64 @@ test("Effect policy treats package script TypeScript targets as entrypoint adapt
   );
 });
 
+test("Effect policy treats parser-visible HTTP middleware adapters as entrypoint boundaries", () => {
+  const root = effectProject("http-adapter-entrypoint", {
+    packageJson: {
+      dependencies: { effect: "^3.0.0" },
+    },
+    source: {
+      "node-http.d.ts": [
+        'declare module "node:http" {',
+        "  export interface IncomingMessage {}",
+        "  export interface ServerResponse {}",
+        "}",
+      ],
+      "server/http/wendaoApi.ts": [
+        'import type { IncomingMessage, ServerResponse } from "node:http";',
+        'import { Effect } from "effect";',
+        "declare const program: Effect.Effect<string, Error>;",
+        "export function createWendaoApiMiddleware(): (",
+        "  request: IncomingMessage,",
+        "  response: ServerResponse,",
+        ") => void {",
+        "  return () => {",
+        "    void Effect.runPromise(program);",
+        "  };",
+        "}",
+      ],
+      "domain.ts": [
+        "export async function loadDomainOwner(): Promise<string> {",
+        "  return 'owner';",
+        "}",
+      ],
+    },
+  });
+
+  const report = runTypeScriptProjectHarness(root);
+  const roleByPath = new Map(
+    report.reasoningTree.modules.map((moduleReport) => [
+      path.relative(root, moduleReport.path),
+      moduleReport.role,
+    ]),
+  );
+
+  assert.equal(isTypeScriptHarnessClean(report), true);
+  assert.equal(roleByPath.get("src/server/http/wendaoApi.ts"), "entrypoint");
+  assert.deepEqual(
+    report.findings
+      .filter((finding) => finding.ruleId.startsWith("TS-EXT-EFFECT"))
+      .map((finding) =>
+        [
+          finding.ruleId,
+          finding.severity,
+          path.relative(root, finding.location.path ?? ""),
+          finding.labels.module_role ?? "",
+        ].join(":"),
+      ),
+    ["TS-EXT-EFFECT-R002:info:src/domain.ts:source"],
+  );
+});
+
 test("Effect object config remains project-wide and does not suppress modules", () => {
   const root = effectProject("object-config-project-wide", {
     packageJson: {

@@ -138,11 +138,13 @@ harness should guide agents to migrate public async domain APIs toward
 `Effect.Effect<Success, DomainError, Requirements>`, `Effect.tryPromise`
 interop, and `Effect.run*` execution only at entrypoint or adapter boundaries.
 Package-owned CLI adapters are recognized from parser-owned `bin` facts and
-from TypeScript targets named in `package.json` scripts, so agent advice stays
-focused on source/domain owners instead of asking benchmark or command handlers
-to return Effect values. The package config can enable the extension, but it
-cannot narrow coverage with per-file allowlists; reusable source owners remain
-visible to the policy until their public async surfaces move to Effect.
+from TypeScript targets named in `package.json` scripts. Parser-visible HTTP
+middleware factories are also treated as runtime adapter entrypoints when their
+native import/export facts show a server adapter boundary, so agent advice stays
+focused on source/domain owners instead of asking benchmark, command, or HTTP
+handlers to return Effect values. The package config can enable the extension,
+but it cannot narrow coverage with per-file allowlists; reusable source owners
+remain visible to the policy until their public async surfaces move to Effect.
 M15 also gives agents performance-oriented Effect guidance for async batches:
 parser-native facts detect `Promise.all` fan-out, await-in-loop batch work, and
 Effect collection combinators that omit a concurrency budget. The compact

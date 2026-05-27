@@ -166,6 +166,7 @@ function moduleRole(
   }
   if (
     isEntryPointPath(filePath) ||
+    isRuntimeAdapterEntrypoint(moduleReport) ||
     entrypointOwnerPaths.has(filePath) ||
     isInsideAny(filePath, entrypointOwnerRoots)
   ) {
@@ -192,7 +193,7 @@ function explicitModuleRole(moduleReport: TypeScriptModuleReport): TypeScriptMod
   if (isConfigFileName(fileName)) {
     return "config";
   }
-  if (isEntryPointPath(filePath)) {
+  if (isEntryPointPath(filePath) || isRuntimeAdapterEntrypoint(moduleReport)) {
     return "entrypoint";
   }
   if (moduleFileNames("index").includes(fileName)) {
@@ -207,6 +208,38 @@ function isEntryPointPath(filePath: string): boolean {
     return true;
   }
   return path.basename(path.dirname(filePath)) === "bin";
+}
+
+function isRuntimeAdapterEntrypoint(moduleReport: TypeScriptModuleReport): boolean {
+  return (
+    moduleReport.imports.some((importFact) =>
+      isRuntimeAdapterImportSpecifier(importFact.moduleSpecifier),
+    ) && moduleReport.exports.some((exportFact) => isRuntimeAdapterExportName(exportFact.name))
+  );
+}
+
+function isRuntimeAdapterImportSpecifier(moduleSpecifier: string): boolean {
+  return (
+    moduleSpecifier === "node:http" ||
+    moduleSpecifier === "node:https" ||
+    moduleSpecifier === "http" ||
+    moduleSpecifier === "https" ||
+    moduleSpecifier === "express" ||
+    moduleSpecifier === "fastify" ||
+    moduleSpecifier === "hono" ||
+    moduleSpecifier === "@hono/node-server"
+  );
+}
+
+function isRuntimeAdapterExportName(exportName: string): boolean {
+  const normalized = exportName.toLowerCase();
+  return (
+    normalized.includes("middleware") ||
+    normalized.endsWith("handler") ||
+    normalized.endsWith("server") ||
+    normalized.includes("route") ||
+    normalized.includes("api")
+  );
 }
 
 function packageEntrypointOwnerRoots(
