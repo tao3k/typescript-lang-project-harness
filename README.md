@@ -85,7 +85,7 @@ rule-pack severities, and promoting advisory rules by `blockingRuleIds`.
 `TS-SEM-*`, `TS-PROJ-R003`, `TS-PROJ-R004`, `TS-PROJ-R005`,
 `TS-PROJ-R006`, `TS-MOD-*`, `TS-TEST-*`, `TS-AGENT-*`, and
 `TS-EXT-EFFECT-R002` through
-`TS-EXT-EFFECT-R009` findings are shown to agents without failing the default
+`TS-EXT-EFFECT-R010` findings are shown to agents without failing the default
 gate. `TS-EXT-EFFECT-R001` is `error` because an
 explicit Effect enablement that lacks the `effect` dependency is a broken
 project configuration promise. Package metadata diagnostics cover both the
@@ -194,6 +194,15 @@ execution, service requirements, error channels, Promise interop,
 resource/scope, concurrency/failure policy, and Schema validation. Streams,
 observability, and richer service architecture checks remain follow-up slices
 that must start from parser-owned facts before policy consumes them.
+M18 adds the highest-return remaining Effect production boundary: public
+external IO effects should make telemetry and resilience visible in source.
+`TS-EXT-EFFECT-R010` records parser-native `Effect.tryPromise`,
+`Effect.promise`, `Effect.async`, and `fetch` calls in public source owners,
+suppresses the advice when the same owner already shows both observability
+evidence (`Effect.withSpan`, Effect logging/annotations, or `Metric.*`) and
+resilience evidence (`Effect.retry*` or `Effect.timeout*`), and tells agents to
+put span names, log attributes, metrics, retry, and timeout policy at the
+public Effect boundary.
 
 For agent repair loops, `renderTypeScriptProjectHarnessAgentCompactText(report)`
 and `--agent-compact` emit task-oriented repair instructions, while

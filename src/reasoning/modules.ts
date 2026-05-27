@@ -98,6 +98,7 @@ function reasoningModuleFromRole(
     effectResourceScopeRisks: moduleReport.effectResourceScopeRisks,
     effectConcurrencySignals: moduleReport.effectConcurrencySignals,
     effectSchemaBoundarySignals: moduleReport.effectSchemaBoundarySignals,
+    effectProductionBoundarySignals: moduleReport.effectProductionBoundarySignals,
     effectServiceMethods: moduleReport.effectServiceMethods,
   };
 }

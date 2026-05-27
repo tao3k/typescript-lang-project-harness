@@ -56,6 +56,9 @@ entrypoint into a catch-all reference page.
 - [Effect Capability Boundaries M17 Plan](02_plans/215_effect_capability_boundaries_m17_plan.md):
   stacked milestone for parser-owned Effect Schema boundary advice and the
   broader Effect capability-policy map.
+- [Effect Production Observability M18 Plan](02_plans/216_effect_production_observability_m18_plan.md):
+  stacked milestone for parser-owned Effect external IO observability and
+  resilience advice, plus React docs research baseline.
 
 ## 03_features: Functional Ledger
 

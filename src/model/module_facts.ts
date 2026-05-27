@@ -6,6 +6,7 @@ import type {
 } from "../model.js";
 import type {
   TypeScriptEffectPromiseInteropRiskFact,
+  TypeScriptEffectProductionBoundarySignalFact,
   TypeScriptEffectResourceScopeRiskFact,
   TypeScriptEffectRuntimeCallFact,
   TypeScriptEffectSchemaBoundarySignalFact,
@@ -64,6 +65,7 @@ export interface TypeScriptModuleReport {
   readonly effectResourceScopeRisks: readonly TypeScriptEffectResourceScopeRiskFact[];
   readonly effectConcurrencySignals: readonly TypeScriptEffectConcurrencySignalFact[];
   readonly effectSchemaBoundarySignals: readonly TypeScriptEffectSchemaBoundarySignalFact[];
+  readonly effectProductionBoundarySignals: readonly TypeScriptEffectProductionBoundarySignalFact[];
   readonly effectServiceMethods: readonly TypeScriptEffectServiceMethodFact[];
 }
 
@@ -91,5 +93,6 @@ export interface TypeScriptReasoningModule {
   readonly effectResourceScopeRisks: readonly TypeScriptEffectResourceScopeRiskFact[];
   readonly effectConcurrencySignals: readonly TypeScriptEffectConcurrencySignalFact[];
   readonly effectSchemaBoundarySignals: readonly TypeScriptEffectSchemaBoundarySignalFact[];
+  readonly effectProductionBoundarySignals: readonly TypeScriptEffectProductionBoundarySignalFact[];
   readonly effectServiceMethods: readonly TypeScriptEffectServiceMethodFact[];
 }
