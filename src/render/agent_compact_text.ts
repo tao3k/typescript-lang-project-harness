@@ -1,10 +1,15 @@
 import path from "node:path";
 
 import { advisoryFindings, blockingFindings } from "../model.js";
-import type { TypeScriptHarnessFinding, TypeScriptHarnessReport } from "../model.js";
+import type {
+  TypeScriptHarnessFinding,
+  TypeScriptHarnessReport,
+  TypeScriptPackageExtensionFact,
+} from "../model.js";
 
 const MAX_ADVICE_ACTIONS = 8;
 const MAX_TARGET_EXAMPLES = 4;
+const MAX_TARGET_GROUPS = 6;
 
 export type TypeScriptAgentCompactTextFindingMode = "advice" | "blocking" | "all";
 
@@ -12,6 +17,7 @@ export interface TypeScriptAgentCompactTextOptions {
   readonly findings?: TypeScriptAgentCompactTextFindingMode;
   readonly maxActionGroups?: number;
   readonly maxTargetExamples?: number;
+  readonly maxTargetGroups?: number;
 }
 
 interface AdviceGroup {
@@ -32,12 +38,15 @@ export function renderTypeScriptProjectHarnessAgentCompactText(
   const groups = groupedAdviceFindings(findings);
   const maxActionGroups = options.maxActionGroups ?? MAX_ADVICE_ACTIONS;
   const maxTargetExamples = options.maxTargetExamples ?? MAX_TARGET_EXAMPLES;
+  const maxTargetGroups = options.maxTargetGroups ?? MAX_TARGET_GROUPS;
   return [
     `AgentCompactText: mode=${findingMode} findings=${findings.length} tasks=${groups.length}`,
     "Directive: edit listed targets, apply fix steps, rerun harness.",
     "RepairTasks:",
     ...compactLines(
-      groups.map((group, index) => renderRepairTask(report, group, index + 1, maxTargetExamples)),
+      groups.map((group, index) =>
+        renderRepairTask(report, group, index + 1, maxTargetExamples, maxTargetGroups),
+      ),
       maxActionGroups,
       "repair tasks",
     ),
@@ -131,10 +140,12 @@ function renderRepairTask(
   group: AdviceGroup,
   index: number,
   maxTargetExamples: number,
+  maxTargetGroups: number,
 ): string {
   const finding = group.finding;
   const lines = [`- ${renderTaskHeader(finding, group.count, index)}`];
   lines.push(
+    ...projectCoverageLines(report, group, maxTargetGroups),
     "  fix:",
     ...adviceFixSteps(finding).map((step) => `   - ${step}`),
     "  targets:",
@@ -144,6 +155,100 @@ function renderRepairTask(
     ),
   );
   return lines.join("\n");
+}
+
+function projectCoverageLines(
+  report: TypeScriptHarnessReport,
+  group: AdviceGroup,
+  maxTargetGroups: number,
+): readonly string[] {
+  if (!isEffectExtensionFinding(group.finding)) {
+    return [];
+  }
+  const extension = effectExtensionFact(report);
+  if (extension === undefined) {
+    return [];
+  }
+  const targetGroups = groupedTargetOwners(report, group.findings);
+  return [
+    `  coverage: ${extension.coverage} activation=${extension.activation}${extensionSourceLabel(
+      extension,
+    )} targets=${group.count} files=${uniqueTargetFileCount(group.findings)} groups=${targetGroups.length}`,
+    "  target_groups:",
+    ...compactTargetGroupLines(
+      targetGroups.map((targetGroup) => renderTargetGroup(targetGroup)),
+      maxTargetGroups,
+    ),
+  ];
+}
+
+function isEffectExtensionFinding(finding: TypeScriptHarnessFinding): boolean {
+  return finding.ruleId.startsWith("TS-EXT-EFFECT-");
+}
+
+function effectExtensionFact(
+  report: TypeScriptHarnessReport,
+): TypeScriptPackageExtensionFact | undefined {
+  return report.reasoningTree.packageExtensions.find((extension) => extension.name === "effect");
+}
+
+function extensionSourceLabel(extension: TypeScriptPackageExtensionFact): string {
+  const labels = [];
+  if (extension.dependencySource !== undefined) {
+    labels.push(`dependency=${extension.dependencySource}`);
+  }
+  if (extension.configSource !== undefined) {
+    labels.push(`config=${extension.configSource}`);
+  }
+  return labels.length === 0 ? "" : ` ${labels.join(" ")}`;
+}
+
+interface TargetOwnerGroup {
+  readonly owner: string;
+  readonly count: number;
+  readonly first: TypeScriptHarnessFinding;
+}
+
+function groupedTargetOwners(
+  report: TypeScriptHarnessReport,
+  findings: readonly TypeScriptHarnessFinding[],
+): readonly TargetOwnerGroup[] {
+  const groups = new Map<string, { count: number; first: TypeScriptHarnessFinding }>();
+  for (const finding of findings) {
+    const owner = targetOwnerPath(report, finding);
+    const existing = groups.get(owner);
+    if (existing === undefined) {
+      groups.set(owner, { count: 1, first: finding });
+      continue;
+    }
+    existing.count += 1;
+  }
+  return [...groups.entries()]
+    .map(([owner, group]) => ({ owner, count: group.count, first: group.first }))
+    .sort((left, right) => right.count - left.count || left.owner.localeCompare(right.owner));
+}
+
+function targetOwnerPath(
+  report: TypeScriptHarnessReport,
+  finding: TypeScriptHarnessFinding,
+): string {
+  const rawPath = finding.location.path;
+  if (rawPath === undefined) {
+    return "<project>";
+  }
+  const relativePath = path.relative(report.reasoningTree.projectRoot, rawPath) || ".";
+  const parts = relativePath.split(path.sep).filter((part) => part.length > 0);
+  return parts.length <= 3 ? relativePath : parts.slice(0, 3).join("/");
+}
+
+function renderTargetGroup(group: TargetOwnerGroup): string {
+  const surfaces = group.first.labels.async_surfaces ?? group.first.labels.runtime_calls;
+  const suffix = surfaces === undefined || surfaces === "" ? "" : ` first=${surfaces}`;
+  return `   - ${group.owner} x${group.count}${suffix}`;
+}
+
+function uniqueTargetFileCount(findings: readonly TypeScriptHarnessFinding[]): number {
+  return new Set(findings.map((finding) => finding.location.path ?? "<project>")).size;
 }
 
 function renderTaskHeader(finding: TypeScriptHarnessFinding, count: number, index: number): string {
@@ -368,4 +473,11 @@ function compactTargetLines(lines: readonly string[], maxLines: number): string[
     return [...lines];
   }
   return [...lines.slice(0, maxLines), `   - ... +${lines.length - maxLines} target examples`];
+}
+
+function compactTargetGroupLines(lines: readonly string[], maxLines: number): string[] {
+  if (lines.length <= maxLines) {
+    return [...lines];
+  }
+  return [...lines.slice(0, maxLines), `   - ... +${lines.length - maxLines} target groups`];
 }

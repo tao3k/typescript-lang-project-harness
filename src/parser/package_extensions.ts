@@ -53,6 +53,7 @@ export function packageExtensionFacts(
       displayName: "Effect",
       packageName: "effect",
       activation,
+      coverage: "project",
       capabilities: EFFECT_EXTENSION_CAPABILITIES,
       location,
       ...(effectDependency === undefined ? {} : { dependencySource: effectDependency.source }),

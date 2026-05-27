@@ -1,6 +1,7 @@
 import type {
   TypeScriptPackageExtensionActivation,
   TypeScriptPackageExtensionConfigSource,
+  TypeScriptPackageExtensionCoverage,
   TypeScriptPackageExtensionDependencySource,
   TypeScriptPackageExtensionFact,
   TypeScriptPackageExtensionName,
@@ -32,6 +33,7 @@ export type {
 export type {
   TypeScriptPackageExtensionActivation,
   TypeScriptPackageExtensionConfigSource,
+  TypeScriptPackageExtensionCoverage,
   TypeScriptPackageExtensionDependencySource,
   TypeScriptPackageExtensionFact,
   TypeScriptPackageExtensionName,

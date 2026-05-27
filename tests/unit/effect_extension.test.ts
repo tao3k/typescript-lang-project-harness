@@ -50,9 +50,17 @@ test("Effect dependency activates extension snapshot and async domain advice", (
     report.projectScope?.packageJson.packageExtensions.map((extension) => ({
       name: extension.name,
       activation: extension.activation,
+      coverage: extension.coverage,
       dependencySource: extension.dependencySource,
     })),
-    [{ name: "effect", activation: "dependency", dependencySource: "dependencies" }],
+    [
+      {
+        name: "effect",
+        activation: "dependency",
+        coverage: "project",
+        dependencySource: "dependencies",
+      },
+    ],
   );
   assert.deepEqual(
     report.findings
@@ -67,6 +75,7 @@ test("Effect dependency activates extension snapshot and async domain advice", (
     snapshot,
     /effect activation=dependency capabilities=typed-async,domain-effects,policy/u,
   );
+  assert.match(snapshot, /coverage=project/u);
 });
 
 test("Effect dependency gives project-wide async migration advice", () => {
@@ -105,6 +114,9 @@ test("Effect dependency gives project-wide async migration advice", () => {
     /\[TS-EXT-EFFECT-R002\] info x2: Migrate public async domain APIs to Effect/u,
   );
   assert.match(advice, /raw Promise instead of Effect\.Effect; facts: package\.json Effect/u);
+  assert.match(advice, /coverage: project activation=dependency dependency=dependencies/u);
+  assert.match(advice, /target_groups:\n   - src\/effect-owner\.ts x1 first=loadEffectOwner/u);
+  assert.match(advice, /\n   - src\/legacy\.ts x1 first=loadLegacyOwner/u);
   assert.match(advice, /add `import \{ Effect \} from "effect"`/u);
   assert.match(advice, /Effect\.Effect<Success, DomainError, Requirements>/u);
   assert.match(advice, /Effect\.tryPromise\(\{ try: \(\) => promise, catch:/u);
@@ -191,9 +203,16 @@ test("configured Effect dependency is active and can be disabled through the ext
   assert.deepEqual(
     defaultReport.projectScope?.packageJson.packageExtensions.map((extension) => ({
       activation: extension.activation,
+      coverage: extension.coverage,
       configSource: extension.configSource,
     })),
-    [{ activation: "config-enabled", configSource: "typescriptProjectHarness" }],
+    [
+      {
+        activation: "config-enabled",
+        coverage: "project",
+        configSource: "typescriptProjectHarness",
+      },
+    ],
   );
   assert.ok(defaultReport.findings.some((finding) => finding.ruleId === "TS-EXT-EFFECT-R002"));
   assert.ok(

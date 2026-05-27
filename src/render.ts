@@ -197,7 +197,7 @@ function renderExtensionLines(
         extension.configSource === undefined ? "" : ` config=${extension.configSource}`;
       return ` - ${extension.name} activation=${extension.activation} capabilities=${extension.capabilities.join(
         ",",
-      )}${configLabel}`;
+      )} coverage=${extension.coverage}${configLabel}`;
     })
     .sort((left, right) => left.localeCompare(right));
 }

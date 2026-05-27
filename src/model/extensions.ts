@@ -18,11 +18,14 @@ export type TypeScriptPackageExtensionConfigSource =
   | "typescriptLangProjectHarness"
   | "typescript-lang-project-harness";
 
+export type TypeScriptPackageExtensionCoverage = "project";
+
 export interface TypeScriptPackageExtensionFact {
   readonly name: TypeScriptPackageExtensionName;
   readonly displayName: string;
   readonly packageName: string;
   readonly activation: TypeScriptPackageExtensionActivation;
+  readonly coverage: TypeScriptPackageExtensionCoverage;
   readonly capabilities: readonly string[];
   readonly location: SourceLocation;
   readonly dependencySource?: TypeScriptPackageExtensionDependencySource;
