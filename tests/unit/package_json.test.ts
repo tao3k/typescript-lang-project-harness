@@ -48,7 +48,7 @@ test("project harness reports malformed package json without throwing", () => {
     [{ phase: "package-json", ownerPath: "package.json" }],
   );
   assert.equal(report.projectScope?.packageJson.diagnostics.length, 1);
-  assert.match(rendered, /\[TS-PROJ-R003\] info/u);
+  assert.match(rendered, /\[TS-PROJ-R003\] Info/u);
   assert.match(rendered, /package\.json parser diagnostic/u);
   assert.match(snapshot, /FindingGroups:/u);
   assert.match(snapshot, /TS-PROJ-R003 x1 first=package\.json/u);
@@ -562,7 +562,7 @@ test("project harness records Rspack build tool facts from package json and conf
   );
   assert.match(
     advice,
-    /\[TS-PROJ-R006\] info x1: Expose Rspack build surface through npm scripts/u,
+    /\[TS-PROJ-R006\] Info x1: Expose Rspack build surface through npm scripts/u,
   );
   assert.match(advice, /add or update package scripts so `npm run build`/u);
 });

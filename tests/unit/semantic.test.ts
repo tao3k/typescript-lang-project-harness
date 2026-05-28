@@ -63,7 +63,7 @@ test("project parser exposes native TypeScript semantic diagnostics as non-block
     })),
     [{ path: "src/index.ts", isValid: true, semanticDiagnosticCount: 1, syntaxDiagnosticCount: 0 }],
   );
-  assert.match(rendered, /\[TS-SEM-R001\] info/u);
+  assert.match(rendered, /\[TS-SEM-R001\] Info/u);
   assert.match(rendered, /TS2322: Type 'number' is not assignable to type 'string'/u);
   assert.match(snapshot, /^Modules: source=1 branches=1 findings=1/u);
   assert.match(snapshot, /OwnerBranches:/u);

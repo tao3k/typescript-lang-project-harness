@@ -31,6 +31,6 @@ test("test layout pack reports test modules outside configured test roots withou
     report.findings.map((finding) => `${finding.ruleId}:${finding.severity}`),
     ["TS-TEST-R001:info"],
   );
-  assert.match(rendered, /\[TS-TEST-R001\] info/u);
+  assert.match(rendered, /\[TS-TEST-R001\] Info/u);
   assert.match(rendered, /Test module 'src\/domain\.test\.ts' is outside configured test roots/u);
 });

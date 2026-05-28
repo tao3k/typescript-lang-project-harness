@@ -71,11 +71,11 @@ test("React dependency activates render purity advice from parser-native facts",
   assert.match(findings[0]?.labels.react_purity ?? "", /Clock:document\.title/u);
   assert.match(findings[0]?.labels.react_purity ?? "", /useClockSeed:Date\.now/u);
   assert.doesNotMatch(findings[0]?.labels.react_purity ?? "", /SafeClock/u);
-  assert.match(rendered, /\[TS-EXT-REACT-R002\] info/u);
+  assert.match(rendered, /\[TS-EXT-REACT-R002\] Info/u);
   assert.match(snapshot, /react activation=dependency/u);
   assert.match(
     advice,
-    /\[TS-EXT-REACT-R002\] info x1: Keep React component and hook render paths pure/u,
+    /\[TS-EXT-REACT-R002\] Info x1: Keep React component and hook render paths pure/u,
   );
   assert.match(advice, /component or hook render path has non-idempotent work/u);
   assert.match(advice, /facts: package\.json React activation/u);
@@ -108,7 +108,7 @@ test("explicit React enablement without dependency is an error-level blocking fi
       .map((finding) => `${finding.ruleId}:${finding.severity}:${finding.label}`),
     ["TS-EXT-REACT-R001:error:declare react before enforcing React extension policy"],
   );
-  assert.match(rendered, /\[TS-EXT-REACT-R001\] error/u);
+  assert.match(rendered, /\[TS-EXT-REACT-R001\] Error/u);
   assert.match(rendered, /package\.json enables the React extension/u);
   assert.match(snapshot, /react activation=config-enabled-missing-dependency/u);
 });
@@ -174,7 +174,7 @@ test("React hook order violations are error-level structural findings", () => {
   assert.match(finding?.labels.react_hook_violation_kinds ?? "", /try-catch-finally/u);
   assert.match(
     advice,
-    /\[TS-EXT-REACT-R003\] error x1: Move React hooks back to stable top-level call order/u,
+    /\[TS-EXT-REACT-R003\] Error x1: Move React hooks back to stable top-level call order/u,
   );
   assert.match(advice, /call hooks unconditionally at the top level/u);
   assert.match(advice, /move conditions inside `useEffect`, `useMemo`/u);
@@ -213,7 +213,7 @@ test("React static component and hook factories produce compiler-readiness advic
   assert.match(finding?.labels.react_static_definition_kinds ?? "", /nested-hook/u);
   assert.match(
     advice,
-    /\[TS-EXT-REACT-R004\] info x1: Hoist nested React components and hooks to module scope/u,
+    /\[TS-EXT-REACT-R004\] Info x1: Hoist nested React components and hooks to module scope/u,
   );
   assert.match(advice, /hoist nested component and custom hook definitions to module scope/u);
   assert.match(advice, /pass render-local values through props or explicit hook parameters/u);

@@ -137,7 +137,7 @@ test("agent policy reports unresolved project imports without blocking", () => {
       .map((finding) => `${finding.ruleId}:${finding.severity}`),
     ["TS-AGENT-R001:info", "TS-AGENT-R001:info", "TS-AGENT-R001:info"],
   );
-  assert.match(rendered, /\[TS-AGENT-R001\] info/u);
+  assert.match(rendered, /\[TS-AGENT-R001\] Info/u);
   assert.match(rendered, /Project import '\.\/missing\.js' does not resolve/u);
   assert.match(rendered, /Project import '#missing' does not resolve/u);
   assert.match(rendered, /Project import '@app\/missing' does not resolve/u);

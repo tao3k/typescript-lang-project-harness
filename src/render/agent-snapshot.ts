@@ -110,16 +110,48 @@ export function renderTypeScriptProjectHarnessAgentSnapshot(
 
 function renderFinding(report: TypeScriptHarnessReport, finding: TypeScriptHarnessFinding): string {
   const location = renderLocation(report, finding);
-  const lines = [`[${finding.ruleId}] ${finding.severity}: ${finding.title}`, location];
-  if (finding.sourceLine !== undefined) {
-    lines.push(`> ${finding.sourceLine.trimEnd()}`);
+  const lines = [`[${finding.ruleId}] ${capitalizeSeverity(finding.severity)}: ${finding.title}`];
+  lines.push(`@ ${location}`);
+
+  // fix: line — high-signal for agents
+  const fixHint = compactFixHint(finding);
+  if (fixHint !== undefined) {
+    lines.push(`fix: ${fixHint}`);
   }
-  lines.push(
-    finding.label,
-    `Help: ${compactProjectRootMentions(report.reasoningTree, finding.summary)}`,
-    `Contract: ${finding.requirement}`,
-  );
+
+  // line: source context
+  if (finding.sourceLine !== undefined) {
+    lines.push(`line: ${finding.location.line} | ${finding.sourceLine.trimEnd()}`);
+  }
+
+  lines.push(`Help: ${compactProjectRootMentions(report.reasoningTree, finding.summary)}`);
+  lines.push(`Contract: ${finding.requirement}`);
   return lines.join("\n");
+}
+
+function capitalizeSeverity(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+/** Compact one-line fix hint from the finding label/summary. */
+function compactFixHint(finding: TypeScriptHarnessFinding): string | undefined {
+  // Derive a concise fix from the rule label
+  switch (finding.label) {
+    case "missing module doc":
+      return "add a module-level JSDoc comment describing the public API";
+    case "undocumented error types":
+      return "add JSDoc explaining when each error variant occurs";
+    case "high facade export density":
+      return "split into sub-domain barrels";
+    case "oversized project module":
+      return "split the file by concern or extract helpers";
+    case "public function nested algorithm":
+      return "extract nested logic into flat helper functions";
+    case "dense named imports":
+      return "replace with a namespace import";
+    default:
+      return undefined;
+  }
 }
 
 function renderLocation(

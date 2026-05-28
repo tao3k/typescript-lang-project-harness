@@ -104,7 +104,7 @@ test("project runner routes missing tsconfig policy through reasoning facts", ()
     [{ ruleId: "TS-PROJ-R001", locationPath: root }],
   );
   assert.equal(isTypeScriptHarnessClean(report), false);
-  assert.match(rendered, /\[TS-PROJ-R001\] warning/u);
+  assert.match(rendered, /\[TS-PROJ-R001\] Warning/u);
   assert.match(snapshot, /^Modules: source=1 branches=1 findings=1/u);
   assert.match(snapshot, /FindingGroups:/u);
   assert.match(snapshot, /TS-PROJ-R001/u);
@@ -136,7 +136,7 @@ test("project runner renders native syntax findings", () => {
     })),
     [{ ruleId: "TS-SYN-R001", summary: "TS1109: Expression expected." }],
   );
-  assert.match(rendered, /\[TS-SYN-R001\] error/u);
+  assert.match(rendered, /\[TS-SYN-R001\] Error/u);
   assert.match(rendered, /Expression expected/u);
 });
 
@@ -162,7 +162,7 @@ test("project runner routes tsconfig diagnostics through reasoning facts", () =>
     report.findings.map((finding) => finding.ruleId),
     ["TS-PROJ-R002"],
   );
-  assert.match(rendered, /\[TS-PROJ-R002\] error/u);
+  assert.match(rendered, /\[TS-PROJ-R002\] Error/u);
   assert.match(rendered, /TypeScript config parser diagnostic/u);
   assert.match(snapshot, /FindingGroups:/u);
   assert.match(snapshot, /TS-PROJ-R002/u);
@@ -203,7 +203,7 @@ test("explicit-path runner routes syntax diagnostics through reasoning facts", (
     })),
     [{ ruleId: "TS-SYN-R001", summary: "TS1109: Expression expected." }],
   );
-  assert.match(rendered, /\[TS-SYN-R001\] error/u);
+  assert.match(rendered, /\[TS-SYN-R001\] Error/u);
   assert.equal(rendered.includes(filePath), false);
   assert.match(rendered, /^broken\.ts:\d+:\d+/mu);
   assert.match(snapshot, /^Modules: source=1 branches=1 findings=1/u);

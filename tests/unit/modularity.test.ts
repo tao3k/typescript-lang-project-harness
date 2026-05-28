@@ -38,7 +38,7 @@ test("modularity pack reports production modules depending on tests without bloc
     report.findings.map((finding) => `${finding.ruleId}:${finding.severity}`),
     ["TS-MOD-R001:info"],
   );
-  assert.match(rendered, /\[TS-MOD-R001\] info/u);
+  assert.match(rendered, /\[TS-MOD-R001\] Info/u);
   assert.match(rendered, /Module role 'facade' depends on test owner '\.\.\/tests\/helper\.js'/u);
 });
 
@@ -66,7 +66,7 @@ test("modularity pack reports oversized package project modules without blocking
     report.findings.map((finding) => `${finding.ruleId}:${finding.severity}`),
     ["TS-MOD-R002:info"],
   );
-  assert.match(rendered, /\[TS-MOD-R002\] info/u);
+  assert.match(rendered, /\[TS-MOD-R002\] Info/u);
   assert.match(rendered, /Project module 'src\/reasoning\.ts' in reasoning layer has 502 lines/u);
   assert.match(rendered, /oversized project module/u);
 });

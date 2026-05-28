@@ -78,7 +78,7 @@ test("Effect dependency activates extension snapshot and async domain advice", (
       .map((finding) => `${finding.ruleId}:${finding.severity}`),
     ["TS-EXT-EFFECT-R002:info"],
   );
-  assert.match(rendered, /\[TS-EXT-EFFECT-R002\] info/u);
+  assert.match(rendered, /\[TS-EXT-EFFECT-R002\] Info/u);
   assert.match(rendered, /Effect extension is active/u);
   assert.match(snapshot, /Extensions:/u);
   assert.match(
@@ -121,7 +121,7 @@ test("Effect dependency gives project-wide async migration advice", () => {
   assert.match(advice, /AgentCompactText: mode=advice findings=2 tasks=1/u);
   assert.match(
     advice,
-    /\[TS-EXT-EFFECT-R002\] info x2: Migrate public async domain APIs to Effect/u,
+    /\[TS-EXT-EFFECT-R002\] Info x2: Migrate public async domain APIs to Effect/u,
   );
   assert.match(advice, /raw Promise instead of Effect\.Effect; facts: package\.json Effect/u);
   assert.match(advice, /coverage: project activation=dependency dependency=dependencies/u);
@@ -166,9 +166,9 @@ test("Effect compact advice is prioritized before generic agent shape advice", (
   );
   assert.match(
     advice,
-    /RepairTasks:\n- \[TS-EXT-EFFECT-R002\] info x1: Migrate public async domain APIs to Effect/u,
+    /RepairTasks:\n- \[TS-EXT-EFFECT-R002\] Info x1: Migrate public async domain APIs to Effect/u,
   );
-  assert.match(advice, /\n- \[TS-AGENT-R010\] info x1:/u);
+  assert.match(advice, /\n- \[TS-AGENT-R010\] Info x1:/u);
 });
 
 test("explicit Effect enablement without dependency is an error-level blocking finding", () => {
@@ -190,7 +190,7 @@ test("explicit Effect enablement without dependency is an error-level blocking f
       .map((finding) => `${finding.ruleId}:${finding.severity}:${finding.label}`),
     ["TS-EXT-EFFECT-R001:error:declare effect before enforcing Effect extension policy"],
   );
-  assert.match(rendered, /\[TS-EXT-EFFECT-R001\] error/u);
+  assert.match(rendered, /\[TS-EXT-EFFECT-R001\] Error/u);
   assert.match(rendered, /package\.json enables the Effect extension/u);
   assert.match(snapshot, /effect activation=config-enabled-missing-dependency/u);
 });
@@ -659,7 +659,7 @@ test("Effect async batch advice asks agents to declare concurrency policy", () =
   assert.doesNotMatch(finding?.labels.concurrency_signals ?? "", /loadOwnerEffectsWithBudget/u);
   assert.match(
     advice,
-    /\[TS-EXT-EFFECT-R008\] info x1: Declare Effect concurrency and failure policy for async batches/u,
+    /\[TS-EXT-EFFECT-R008\] Info x1: Declare Effect concurrency and failure policy for async batches/u,
   );
   assert.match(
     advice,
@@ -716,7 +716,7 @@ test("Effect JSON boundary advice asks agents to decode with Schema", () => {
   assert.doesNotMatch(finding?.labels.schema_boundary ?? "", /loadDecodedOwner/u);
   assert.match(
     advice,
-    /\[TS-EXT-EFFECT-R009\] info x1: Decode JSON boundaries with Effect Schema/u,
+    /\[TS-EXT-EFFECT-R009\] Info x1: Decode JSON boundaries with Effect Schema/u,
   );
   assert.match(advice, /Schema\.decodeUnknown/u);
   assert.match(advice, /Schema\.parseJson/u);
@@ -764,7 +764,7 @@ test("Effect production boundary advice asks agents for observability and resili
   assert.doesNotMatch(finding?.labels.production_boundary ?? "", /loadOwnerWithPolicy/u);
   assert.match(
     advice,
-    /\[TS-EXT-EFFECT-R010\] info x1: Add production policy to Effect external IO boundaries/u,
+    /\[TS-EXT-EFFECT-R010\] Info x1: Add production policy to Effect external IO boundaries/u,
   );
   assert.match(advice, /Effect\.withSpan/u);
   assert.match(advice, /Effect\.retry\(Schedule\.exponential/u);
