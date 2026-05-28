@@ -78,6 +78,9 @@ test("rule catalog keeps deterministic pack order and agent advice severity", ()
       "TS-EXT-REACT-R002:info",
       "TS-EXT-REACT-R003:error",
       "TS-EXT-REACT-R004:info",
+      "TS-EXT-SHADCN-R001:error",
+      "TS-EXT-SHADCN-R002:info",
+      "TS-EXT-SHADCN-R003:info",
     ],
   );
 });

@@ -1,6 +1,6 @@
 import type { SourceLocation } from "../model.js";
 
-export type TypeScriptPackageExtensionName = "effect" | "react";
+export type TypeScriptPackageExtensionName = "effect" | "react" | "shadcn";
 
 export type TypeScriptPackageExtensionActivation =
   | "dependency"

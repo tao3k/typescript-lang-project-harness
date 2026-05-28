@@ -29,6 +29,13 @@ const KNOWN_PACKAGE_EXTENSIONS = [
     capabilities: ["components", "hooks", "compiler-readiness", "purity"],
     configAliases: ["React"],
   },
+  {
+    name: "shadcn",
+    displayName: "shadcn/ui",
+    packageName: "tailwindcss",
+    capabilities: ["components", "registry", "theming", "cli"],
+    configAliases: ["shadcn", "Shadcn"],
+  },
 ] as const;
 
 const HARNESS_CONFIG_SOURCE_NAMES: readonly TypeScriptPackageExtensionConfigSource[] = [

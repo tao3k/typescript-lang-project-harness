@@ -21,6 +21,7 @@ import {
   evaluateReactExtensionPolicyRules,
   typeScriptReactExtensionPolicyRules,
 } from "./react_pack.js";
+import { evaluateShadcnPolicyRules, shadcnPolicyRules } from "./shadcn/pack.js";
 
 export const TS_EXT_EFFECT_R001: TypeScriptHarnessRule = {
   ruleId: "TS-EXT-EFFECT-R001",
@@ -105,6 +106,7 @@ export function typeScriptExtensionPolicyRules(): readonly TypeScriptHarnessRule
     TS_EXT_EFFECT_R009,
     TS_EXT_EFFECT_R010,
     ...typeScriptReactExtensionPolicyRules(),
+    ...shadcnPolicyRules(),
   ];
 }
 
@@ -123,6 +125,7 @@ export function evaluateExtensionPolicyRules(
     ...evaluateEffectSchemaBoundaryAdvice(reasoningTree),
     ...evaluateEffectProductionBoundaryAdvice(reasoningTree),
     ...evaluateReactExtensionPolicyRules(reasoningTree),
+    ...evaluateShadcnPolicyRules(reasoningTree),
   ].sort((left, right) => findingSortKey(left).localeCompare(findingSortKey(right)));
 }
 
