@@ -125,6 +125,16 @@ const TS_AGENT_R015: TypeScriptHarnessRule = {
   labels: { surface: "agent", parser: "reasoning-tree" },
 };
 
+const TS_AGENT_R016: TypeScriptHarnessRule = {
+  ruleId: "TS-AGENT-R016",
+  packId: "typescript.agent_policy",
+  severity: "info",
+  title: "Domain error/exception types should document when they occur",
+  requirement:
+    "Public error or exception type exports should carry a JSDoc comment explaining the condition under which each error variant occurs. Pattern from Effect-TS: every error type has @since and description in its JSDoc (e.g., ConfigError.ts, PlatformError.ts).",
+  labels: { surface: "agent", parser: "reasoning-tree" },
+};
+
 export function typeScriptAgentPolicyRules(): readonly TypeScriptHarnessRule[] {
   return [
     TS_AGENT_R001,
@@ -142,6 +152,7 @@ export function typeScriptAgentPolicyRules(): readonly TypeScriptHarnessRule[] {
     TS_AGENT_R013,
     TS_AGENT_R014,
     TS_AGENT_R015,
+    TS_AGENT_R016,
   ];
 }
 
@@ -168,7 +179,8 @@ export function evaluateAgentPolicyRules(
     .concat(evaluateNativeDataShapeAdvice(reasoningTree))
     .concat(evaluateMissingModuleDoc(reasoningTree))
     .concat(evaluateNamedImportDensity(reasoningTree))
-    .concat(evaluateFacadeExportDensity(reasoningTree));
+    .concat(evaluateFacadeExportDensity(reasoningTree))
+    .concat(evaluateUndocumentedErrorTypes(reasoningTree));
 }
 
 function evaluatePackageEntryAdvice(
@@ -496,6 +508,39 @@ function evaluateFacadeExportDensity(
       label: "high facade export density",
       labels: TS_AGENT_R015.labels,
     }));
+}
+
+/** R016: Domain error types without documentation. */
+function evaluateUndocumentedErrorTypes(
+  reasoningTree: TypeScriptReasoningTree,
+): TypeScriptHarnessFinding[] {
+  const ERROR_NAME_PATTERNS = ["Error", "Exception", "Failure", "Fault"];
+  return reasoningTree.ownerBranches
+    .filter(
+      (b) =>
+        !b.hasIntentDoc &&
+        b.exportNames.some((name) =>
+          ERROR_NAME_PATTERNS.some((pattern) => name.includes(pattern)),
+        ) &&
+        (b.roles.includes("source") || b.roles.includes("facade")),
+    )
+    .slice(0, 20)
+    .map((b) => {
+      const errorExports = b.exportNames.filter((name) =>
+        ERROR_NAME_PATTERNS.some((p) => name.includes(p)),
+      );
+      return {
+        ruleId: TS_AGENT_R016.ruleId,
+        packId: TS_AGENT_R016.packId,
+        severity: TS_AGENT_R016.severity,
+        title: TS_AGENT_R016.title,
+        summary: `Exports error types (${errorExports.slice(0, 5).join(", ")}) without module-level JSDoc documenting failure conditions.`,
+        location: { path: b.path, line: 1, column: 0 },
+        requirement: TS_AGENT_R016.requirement,
+        label: "undocumented error types",
+        labels: TS_AGENT_R016.labels,
+      };
+    });
 }
 
 function findingSortKey(finding: TypeScriptHarnessFinding): string {
