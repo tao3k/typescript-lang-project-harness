@@ -18,6 +18,7 @@ import { renderStats, renderHarnessFindings, renderHarnessFindingsWith } from ".
 import { renderDeps } from "./render-deps.js";
 import { renderTopology } from "./render-topology.js";
 import { renderDomain } from "./render-domain.js";
+import { renderGuide } from "./render-guide.js";
 
 export const HELP_TEXT = `ts-harness — TypeScript project reasoning harness for agents
 
@@ -99,11 +100,13 @@ interface ParsedArgs {
   readonly showTopology: boolean;
   readonly showDeps: boolean;
   readonly showDomain: boolean;
+  readonly showGuide: boolean;
   readonly showHelp: boolean;
   readonly showCache: boolean;
   readonly showAll: boolean;
   readonly depsTarget: string | undefined;
   readonly domainTarget: string | undefined;
+  readonly guideTopic: string | undefined;
   readonly projectRoot: string | undefined;
   readonly error: string | undefined;
 }
@@ -112,6 +115,7 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
   const flags: Record<string, boolean | string | undefined> = {};
   let depsTarget: string | undefined;
   let domainTarget: string | undefined;
+  let guideTopic: string | undefined;
   let projectRoot: string | undefined;
 
   for (let i = 0; i < argv.length; i++) {
@@ -126,6 +130,7 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
       case "--topology":
       case "--deps":
       case "--domain":
+      case "--guide":
       case "--help":
       case "--cache":
       case "--all":
@@ -140,6 +145,8 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
           depsTarget = arg;
         } else if (i > 0 && argv[i - 1] === "--domain") {
           domainTarget = arg;
+        } else if (i > 0 && argv[i - 1] === "--guide") {
+          guideTopic = arg;
         } else if (projectRoot === undefined) {
           projectRoot = arg;
         } else {
@@ -158,6 +165,7 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
     "--topology",
     "--deps",
     "--domain",
+    "--guide",
   ];
   const activeOutputs = outputFlags.filter((f) => flags[f]);
   if (activeOutputs.length > 1) {
@@ -174,11 +182,13 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
     showTopology: flags["--topology"] === true,
     showDeps: flags["--deps"] === true,
     showDomain: flags["--domain"] === true,
+    showGuide: flags["--guide"] === true,
     showHelp: flags["--help"] === true,
     showCache: flags["--cache"] === true,
     showAll: flags["--all"] === true,
     depsTarget,
     domainTarget,
+    guideTopic,
     projectRoot,
     error: undefined,
   };
@@ -195,11 +205,13 @@ function blankArgs(error: string): ParsedArgs {
     showTopology: false,
     showDeps: false,
     showDomain: false,
+    showGuide: false,
     showHelp: false,
     showCache: false,
     showAll: false,
     depsTarget: undefined,
     domainTarget: undefined,
+    guideTopic: undefined,
     projectRoot: undefined,
     error,
   };
@@ -234,6 +246,9 @@ function renderCliOutput(
   }
   if (args.showDomain) {
     return renderDomain(report, args.domainTarget ?? "");
+  }
+  if (args.showGuide) {
+    return renderGuide(report, args.guideTopic ?? "");
   }
 
   // Default: compact findings or [ok]
