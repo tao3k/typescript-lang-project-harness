@@ -358,6 +358,50 @@ function adviceFixSteps(finding: TypeScriptHarnessFinding): readonly string[] {
         "keep `tsc --noEmit` in `npm run check` when the project still needs TypeScript type checking",
         "if declaration output is required, keep a separate `tsc --emitDeclarationOnly` or `tsc` build step",
       ];
+    case "TS-AGENT-R013":
+      return [
+        "add a module-level JSDoc comment (/** ... */) describing the module's public API and responsibility",
+        "example from Effect-TS: Brand.ts opens with 20 lines explaining refined vs nominal branding",
+      ];
+    case "TS-AGENT-R014":
+      return [
+        "replace dense named imports with a namespace import: `import * as X from './module.js'`",
+        "example from Effect-TS: `import * as Arr from './Array.js'` instead of importing 10 symbols individually",
+      ];
+    case "TS-AGENT-R015":
+      return [
+        "split the facade into sub-domain barrels (e.g., Schema.ts, Cause.ts, Fiber.ts)",
+        "each sub-domain barrel should export only symbols for that domain",
+        "example from Effect-TS: each file in src/ is a self-contained sub-domain barrel",
+      ];
+    case "TS-AGENT-R016":
+      return [
+        "add a JSDoc comment for each error/exception type explaining when it occurs",
+        "document the failure condition, not just the type name",
+        "example from Effect-TS: ConfigError.ts documents when each variant (MissingData, InvalidData, etc.) fires",
+      ];
+    case "TS-AGENT-R007":
+      return [
+        "extract deeply nested logic into small, flat helper functions",
+        "each function should handle one level of control flow (condition, loop, or branch)",
+        "example from Effect-TS: internal/fiberRuntime.ts extracts ScopeImpl and FiberRuntime as separate classes",
+      ];
+    case "TS-EXT-SHADCN-R001":
+      return [
+        "add `tailwindcss` to package.json dependencies",
+        "the shadcn/ui extension requires tailwindcss to validate component styling",
+      ];
+    case "TS-EXT-SHADCN-R002":
+      return [
+        "import and use the `cn()` utility from `@/lib/utils` for className merging",
+        "replace manual string concatenation of class names with `cn()` calls",
+      ];
+    case "TS-EXT-SHADCN-R003":
+      return [
+        "add a Zod schema for the configuration object",
+        "use `.strict()` to reject unknown properties and `.refine()` for custom validation",
+        "example from shadcn/ui: every config object has a corresponding Zod schema",
+      ];
     default:
       return ["open the target, apply the rule contract in source, and rerun harness"];
   }
