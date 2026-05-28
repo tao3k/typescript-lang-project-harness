@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import path from "node:path";
 
 import ts from "typescript";
@@ -43,13 +44,52 @@ export function readProjectScope(
   const projectRoot = packageProjectRoot(pathFromInput(projectRootInput));
   const configFacts = readTypeScriptConfigFacts(projectRoot);
   const packageJson = readPackageJsonFacts(projectRoot);
+
+  const rootSourcePaths = existingChildPaths(projectRoot, config.sourceDirNames);
+  const rootTestPaths = config.includeTests
+    ? existingChildPaths(projectRoot, config.testDirNames)
+    : [];
+
+  // Discover workspace package source/test dirs
+  const workspaceSourcePaths = workspaceChildPaths(
+    projectRoot,
+    packageJson.workspacePackages,
+    config.sourceDirNames,
+  );
+  const workspaceTestPaths = config.includeTests
+    ? workspaceChildPaths(projectRoot, packageJson.workspacePackages, config.testDirNames)
+    : [];
+
   return {
     projectRoot,
-    sourcePaths: existingChildPaths(projectRoot, config.sourceDirNames),
-    testPaths: config.includeTests ? existingChildPaths(projectRoot, config.testDirNames) : [],
+    sourcePaths: dedupeSorted([...rootSourcePaths, ...workspaceSourcePaths]),
+    testPaths: dedupeSorted([...rootTestPaths, ...workspaceTestPaths]),
     config: configFacts,
     packageJson,
   };
+}
+
+/** For each workspace package, find existing child dirs matching the given names. */
+function workspaceChildPaths(
+  projectRoot: string,
+  workspacePackages: readonly { readonly path: string }[],
+  dirNames: readonly string[],
+): string[] {
+  const dirs: string[] = [];
+  for (const wp of workspacePackages) {
+    if (wp.path === projectRoot) continue;
+    for (const name of dirNames) {
+      const candidate = path.join(wp.path, name);
+      if (fs.existsSync(candidate) && fs.statSync(candidate).isDirectory()) {
+        dirs.push(candidate);
+      }
+    }
+  }
+  return dirs;
+}
+
+function dedupeSorted(items: string[]): string[] {
+  return [...new Set(items)].sort();
 }
 
 export function projectFileNames(
@@ -93,7 +133,19 @@ export function parseTypeScriptProjectFiles(
   return rootNames.map((fileName) => {
     const sourceFile = program.getSourceFile(fileName);
     if (sourceFile === undefined) {
-      return parseTypeScriptSourceFile(fileName);
+      // Monorepo workspace file: not in the root program. Parse standalone + resolve imports per-file.
+      const standalone = parseTypeScriptSourceFile(fileName);
+      if (standalone.imports.length === 0) return standalone;
+      const resolutions = standalone.imports.map((importFact) =>
+        resolveNativeImportFact(
+          scope,
+          fileName,
+          importFact,
+          programInputs.options,
+          resolutionCache,
+        ),
+      );
+      return { ...standalone, importResolutions: resolutions };
     }
     const semanticDiagnostics = collectSemanticDiagnostics
       ? program

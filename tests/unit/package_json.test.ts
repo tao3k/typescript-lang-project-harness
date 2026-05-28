@@ -489,7 +489,7 @@ test("project harness preserves conditional package targets from the TypeScript 
   );
 
   const rendered = renderTypeScriptReasoningTree(report);
-  assert.match(rendered, /^Modules: source=2 branches=1 deps=8 package-owners=8 findings=1/u);
+  assert.match(rendered, /^Modules: source=2 branches=2 deps=8 package-owners=8 findings=1/u);
   assert.match(rendered, /package exports:\. \[types\] --unresolved--> \.\/dist\/index\.d\.ts/u);
   assert.match(
     rendered,
@@ -549,7 +549,7 @@ test("project harness records Rspack build tool facts from package json and conf
 
   const snapshot = renderTypeScriptReasoningTree(report);
   const advice = renderTypeScriptProjectHarnessAgentCompactText(report);
-  assert.match(snapshot, /Modules: source=2 branches=1 build-tools=1 findings=1/u);
+  assert.match(snapshot, /Modules: source=2 branches=2 orphaned=1 build-tools=1 findings=1/u);
   assert.match(
     snapshot,
     /BuildTools:\n - rspack capabilities=bundle,dev-server,typescript-config packages=@rspack\/core configs=rspack\.config\.ts/u,

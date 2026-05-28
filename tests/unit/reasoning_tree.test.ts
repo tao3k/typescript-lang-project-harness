@@ -214,8 +214,19 @@ test("reasoning tree renders tsconfig paths, package entries, roles, and import 
   assert.equal(roleByPath.get("src/index.ts"), "facade");
   assert.equal(roleByPath.get("src/consumer.ts"), "entrypoint");
   assert.equal(roleByPath.get("tests/consumer.test.ts"), "test");
-  assert.deepEqual(
-    tree.ownerBranches.map((branch) => ({
+  // All branches (including non-root source branches added by source+exports rule)
+  assert.ok(
+    tree.ownerBranches.length >= 4,
+    `expected >=4 branches, got ${tree.ownerBranches.length}`,
+  );
+
+  // Root/facade/entrypoint branches should still match golden expectations
+  const rootBranches = tree.ownerBranches
+    .filter(
+      (b) =>
+        b.roles.includes("root") || b.roles.includes("facade") || b.roles.includes("entrypoint"),
+    )
+    .map((branch) => ({
       path: path.relative(root, branch.path),
       ownerNamespace: branch.ownerNamespace,
       roles: branch.roles,
@@ -223,24 +234,29 @@ test("reasoning tree renders tsconfig paths, package entries, roles, and import 
       childEdges: branch.childEdges.map(
         (edge) => `${edge.kind}:${path.relative(root, edge.toPath ?? "")}`,
       ),
-    })),
-    [
-      {
-        path: "src/consumer.ts",
-        ownerNamespace: "src/consumer",
-        roles: ["root", "entrypoint"],
-        externalImports: 2,
-        childEdges: [],
-      },
-      {
-        path: "src/index.ts",
-        ownerNamespace: "src",
-        roles: ["root", "facade"],
-        externalImports: 0,
-        childEdges: ["export:src/domain.ts", "export:src/domain.ts", "export:src/domain.ts"],
-      },
-    ],
+    }));
+
+  assert.deepEqual(rootBranches, [
+    {
+      path: "src/consumer.ts",
+      ownerNamespace: "src/consumer",
+      roles: ["root", "entrypoint"],
+      externalImports: 2,
+      childEdges: [],
+    },
+    {
+      path: "src/index.ts",
+      ownerNamespace: "src",
+      roles: ["root", "facade"],
+      externalImports: 0,
+      childEdges: ["export:src/domain.ts", "export:src/domain.ts", "export:src/domain.ts"],
+    },
+  ]);
+  // Non-root source branches are present
+  assert.ok(
+    tree.ownerBranches.some((b) => path.relative(root, b.path) === "generated/generated.ts"),
   );
+  assert.ok(tree.ownerBranches.some((b) => path.relative(root, b.path) === "src/domain.ts"));
   assert.ok(
     tree.ownerDependencies.some(
       (dependency) =>
@@ -258,7 +274,7 @@ test("reasoning tree renders tsconfig paths, package entries, roles, and import 
   assert.deepEqual(tree.orphanedSourceFiles, []);
 
   const rendered = renderTypeScriptReasoningTree(report);
-  assert.match(rendered, /^Modules: source=4 roots=2 branches=2 deps=/u);
+  assert.match(rendered, /^Modules: source=4 roots=2 branches=4 deps=/u);
   assert.match(rendered, /OwnerBranches:/u);
   assert.match(rendered, /src\/index\.ts \[root, facade\] owner=src/u);
   assert.match(rendered, /src\/consumer\.ts \[root, entrypoint\] owner=src\/consumer/u);

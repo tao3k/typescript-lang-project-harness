@@ -57,6 +57,15 @@ export function orphanedSourceFiles(
     ]);
   }
   const reachable = reachableSourcePaths(rootPaths, outgoing);
+
+  // Also reachable: files directly imported by any facade/entrypoint (package barrel pattern)
+  for (const rootPath of rootPaths) {
+    const children = outgoing.get(rootPath) ?? [];
+    for (const child of children) {
+      reachable.add(child);
+    }
+  }
+
   return sourceModules
     .filter((moduleReport) => moduleReport.role === "source" && !reachable.has(moduleReport.path))
     .map((moduleReport) => moduleReport.path)

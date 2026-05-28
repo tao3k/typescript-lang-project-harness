@@ -70,7 +70,7 @@ test("project runner preserves tsconfig allowJs native file selection", () => {
     "src/view.test.jsx": "test",
     "vite.config.mjs": "config",
   });
-  assert.match(rendered, /^Modules: source=5 roots=2 branches=3 deps=2/u);
+  assert.match(rendered, /^Modules: source=5 roots=2 branches=5 deps=2/u);
   assert.match(
     rendered,
     /src\/index\.js \[root, facade\] owner=src imports=relative:1 exports=value -> export:src\/plain\.js/u,

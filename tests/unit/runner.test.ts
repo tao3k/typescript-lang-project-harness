@@ -206,7 +206,7 @@ test("explicit-path runner routes syntax diagnostics through reasoning facts", (
   assert.match(rendered, /\[TS-SYN-R001\] error/u);
   assert.equal(rendered.includes(filePath), false);
   assert.match(rendered, /^broken\.ts:\d+:\d+/mu);
-  assert.match(snapshot, /^Modules: source=1 findings=1/u);
+  assert.match(snapshot, /^Modules: source=1 branches=1 findings=1/u);
   assert.match(snapshot, /FindingGroups:/u);
   assert.match(snapshot, /TS-SYN-R001/u);
 });

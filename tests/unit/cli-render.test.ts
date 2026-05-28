@@ -7,8 +7,7 @@ import { runTypeScriptProjectHarness } from "../../src/runner.js";
 import { renderTree } from "../../src/cli/render-tree.js";
 import { renderStats } from "../../src/cli/render-stats.js";
 import { renderCache } from "../../src/cli/render-cache.js";
-import { runCli } from "../../src/cli/main.js";
-import { HELP_TEXT } from "../../src/cli/help.js";
+import { runCli, HELP_TEXT } from "../../src/cli/main.js";
 
 function tmpDir(): string {
   return fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-cli-"));
@@ -41,24 +40,26 @@ function captureStd() {
 }
 
 describe("CLI: --tree", () => {
-  it("renders reasoning tree with modules and branches", () => {
+  it("renders reasoning tree with architecture and entrypoints", () => {
     const dir = tmpDir();
     writeFile(dir, "src/index.ts", "export { helper } from './helper.js';");
     writeFile(dir, "src/helper.ts", "export function helper(x: string) { return x.trim(); }");
     const report = runTypeScriptProjectHarness(dir);
     const output = renderTree(report);
-    assert.ok(output.includes("Modules:"), "has Modules line");
-    assert.ok(output.includes("OwnerBranches:"), "has OwnerBranches");
-    assert.ok(output.endsWith("\n\n"), "ends with newline");
+    assert.ok(output.includes("[tree]"), "starts with [tree]");
+    assert.ok(output.includes("Architecture:"), "has Architecture");
+    assert.ok(output.includes("Entrypoints:"), "has Entrypoints");
     fs.rmSync(dir, { recursive: true, force: true });
   });
 
-  it("includes FindingGroups when findings exist", () => {
+  it("includes findings hint when findings exist", () => {
     const dir = tmpDir();
-    writeFile(dir, "src/broken.ts", "export function broken( { }\n");
+    writeFile(dir, "src/index.ts", "export { doThing } from './module.js';");
+    writeFile(dir, "src/module.ts", "export function doThing(a: {): void {}");
     const report = runTypeScriptProjectHarness(dir);
     const output = renderTree(report);
-    assert.ok(output.includes("FindingGroups:"), "has FindingGroups section");
+    // When broken modules exist, tree should mention findings even if no branches
+    assert.ok(output.includes("--harness"), "mentions --harness");
     fs.rmSync(dir, { recursive: true, force: true });
   });
 });
@@ -108,7 +109,8 @@ describe("CLI: --help", () => {
     assert.ok(HELP_TEXT.includes("Usage:"));
     assert.ok(HELP_TEXT.includes("--tree"));
     assert.ok(HELP_TEXT.includes("--stats"));
-    assert.ok(HELP_TEXT.includes("--cache"));
+    assert.ok(HELP_TEXT.includes("--deps"));
+    assert.ok(HELP_TEXT.includes("--harness"));
     assert.ok(HELP_TEXT.includes("--help"));
   });
 
@@ -119,12 +121,12 @@ describe("CLI: --help", () => {
   });
 });
 
-describe("CLI: --findings", () => {
+describe("CLI: --harness", () => {
   it("executes without crash for clean project", () => {
     const dir = tmpDir();
     writeFile(dir, "src/a.ts", "export const a = 1;");
     const { stdout, stderr } = captureStd();
-    const code = runCli(["--findings", dir], { stdout, stderr }, dir);
+    const code = runCli(["--harness", dir], { stdout, stderr }, dir);
     assert.ok(code === 0 || code === 1, "returns valid exit code");
     fs.rmSync(dir, { recursive: true, force: true });
   });

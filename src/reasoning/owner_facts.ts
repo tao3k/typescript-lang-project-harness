@@ -81,7 +81,9 @@ function shouldIncludeOwnerBranch(
     moduleReport.role === "entrypoint" ||
     moduleReport.role === "facade" ||
     moduleReport.role === "config" ||
-    childEdges.length > 0
+    childEdges.length > 0 ||
+    // Include source modules with exports even if import resolution didn't produce edges
+    (moduleReport.role === "source" && moduleReport.exportNames.length > 0)
   );
 }
 

@@ -183,6 +183,13 @@ function moduleRole(
   if (isInsideAny(filePath, scope.sourcePaths)) {
     return "source";
   }
+  // Fallback: if the file is in tsconfig's fileNames or under a project reference, it's source
+  if (isInsideAny(filePath, scope.config.fileNames)) {
+    return "source";
+  }
+  if (isInsideProjectReference(scope.config.projectReferences, filePath)) {
+    return "source";
+  }
   return "unknown";
 }
 
@@ -356,7 +363,11 @@ function resolveCandidatePath(
 
 function isFacadePath(scope: TypeScriptProjectHarnessScope, filePath: string): boolean {
   const fileName = path.basename(filePath);
-  return moduleFileNames("index").includes(fileName) && isInsideAny(filePath, scope.sourcePaths);
+  if (!moduleFileNames("index").includes(fileName)) return false;
+  if (isInsideAny(filePath, scope.sourcePaths)) return true;
+  // Fallback: for monorepo workspace packages using project references
+  if (isInsideProjectReference(scope.config.projectReferences, filePath)) return true;
+  return false;
 }
 
 function isTestFileName(fileName: string): boolean {
@@ -367,6 +378,14 @@ function isTestFileName(fileName: string): boolean {
 
 function isConfigFileName(fileName: string): boolean {
   return CONFIG_FILE_STEMS.some((stem) => moduleFileNames(stem).includes(fileName));
+}
+
+/** Check if a file path is a child of any project reference directory. */
+function isInsideProjectReference(projectReferences: readonly string[], filePath: string): boolean {
+  for (const ref of projectReferences) {
+    if (filePath.startsWith(ref + path.sep)) return true;
+  }
+  return false;
 }
 
 function moduleFileNames(stem: string): readonly string[] {
