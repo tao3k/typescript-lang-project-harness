@@ -47,6 +47,8 @@ test("Effect dependency activates extension snapshot and async domain advice", (
       "TS-EXT-EFFECT-R008:info",
       "TS-EXT-EFFECT-R009:info",
       "TS-EXT-EFFECT-R010:info",
+      "TS-EXT-EFFECT-R011:warning",
+      "TS-EXT-EFFECT-R012:warning",
       "TS-EXT-REACT-R001:error",
       "TS-EXT-REACT-R002:info",
       "TS-EXT-REACT-R003:error",

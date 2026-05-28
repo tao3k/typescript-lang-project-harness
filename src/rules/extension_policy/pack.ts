@@ -93,6 +93,26 @@ export const TS_EXT_EFFECT_R007: TypeScriptHarnessRule = {
   labels: { surface: "extension", parser: "native-syntax", extension: "effect" },
 };
 
+export const TS_EXT_EFFECT_R011: TypeScriptHarnessRule = {
+  ruleId: "TS-EXT-EFFECT-R011",
+  packId: "typescript.extension_policy",
+  severity: "warning",
+  title: "Effect production module imports test utilities",
+  requirement:
+    "Production Effect source modules should not import TestClock, TestServices, TestAnnotations, TestContext, TestLive, or other test infrastructure. Test utilities leak fake clocks and mock services into production paths. Pattern from Effect-TS: test utilities are only imported in `.test.ts` files.",
+  labels: { surface: "extension", parser: "reasoning-tree", extension: "effect" },
+};
+
+export const TS_EXT_EFFECT_R012: TypeScriptHarnessRule = {
+  ruleId: "TS-EXT-EFFECT-R012",
+  packId: "typescript.extension_policy",
+  severity: "warning",
+  title: "Effect service method should declare explicit error channel",
+  requirement:
+    "Effect service methods returning `Effect<A, never, R>` may hide potential failures. Declare a typed error channel (e.g., `Effect<A, ServiceError, R>`) even when the current implementation cannot fail — requirements change and callers need typed error handling. Pattern from Effect-TS: services like ConfigProvider.ts, Clock.ts declare explicit error types.",
+  labels: { surface: "extension", parser: "native-syntax", extension: "effect" },
+};
+
 export function typeScriptExtensionPolicyRules(): readonly TypeScriptHarnessRule[] {
   return [
     TS_EXT_EFFECT_R001,
@@ -105,6 +125,8 @@ export function typeScriptExtensionPolicyRules(): readonly TypeScriptHarnessRule
     TS_EXT_EFFECT_R008,
     TS_EXT_EFFECT_R009,
     TS_EXT_EFFECT_R010,
+    TS_EXT_EFFECT_R011,
+    TS_EXT_EFFECT_R012,
     ...typeScriptReactExtensionPolicyRules(),
     ...shadcnPolicyRules(),
   ];

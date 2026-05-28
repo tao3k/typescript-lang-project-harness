@@ -75,6 +75,8 @@ test("rule catalog keeps deterministic pack order and agent advice severity", ()
       "TS-EXT-EFFECT-R008:info",
       "TS-EXT-EFFECT-R009:info",
       "TS-EXT-EFFECT-R010:info",
+      "TS-EXT-EFFECT-R011:warning",
+      "TS-EXT-EFFECT-R012:warning",
       "TS-EXT-REACT-R001:error",
       "TS-EXT-REACT-R002:info",
       "TS-EXT-REACT-R003:error",

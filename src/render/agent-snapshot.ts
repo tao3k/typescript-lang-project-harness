@@ -180,6 +180,16 @@ function mentorFixHint(finding: TypeScriptHarnessFinding): string | undefined {
         `  fix: verify the import path resolves to an existing file or add the dependency\n` +
         `  verify: check that \`${finding.summary.split("'")[1] ?? "the import"}\` exists in the project`
       );
+    case "Effect production module leaks test utilities":
+      return (
+        `  fix: remove TestClock/TestServices/TestAnnotations imports from production code\n` +
+        `  example: Effect-TS's TestClock.ts is only imported by .test.ts files and TestServices.ts`
+      );
+    case "Effect service with weak error channel":
+      return (
+        `  fix: replace \`Effect<A, never, R>\` with \`Effect<A, ServiceError, R>\`\n` +
+        `  example: Effect-TS's ConfigProvider.ts declares \`Effect<A, ConfigError, R>\` explicitly`
+      );
     default:
       // Generic fallback: extract fix from summary
       if (finding.summary.includes("unresolved")) {
