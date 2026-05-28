@@ -1,3 +1,4 @@
+/** Domain drill-down: branch structure, external boundary (imports/exports), internal deps, and architecture grouping. */
 import path from "node:path";
 import type {
   TypeScriptHarnessReport,

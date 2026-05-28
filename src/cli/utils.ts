@@ -1,3 +1,13 @@
+/**
+ * Shared rendering utilities for the CLI layer.
+ *
+ * Provides topology computation, doc quality estimation, namespace extraction,
+ * role checking, and output formatting primitives used by all renderers.
+ *
+ * Single source of truth for signal thresholds (fan-in >= 3, doc quality thresholds)
+ * and noise patterns (doc-site paths, generic export names).
+ */
+
 import fs from "node:fs";
 import path from "node:path";
 import type { TypeScriptHarnessReport, TypeScriptReasoningTree } from "../model.js";

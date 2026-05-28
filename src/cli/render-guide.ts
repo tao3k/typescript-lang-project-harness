@@ -1,3 +1,4 @@
+/** Vocabulary-driven domain discovery: shows project vocabulary, related concepts, and progressive exploration hints. Also serves as agent guide when no topic given. */
 import path from "node:path";
 import type {
   TypeScriptHarnessReport,

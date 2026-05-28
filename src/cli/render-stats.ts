@@ -1,3 +1,4 @@
+/** Project statistics (files, roots, branches, deps, findings) and harness findings grouped by rule. */
 import type { TypeScriptHarnessReport } from "../model.js";
 
 export function renderStats(report: TypeScriptHarnessReport): string {

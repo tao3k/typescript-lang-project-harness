@@ -1,3 +1,4 @@
+/** Dependency graph topology: foundations (most imported), orchestrators (most imports), bridges, and meaningful orphans. */
 import path from "node:path";
 import type { TypeScriptHarnessReport, TypeScriptReasoningTree } from "../model.js";
 import { relativeTo, computeTopology, isDocSiteFile } from "./utils.js";

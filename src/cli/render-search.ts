@@ -1,13 +1,13 @@
+/**
+ * Domain-scoped file search by export name and path pattern.
+ *
+ * Scores branches by keyword match (export names ×3, path ×2),
+ * groups results by domain, and displays fan-in + doc quality signals.
+ */
+
 import path from "node:path";
 import type { TypeScriptHarnessReport, TypeScriptReasoningTree } from "../model.js";
-import {
-  relativeTo,
-  computeTopology,
-  docLabel,
-  extractNamespace,
-  fanInLabel,
-  isRootBranch,
-} from "./utils.js";
+import { relativeTo, computeTopology, docLabel, fanInLabel, isRootBranch } from "./utils.js";
 
 const MAX_RESULTS = 20;
 

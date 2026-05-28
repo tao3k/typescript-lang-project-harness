@@ -1,3 +1,4 @@
+/** Architecture tree: domains ordered by inferred role, entrypoints, and collapsed internal branches with drill-down hints. */
 import path from "node:path";
 import type {
   TypeScriptHarnessReport,

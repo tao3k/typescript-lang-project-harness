@@ -1,3 +1,4 @@
+/** Dependency graph tracer for a single file. Shows imports (grouped by namespace) and importers with fan-in signal. */
 import path from "node:path";
 import type { TypeScriptHarnessReport, TypeScriptReasoningTree } from "../model.js";
 import { relativeTo, computeTopology, extractNamespace, fanInLabel } from "./utils.js";
