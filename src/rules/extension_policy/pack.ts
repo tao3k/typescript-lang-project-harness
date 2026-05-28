@@ -570,10 +570,23 @@ function evaluateEffectTestUtilityLeak(
 function evaluateEffectWeakErrorChannel(
   reasoningTree: TypeScriptReasoningTree,
 ): TypeScriptHarnessFinding[] {
+  // Find modules that actually import from Effect (not gRPC or other service patterns)
+  const effectImporters = new Set<string>();
+  for (const dep of reasoningTree.ownerDependencies) {
+    if (
+      dep.moduleSpecifier === "effect" ||
+      dep.moduleSpecifier.startsWith("effect/") ||
+      dep.moduleSpecifier.startsWith("@effect/")
+    ) {
+      effectImporters.add(dep.fromPath);
+    }
+  }
+
   return reasoningTree.ownerBranches
     .filter(
       (b) =>
         b.roles.includes("source") &&
+        effectImporters.has(b.path) && // Must actually import Effect
         b.exportNames.some((n) => n.endsWith("Service") || n.includes("Service")),
     )
     .slice(0, 10)
