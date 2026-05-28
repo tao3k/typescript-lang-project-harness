@@ -336,6 +336,7 @@ test("agent policy reports parser-native public type boundary advice without blo
   fs.writeFileSync(
     path.join(root, "src", "events.ts"),
     [
+      "/** Domain event types for the owner lifecycle. */",
       "export type OwnerId = string;",
       "export type OwnerState = 'created' | 'deleted';",
       "export interface JobRecord {",
@@ -372,6 +373,7 @@ test("agent policy keeps model schema modules out of public type boundary advice
   fs.writeFileSync(
     path.join(root, "src", "verification", "model.ts"),
     [
+      "/** Verification schema model types. Excluded from type boundary advice by the model-schema rule filter. */",
       "export type OwnerId = string;",
       "export interface SchemaFact {",
       "  status: string;",
@@ -385,5 +387,8 @@ test("agent policy keeps model schema modules out of public type boundary advice
   const report = runTypeScriptProjectHarness(root);
 
   assert.equal(isTypeScriptHarnessClean(report), true);
-  assert.deepEqual(report.findings, []);
+  assert.deepEqual(
+    report.findings.map((f) => f.ruleId),
+    [],
+  );
 });

@@ -51,6 +51,8 @@ test("policy config can disable several rules and a built-in rule pack", () => {
     "TS-AGENT-R010",
     "TS-AGENT-R011",
     "TS-AGENT-R012",
+    "TS-AGENT-R013",
+    "TS-AGENT-R014",
   ]);
   assert.deepEqual(typeScriptRulePackRuleIds("extension_policy"), [
     "TS-EXT-EFFECT-R001",
