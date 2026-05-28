@@ -519,9 +519,9 @@ function evaluateUndocumentedErrorTypes(
     .filter(
       (b) =>
         !b.hasIntentDoc &&
-        b.exportNames.some((name) =>
+        b.exportNames.filter((name) =>
           ERROR_NAME_PATTERNS.some((pattern) => name.includes(pattern)),
-        ) &&
+        ).length >= 2 &&
         (b.roles.includes("source") || b.roles.includes("facade")),
     )
     .slice(0, 20)

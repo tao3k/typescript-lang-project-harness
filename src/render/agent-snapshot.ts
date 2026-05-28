@@ -110,31 +110,15 @@ export function renderTypeScriptProjectHarnessAgentSnapshot(
 
 function renderFinding(report: TypeScriptHarnessReport, finding: TypeScriptHarnessFinding): string {
   const location = renderLocation(report, finding);
-  const lines: string[] = [];
-
-  // Line 1: [RULE] Severity: Title
-  lines.push(`[${finding.ruleId}] ${capitalizeSeverity(finding.severity)}: ${finding.title}`);
-
-  // Line 2: @ path:line:col
-  lines.push(`@ ${location}`);
-
-  // Line 3: fix: repair instruction (MENTOR-LEVEL: specific, with example)
-  const fixHint = mentorFixHint(finding);
-  if (fixHint !== undefined) {
-    lines.push(`${fixHint}`);
-  }
-
-  // Line 4: code: source context (MENTOR-LEVEL: shows agent the actual code)
+  const lines = [`[${finding.ruleId}] ${finding.severity}: ${finding.title}`, location];
   if (finding.sourceLine !== undefined) {
-    lines.push(`code: ${finding.sourceLine.trimEnd()}`);
+    lines.push(`> ${finding.sourceLine.trimEnd()}`);
   }
-
-  // Line 5: Help: parser fact
-  lines.push(`Help: ${compactProjectRootMentions(report.reasoningTree, finding.summary)}`);
-
-  // Line 6: Contract: the principle
-  lines.push(`Contract: ${finding.requirement}`);
-
+  lines.push(
+    finding.label,
+    `Help: ${compactProjectRootMentions(report.reasoningTree, finding.summary)}`,
+    `Contract: ${finding.requirement}`,
+  );
   return lines.join("\n");
 }
 
