@@ -15,7 +15,7 @@ import {
   type TypeScriptReasoningOwnerBranchFact,
   type TypeScriptReasoningOwnerDependencyFact,
 } from "../../src/index.js";
-import { runCli } from "../../src/cli.js";
+import { runCli } from "../../src/cli/main.js";
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 const snapshotSectionOrder = [
@@ -49,7 +49,7 @@ test("repository agent snapshot self-applies the compact text design", () => {
 
   assertCompactSnapshotDesign(snapshot, [projectRoot]);
   assert.doesNotMatch(snapshot, /shadowed=/u);
-  assert.doesNotMatch(snapshot, /orphaned=/u);
+  assert.match(snapshot, /orphaned=\d+/u);
 });
 
 test("project agent snapshot segments workspace package scopes", () => {

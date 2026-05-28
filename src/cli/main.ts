@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import path from "node:path";
 
 import {
@@ -5,12 +7,12 @@ import {
   renderTypeScriptProjectHarnessAgentCompactText,
   renderTypeScriptProjectHarnessAgentSnapshot,
   renderTypeScriptProjectHarnessJson,
-} from "./render.js";
+} from "../render.js";
 import {
   buildTypeScriptProjectHarnessAgentSnapshot,
   runTypeScriptProjectHarness,
-} from "./runner.js";
-import { isTypeScriptHarnessClean } from "./model.js";
+} from "../runner.js";
+import { isTypeScriptHarnessClean } from "../model.js";
 
 export interface CliStreams {
   readonly stdout: { write(chunk: string): unknown };

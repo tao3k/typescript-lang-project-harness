@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
-import { runCli } from "../../src/cli.js";
+import { runCli } from "../../src/cli/main.js";
 
 test("CLI supports compact, JSON, agent compact, and agent snapshot output modes", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-cli-"));

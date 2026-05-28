@@ -5,7 +5,7 @@
   "description": "Project-level TypeScript language harness with native parser facts and compact diagnostics for agents",
   "license": "Apache-2.0",
   "bin": {
-    "typescript-project-harness": "./dist/src/bin/typescript-project-harness.js"
+    "typescript-project-harness": "./dist/src/cli/main.js"
   },
   "files": [
     "dist",
@@ -21,14 +21,14 @@
   },
   "scripts": {
     "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
-    "build": "npm run clean && tsc -p tsconfig.json && chmod +x dist/src/bin/typescript-project-harness.js",
+    "build": "npm run clean && tsc -p tsconfig.json && chmod +x dist/src/cli/main.js",
     "check": "tsc -p tsconfig.json --noEmit",
     "prepare": "npm run build",
     "format": "oxfmt --write .",
     "format:check": "oxfmt --check .",
     "lint": "oxlint .",
     "test": "npm run build && node --test \"dist/tests/**/*.test.js\"",
-    "harness": "npm run build && node dist/src/bin/typescript-project-harness.js ."
+    "harness": "npm run build && node dist/src/cli/main.js ."
   },
   "dependencies": {
     "typescript": "^5.9.3"

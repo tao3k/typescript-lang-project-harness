@@ -77,7 +77,9 @@ test("TypeScript semantics stay in the parser layer", () => {
     /resolvePathAlias|resolveRelativeModule|resolvePackageImport|escapeRegExp|new RegExp/u,
   );
 
-  const renderSource = fs.readFileSync(path.join(projectRoot, "src", "render.ts"), "utf8");
+  const renderSource =
+    fs.readFileSync(path.join(projectRoot, "src", "render.ts"), "utf8") +
+    fs.readFileSync(path.join(projectRoot, "src", "render", "agent-snapshot.ts"), "utf8");
   assert.doesNotMatch(renderSource, /report\.(modules|projectScope|rootPaths)/u);
   assert.match(renderSource, /report\.reasoningTree\.projectRoot/u);
   assert.match(renderSource, /tree\.ownerBranches/u);
@@ -93,7 +95,11 @@ test("TypeScript semantics stay in the parser layer", () => {
 
 function isParserLayerSource(sourcePath: string): boolean {
   const relativePath = path.relative(path.join(projectRoot, "src"), sourcePath);
-  return relativePath === "parser.ts" || relativePath.startsWith(`parser${path.sep}`);
+  return (
+    relativePath === "parser.ts" ||
+    relativePath.startsWith(`parser${path.sep}`) ||
+    relativePath.startsWith(`syntax${path.sep}`)
+  );
 }
 
 function isReasoningLayerSource(sourcePath: string): boolean {

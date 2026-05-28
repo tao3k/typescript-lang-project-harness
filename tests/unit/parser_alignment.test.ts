@@ -37,7 +37,10 @@ test("parser-first alignment keeps TypeScript-native facts owned by the parser l
 });
 
 test("runner, rule, and render layers stay downstream of the reasoning tree", () => {
-  const runner = readProjectFile("src/runner.ts");
+  const runner =
+    readProjectFile("src/runner.ts") +
+    readProjectFile("src/runner/run-project.ts") +
+    readProjectFile("src/runner/run-paths.ts");
   assertIncludes(runner, "const reasoningTree = buildTypeScriptReasoningTree(scope, modules);");
   assertIncludes(runner, "const findings = evaluateDefaultRulePacks(reasoningTree, config);");
   assertIncludes(
@@ -68,7 +71,7 @@ test("runner, rule, and render layers stay downstream of the reasoning tree", ()
     "src/rules",
   );
 
-  const render = readProjectFile("src/render.ts");
+  const render = readProjectFile("src/render.ts") + readProjectFile("src/render/agent-snapshot.ts");
   assertIncludes(render, "const tree = report.reasoningTree;");
   assertIncludes(render, "tree.ownerBranches.map");
   assertIncludes(render, "tree.ownerDependencies");
@@ -163,7 +166,11 @@ function assertNoAny(source: string, forbidden: readonly string[], label: string
 
 function isParserLayerSource(sourcePath: string): boolean {
   const relativePath = path.relative(path.join(projectRoot, "src"), sourcePath);
-  return relativePath === "parser.ts" || relativePath.startsWith(`parser${path.sep}`);
+  return (
+    relativePath === "parser.ts" ||
+    relativePath.startsWith(`parser${path.sep}`) ||
+    relativePath.startsWith(`syntax${path.sep}`)
+  );
 }
 
 function readAll(paths: readonly string[]): string {

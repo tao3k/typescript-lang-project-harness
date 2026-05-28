@@ -1,4 +1,4 @@
 export {
-  buildExplicitTypeScriptReasoningTree,
   buildTypeScriptReasoningTree,
+  buildExplicitTypeScriptReasoningTree,
 } from "./reasoning/index.js";
