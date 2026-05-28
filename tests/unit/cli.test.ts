@@ -58,7 +58,7 @@ test("CLI supports compact, JSON, agent compact, and agent snapshot output modes
 
   const invalid = runCliCapture(["--json", "--agent-compact", "."], root);
   assert.equal(invalid.exitCode, 2);
-  assert.match(invalid.stderr, /cannot be combined/u);
+  assert.match(invalid.stderr, /cannot combine/u);
 });
 
 function runCliCapture(
