@@ -4,28 +4,29 @@ import type {
   TypeScriptReasoningTree,
   TypeScriptReasoningOwnerBranchFact,
 } from "../model.js";
+import { relativeTo, computeTopology, isRootBranch } from "./utils.js";
 
 const MAX_BRANCHES_TO_SHOW = 20;
-const MAX_EXPORTS_TO_SHOW = 8;
 
 export function renderTree(report: TypeScriptHarnessReport): string {
   const tree = report.reasoningTree;
-  const branches = tree.ownerBranches;
+  const { fanIn, fanOut } = computeTopology(report);
   const lines: string[] = [];
 
-  // ── 1. Summary ──
   lines.push(treeSummaryLine(tree));
 
-  // ── 2. Architecture domains (ordered by data-flow role) ──
-  const domains = buildArchDomains(branches, tree);
+  // Architecture domains
+  const domains = buildArchDomains(tree.ownerBranches, tree, fanIn, fanOut);
   if (domains.length > 0) {
     lines.push("");
     lines.push("Architecture:");
     for (const d of domains) {
-      const entryLabel = d.isEntry ? " ◆ entry" : "";
-      const bridgeNote = d.isBridge ? " ◆ bridge" : "";
-      lines.push(`  [${d.role}] ${d.dir}/  ${d.branchCount} branches${entryLabel}${bridgeNote}`);
-      // Show top-level export surface hints
+      const badges: string[] = [];
+      if (d.isEntry) badges.push("◆ entry");
+      if (d.isBridge) badges.push("◆ bridge");
+      lines.push(
+        `  [${d.role}] ${d.dir}/  ${d.branches} branches${badges.length > 0 ? " " + badges.join(" ") : ""}`,
+      );
       if (d.topExports.length > 0) {
         lines.push(
           `    exports: ${d.topExports.slice(0, 8).join(", ")}${d.topExports.length > 8 ? " …" : ""}`,
@@ -34,10 +35,8 @@ export function renderTree(report: TypeScriptHarnessReport): string {
     }
   }
 
-  // ── 3. Entrypoints ──
-  const entrypoints = branches.filter(
-    (b) => b.roles.includes("facade") || b.roles.includes("entrypoint"),
-  );
+  // Entrypoints
+  const entrypoints = tree.ownerBranches.filter((b) => isRootBranch(b.roles));
   if (entrypoints.length > 0) {
     lines.push("");
     lines.push("Entrypoints:");
@@ -48,10 +47,8 @@ export function renderTree(report: TypeScriptHarnessReport): string {
     }
   }
 
-  // ── 4. Remaining branches: collapse to count ──
-  const otherBranches = branches.filter(
-    (b) => !b.roles.includes("facade") && !b.roles.includes("entrypoint"),
-  );
+  // Collapsed branches
+  const otherBranches = tree.ownerBranches.filter((b) => !isRootBranch(b.roles));
   if (otherBranches.length > 0) {
     const domainHints = [
       ...new Set(otherBranches.map((b) => domainKey(relativeTo(tree, b.path)))),
@@ -61,28 +58,19 @@ export function renderTree(report: TypeScriptHarnessReport): string {
     lines.push(`  domains: ${domainHints.join(", ")}`);
   }
 
-  // ── 5. Hints ──
+  // Hints
   if (report.findings.length > 0) {
     lines.push("");
     lines.push(`use --harness to see ${report.findings.length} policy findings`);
   }
   if (tree.ownerDependencies.length > 100) {
-    lines.push(`use --topology for key dependency nodes`);
+    lines.push("use --topology for key dependency nodes");
   }
 
   return lines.join("\n") + "\n";
 }
 
-// ── Architecture role inference ────────────────────────────
-
-interface ArchDomain {
-  readonly dir: string;
-  readonly role: ArchRole;
-  readonly branchCount: number;
-  readonly topExports: readonly string[];
-  readonly isEntry: boolean;
-  readonly isBridge: boolean;
-}
+// ── Architecture roles ────────────────────────────────────
 
 type ArchRole =
   | "core"
@@ -109,11 +97,21 @@ const ROLE_ORDER: Record<ArchRole, number> = {
   internal: 9,
 };
 
+interface ArchDomain {
+  readonly dir: string;
+  readonly role: ArchRole;
+  readonly branches: number;
+  readonly topExports: readonly string[];
+  readonly isEntry: boolean;
+  readonly isBridge: boolean;
+}
+
 function buildArchDomains(
   branches: readonly TypeScriptReasoningOwnerBranchFact[],
   tree: TypeScriptReasoningTree,
+  fanIn: ReadonlyMap<string, number>,
+  fanOut: ReadonlyMap<string, number>,
 ): ArchDomain[] {
-  // Group branches by domain key
   const domainBranches = new Map<string, TypeScriptReasoningOwnerBranchFact[]>();
   for (const b of branches) {
     const key = domainKey(relativeTo(tree, b.path));
@@ -125,55 +123,30 @@ function buildArchDomains(
     }
   }
 
-  // Compute fan-in / fan-out per domain
-  const fanIn = new Map<string, number>();
-  const fanOut = new Map<string, number>();
-  for (const d of tree.ownerDependencies) {
-    if (d.isTestContext) continue;
-    const fromDomain = domainKey(relativeTo(tree, d.fromPath));
-    const toDomain = d.toPath !== undefined ? domainKey(relativeTo(tree, d.toPath)) : undefined;
-    fanOut.set(fromDomain, (fanOut.get(fromDomain) ?? 0) + 1);
-    if (toDomain !== undefined) {
-      fanIn.set(toDomain, (fanIn.get(toDomain) ?? 0) + 1);
-    }
-  }
-
   const domains: ArchDomain[] = [];
   for (const [key, bs] of domainBranches) {
     const totalExports = [...new Set(bs.flatMap((b) => b.exportNames))];
-    const hasEntrypoint = bs.some(
-      (b) => b.roles.includes("entrypoint") || b.roles.includes("facade"),
-    );
+    const hasEntry = bs.some((b) => isRootBranch(b.roles));
     const isBridge = (fanIn.get(key) ?? 0) >= 3 && (fanOut.get(key) ?? 0) >= 3;
-    const role = inferRole(key, fanIn.get(key) ?? 0, fanOut.get(key) ?? 0, hasEntrypoint);
-
     domains.push({
       dir: key,
-      role,
-      branchCount: bs.length,
+      role: inferRole(key, fanIn.get(key) ?? 0, hasEntry),
+      branches: bs.length,
       topExports: totalExports,
-      isEntry: hasEntrypoint,
+      isEntry: hasEntry,
       isBridge,
     });
   }
 
-  // Sort by role order, then by name
   return domains.sort((a, b) => {
-    const roleDiff = (ROLE_ORDER[a.role] ?? 99) - (ROLE_ORDER[b.role] ?? 99);
-    if (roleDiff !== 0) return roleDiff;
-    return a.dir.localeCompare(b.dir);
+    const diff = (ROLE_ORDER[a.role] ?? 99) - (ROLE_ORDER[b.role] ?? 99);
+    return diff !== 0 ? diff : a.dir.localeCompare(b.dir);
   });
 }
 
-function inferRole(
-  domain: string,
-  fanIn: number,
-  fanOut: number,
-  hasEntrypoint: boolean,
-): ArchRole {
+function inferRole(domain: string, _fanIn: number, hasEntry: boolean): ArchRole {
   const name = domain.toLowerCase();
-
-  // Monorepo package patterns
+  if (name.includes("model") || name.includes("types") || name.includes("schema")) return "data";
   if (name === "cli" || name.endsWith("/cli") || name.includes("packages/cli")) return "entry";
   if (name.includes("effect") && !name.includes("sql")) return "core";
   if (
@@ -187,14 +160,6 @@ function inferRole(
     return "database";
   if (name.includes("ai") || name.includes("openrouter") || name.includes("openai")) return "ai";
   if (name.includes("printer")) return "output";
-  if (name.includes("rpc")) return "process";
-  if (name.includes("cluster") || name.includes("workflow")) return "process";
-  if (name.includes("typeclass")) return "core";
-  if (name.includes("opentelemetry") || name.includes("vitest")) return "process";
-  if (name.includes("experimental")) return "process";
-
-  // Generic patterns
-  if (name.includes("model") || name.includes("types") || name.includes("schema")) return "data";
   if (name.includes("parser") || name.includes("syntax") || name.includes("lexer")) return "input";
   if (name.includes("render") || name.includes("format") || name.includes("display"))
     return "output";
@@ -202,21 +167,22 @@ function inferRole(
     name.includes("rule") ||
     name.includes("verif") ||
     name.includes("reason") ||
-    name.includes("cache")
+    name.includes("cache") ||
+    name.includes("rpc") ||
+    name.includes("cluster") ||
+    name.includes("workflow") ||
+    name.includes("opentelemetry") ||
+    name.includes("vitest") ||
+    name.includes("experimental")
   )
     return "process";
-
-  // Topology: high fan-in means foundational
-  if (fanIn >= 20) return "core";
-  if (hasEntrypoint) return "entry";
-
+  if (name.includes("typeclass")) return "core";
+  if (hasEntry) return "entry";
   return "internal";
 }
 
-// ── Helpers ────────────────────────────────────────────────
-
 function treeSummaryLine(tree: TypeScriptReasoningTree): string {
-  const roots = tree.modules.filter((m) => m.role === "entrypoint" || m.role === "facade").length;
+  const roots = tree.modules.filter((m) => isRootBranch([m.role])).length;
   const deps = tree.ownerDependencies.filter((d) => !d.isTestContext).length;
   const parts = [
     `files=${tree.modules.length}`,
@@ -235,8 +201,4 @@ function treeSummaryLine(tree: TypeScriptReasoningTree): string {
 
 function domainKey(relPath: string): string {
   return relPath.split("/").slice(0, 2).join("/");
-}
-
-function relativeTo(tree: TypeScriptReasoningTree, filePath: string): string {
-  return path.relative(tree.projectRoot, filePath) || ".";
 }
