@@ -110,22 +110,31 @@ export function renderTypeScriptProjectHarnessAgentSnapshot(
 
 function renderFinding(report: TypeScriptHarnessReport, finding: TypeScriptHarnessFinding): string {
   const location = renderLocation(report, finding);
-  const lines = [`[${finding.ruleId}] ${capitalizeSeverity(finding.severity)}: ${finding.title}`];
+  const lines: string[] = [];
+
+  // Line 1: [RULE] Severity: Title
+  lines.push(`[${finding.ruleId}] ${capitalizeSeverity(finding.severity)}: ${finding.title}`);
+
+  // Line 2: @ path:line:col
   lines.push(`@ ${location}`);
 
-  // fix: line — high-signal for agents
-  const fixHint = compactFixHint(finding);
+  // Line 3: fix: repair instruction (MENTOR-LEVEL: specific, with example)
+  const fixHint = mentorFixHint(finding);
   if (fixHint !== undefined) {
-    lines.push(`fix: ${fixHint}`);
+    lines.push(`${fixHint}`);
   }
 
-  // line: source context
+  // Line 4: code: source context (MENTOR-LEVEL: shows agent the actual code)
   if (finding.sourceLine !== undefined) {
-    lines.push(`line: ${finding.location.line} | ${finding.sourceLine.trimEnd()}`);
+    lines.push(`code: ${finding.sourceLine.trimEnd()}`);
   }
 
+  // Line 5: Help: parser fact
   lines.push(`Help: ${compactProjectRootMentions(report.reasoningTree, finding.summary)}`);
+
+  // Line 6: Contract: the principle
   lines.push(`Contract: ${finding.requirement}`);
+
   return lines.join("\n");
 }
 
@@ -133,23 +142,52 @@ function capitalizeSeverity(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-/** Compact one-line fix hint from the finding label/summary. */
-function compactFixHint(finding: TypeScriptHarnessFinding): string | undefined {
-  // Derive a concise fix from the rule label
+/** Mentor-level fix hint: specific instruction + real-world example. */
+function mentorFixHint(finding: TypeScriptHarnessFinding): string | undefined {
   switch (finding.label) {
     case "missing module doc":
-      return "add a module-level JSDoc comment describing the public API";
+      return (
+        `  fix: add a module-level JSDoc comment describing the public API\n` +
+        `  example: Effect-TS's Brand.ts opens with 20 lines explaining refined vs nominal`
+      );
     case "undocumented error types":
-      return "add JSDoc explaining when each error variant occurs";
+      return (
+        `  fix: add JSDoc explaining when each error variant occurs\n` +
+        `  example: Effect-TS's ConfigError.ts documents MissingData, InvalidData conditions`
+      );
     case "high facade export density":
-      return "split into sub-domain barrels";
+      return (
+        `  fix: split into sub-domain barrels (Schema.ts, Cause.ts, Fiber.ts)\n` +
+        `  example: Effect-TS's src/ has 100+ self-contained sub-domain barrels`
+      );
     case "oversized project module":
-      return "split the file by concern or extract helpers";
+      return (
+        `  fix: split the file by concern or extract helper modules\n` +
+        `  example: Effect-TS's Effect.ts delegates to internal/core.ts, internal/core-effect.ts`
+      );
     case "public function nested algorithm":
-      return "extract nested logic into flat helper functions";
+      return (
+        `  fix: extract nested logic into flat helper functions\n` +
+        `  example: Effect-TS's fiberRuntime.ts extracts ScopeImpl and FiberRuntime as separate classes`
+      );
     case "dense named imports":
-      return "replace with a namespace import";
+      return (
+        `  fix: replace with namespace import: \`import * as X from './module.js'\`\n` +
+        `  example: Effect-TS uses \`import * as Arr from './Array.js'\` everywhere`
+      );
+    case "unresolved project import edge":
+      return (
+        `  fix: verify the import path resolves to an existing file or add the dependency\n` +
+        `  verify: check that \`${finding.summary.split("'")[1] ?? "the import"}\` exists in the project`
+      );
     default:
+      // Generic fallback: extract fix from summary
+      if (finding.summary.includes("unresolved")) {
+        return `  fix: resolve the import path or add the missing dependency`;
+      }
+      if (finding.summary.includes("missing") || finding.summary.includes("without")) {
+        return `  fix: open the target and apply the rule contract`;
+      }
       return undefined;
   }
 }
