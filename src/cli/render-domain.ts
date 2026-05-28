@@ -11,6 +11,13 @@ export function renderDomain(report: TypeScriptHarnessReport, domainPath: string
   const tree = report.reasoningTree;
   const resolved = path.resolve(tree.projectRoot, domainPath);
 
+  // Compute fan-in
+  const fanIn = new Map<string, number>();
+  for (const d of tree.ownerDependencies) {
+    if (d.isTestContext || d.toPath === undefined) continue;
+    fanIn.set(d.toPath, (fanIn.get(d.toPath) ?? 0) + 1);
+  }
+
   // Collect branch paths in this domain
   const domainBranches = tree.ownerBranches.filter(
     (b) => b.path.startsWith(resolved) || relativeTo(tree, b.path).startsWith(domainPath),
@@ -31,9 +38,11 @@ export function renderDomain(report: TypeScriptHarnessReport, domainPath: string
       const b = bs[0]!;
       const rel = relativeTo(tree, b.path);
       const exports = b.exportNames.slice(0, 8).join(", ");
+      const fi = fanIn.get(b.path) ?? 0;
+      const fiLabel = fi > 0 ? ` ←${fi}` : "";
       const edgeCount = b.childEdges.length;
       const deps = edgeCount > 0 ? ` deps=${edgeCount}` : "";
-      lines.push(`  ${rel}  [${b.roles.join(",")}]  exports: ${exports}${deps}`);
+      lines.push(`  ${rel}${fiLabel}  [${b.roles.join(",")}]  exports: ${exports}${deps}`);
     } else {
       const totalExports = bs.reduce((sum, b) => sum + b.exportNames.length, 0);
       const totalEdges = bs.reduce((sum, b) => sum + b.childEdges.length, 0);
@@ -73,6 +82,27 @@ export function renderDomain(report: TypeScriptHarnessReport, domainPath: string
       lines.push(
         `    → [${domainKey}] ${files.slice(0, 5).join(", ")}${files.length > 5 ? ` +${files.length - 5}` : ""}`,
       );
+    }
+  }
+
+  // ── Architecture grouping (#7): high fan-in, high fan-out, bridges ──
+  const fanOut = new Map<string, number>();
+  for (const d of tree.ownerDependencies) {
+    if (d.isTestContext) continue;
+    fanOut.set(d.fromPath, (fanOut.get(d.fromPath) ?? 0) + 1);
+  }
+
+  const foundations = domainBranches.filter(b => (fanIn.get(b.path) ?? 0) >= 10);
+  const orchestrators = domainBranches.filter(b => (fanOut.get(b.path) ?? 0) >= 5);
+  if (foundations.length > 0 || orchestrators.length > 0) {
+    lines.push("");
+    if (foundations.length > 0) {
+      const names = foundations.slice(0, 5).map(b => path.basename(b.path, ".ts"));
+      lines.push(`  foundations: ${names.join(", ")}${foundations.length > 5 ? ` +${foundations.length - 5}` : ""}`);
+    }
+    if (orchestrators.length > 0) {
+      const names = orchestrators.slice(0, 5).map(b => path.basename(b.path, ".ts"));
+      lines.push(`  orchestrators: ${names.join(", ")}${orchestrators.length > 5 ? ` +${orchestrators.length - 5}` : ""}`);
     }
   }
 

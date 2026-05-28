@@ -3,7 +3,14 @@ import type { TypeScriptHarnessReport, TypeScriptReasoningTree } from "../model.
 
 export function renderDeps(report: TypeScriptHarnessReport, targetPath: string): string {
   const info = buildDepsInfo(report, targetPath);
-  return formatDepsLines(info).join("\n") + "\n";
+  const fanIn = computeFanIn(report, info.modulePath);
+  return formatDepsLines(info, fanIn).join("\n") + "\n";
+}
+
+function computeFanIn(report: TypeScriptHarnessReport, modulePath: string): number {
+  return report.reasoningTree.ownerDependencies.filter(
+    (d) => !d.isTestContext && d.toPath === modulePath,
+  ).length;
 }
 
 interface DepsInfo {
@@ -44,8 +51,9 @@ function buildDepsInfo(report: TypeScriptHarnessReport, targetPath: string): Dep
   };
 }
 
-function formatDepsLines(info: DepsInfo): string[] {
-  const lines: string[] = [`[deps] ${info.relPath}`];
+function formatDepsLines(info: DepsInfo, fanIn: number = 0): string[] {
+  const fiLabel = fanIn > 0 ? `  ←${fanIn} importers` : "";
+  const lines: string[] = [`[deps] ${info.relPath}${fiLabel}`];
 
   if (info.roles.length > 0) {
     lines.push(`  roles: ${info.roles.join(", ")}`);

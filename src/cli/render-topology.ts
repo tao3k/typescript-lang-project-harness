@@ -19,6 +19,12 @@ function isTopologyNoise(filePath: string): boolean {
   return TOPOLOGY_SKIP_PATTERNS.some((p) => filePath.includes(p));
 }
 
+/** Check if a keyword suggests benchmark/performance exploration. */
+export function isPerformanceTopic(topic: string): boolean {
+  const perfWords = ["benchmark", "performance", "perf", "optimize", "micro"];
+  return perfWords.some(w => topic.toLowerCase().includes(w));
+}
+
 export function renderTopology(report: TypeScriptHarnessReport): string {
   const tree = report.reasoningTree;
   const deps = tree.ownerDependencies.filter(
