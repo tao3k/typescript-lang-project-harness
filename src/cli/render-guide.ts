@@ -11,37 +11,41 @@ const AGENT_GUIDE = `# Reasoning Tree — Agent Guide
 
   1. --stats         One-line project identity (files, roots, branches, deps)
   2. --tree          Architecture map: domains by role, entrypoints
-  3. --domain <dir>  Drill into a domain: branches, exports, internal deps
+  3. --domain <dir>  Drill into a domain: branches, exports, internal deps, boundary
   4. --search <pat>  Find files by export name or path pattern
-  5. --deps <file>   Trace imports and importers of a specific file
-  6. --topology      Key nodes: foundations (most imported), orchestrators (most imports)
-  7. --guide <topic> Vocabulary discovery + domain matching
-  8. --harness       Policy findings (use --harness --all for TS diagnostics)
+  5. --deps <file>   Trace imports and importers of a file (grouped by namespace)
+  6. --topology      Key nodes: foundations, orchestrators, bridges, orphans
+  7. --guide <topic> Vocabulary discovery + domain matching + refinement hints
+  8. --harness       Policy findings (add --all for TS diagnostics)
 
 ## Signal Reference
 
   [core] [platform] [database] [ai] [process] [output] [entry]
-    Architecture role inferred from package name + dependency position
-  [facade]   Re-exports from sub-modules (barrel file pattern)
-  [entrypoint]  Runtime or binary entry point
-  ←N         Fan-in: imported by N other modules (shown when N >= 3)
-  ·doc       Has module-level JSDoc content
-  ★doc      High-quality documentation (> 20 words)
-  ◆ bridge   Both high fan-in and high fan-out (critical node)
+    Architecture role — inferred from package name + dependency position
+  [facade]     Re-exports from sub-modules (barrel/index pattern)
+  [entrypoint] Runtime or binary entry point
+  ←N           Fan-in: imported by N modules (shown when N >= 3)
+  ·doc         Has module-level JSDoc content
+  ★doc        High-quality documentation (> 20 meaningful words)
+  ◆ bridge     Both high fan-in and high fan-out (critical node)
 
 ## Exploration Patterns
 
-  To understand a monorepo:
+  Understand a monorepo:
     --stats → --tree → --domain <package> → --deps <index.ts>
-
-  To find a feature:
-    --guide <topic> → --search <keyword> → --deps <top result>
-
-  To trace a data flow:
+  Find a feature:
+    --guide <topic> → note vocabulary → --search <keyword> → --deps <top>
+  Trace a data flow:
     --deps <source> → note importers → --deps <each importer>
+  Assess quality:
+    --harness → note rules → --deps <file with findings> → fix
 
-  To assess quality:
-    --harness → --deps <file with findings> → apply fixes`;
+## Tips
+
+  - Start broad, narrow iteratively: --tree → --domain → --search → --deps
+  - Use vocabulary: --guide <topic> reveals project language for refinement
+  - Read signals first: ←N (foundation), ·doc (where docs are)
+  - Default (no flags) shows this guide`;
 
 export function renderGuide(report: TypeScriptHarnessReport, topic: string): string {
   const tree = report.reasoningTree;
