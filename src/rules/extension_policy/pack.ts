@@ -113,6 +113,16 @@ export const TS_EXT_EFFECT_R012: TypeScriptHarnessRule = {
   labels: { surface: "extension", parser: "native-syntax", extension: "effect" },
 };
 
+export const TS_EXT_EFFECT_R013: TypeScriptHarnessRule = {
+  ruleId: "TS-EXT-EFFECT-R013",
+  packId: "typescript.extension_policy",
+  severity: "warning",
+  title: "Effect fiber fork should propagate FiberRefs context",
+  requirement:
+    "When forking an Effect fiber, the child fiber should explicitly inherit FiberRef values from the parent. Without explicit propagation (`FiberRefs.forkAs` or `Effect.forkWith`), the child fiber may lose critical context like OpenTelemetry spans, log annotations, or concurrency limits. Pattern from Effect-TS: FiberRefs.ts provides `forkAs` and `joinAs` for explicit context propagation.",
+  labels: { surface: "extension", parser: "reasoning-tree", extension: "effect" },
+};
+
 export function typeScriptExtensionPolicyRules(): readonly TypeScriptHarnessRule[] {
   return [
     TS_EXT_EFFECT_R001,
@@ -127,6 +137,7 @@ export function typeScriptExtensionPolicyRules(): readonly TypeScriptHarnessRule
     TS_EXT_EFFECT_R010,
     TS_EXT_EFFECT_R011,
     TS_EXT_EFFECT_R012,
+    TS_EXT_EFFECT_R013,
     ...typeScriptReactExtensionPolicyRules(),
     ...shadcnPolicyRules(),
   ];

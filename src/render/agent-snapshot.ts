@@ -190,6 +190,11 @@ function mentorFixHint(finding: TypeScriptHarnessFinding): string | undefined {
         `  fix: replace \`Effect<A, never, R>\` with \`Effect<A, ServiceError, R>\`\n` +
         `  example: Effect-TS's ConfigProvider.ts declares \`Effect<A, ConfigError, R>\` explicitly`
       );
+    case "Effect fiber fork without FiberRefs propagation":
+      return (
+        `  fix: use \`FiberRefs.forkAs\` or \`Effect.forkWith\` to propagate FiberRef context\n` +
+        `  example: Effect-TS's FiberRefs.ts provides forkAs/joinAs for explicit context inheritance`
+      );
     default:
       // Generic fallback: extract fix from summary
       if (finding.summary.includes("unresolved")) {
