@@ -52,7 +52,7 @@ function buildDepsInfo(report: TypeScriptHarnessReport, targetPath: string): Dep
 }
 
 function formatDepsLines(info: DepsInfo, fanIn: number = 0): string[] {
-  const fiLabel = fanIn > 0 ? `  ←${fanIn} importers` : "";
+  const fiLabel = fanIn >= 3 ? `  ←${fanIn} importers` : ""; // Only show meaningful fan-in
   const lines: string[] = [`[deps] ${info.relPath}${fiLabel}`];
 
   if (info.roles.length > 0) {

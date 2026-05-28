@@ -5,8 +5,52 @@ import type {
   TypeScriptReasoningOwnerBranchFact,
 } from "../model.js";
 
+const AGENT_GUIDE = `# Reasoning Tree — Agent Guide
+
+## Progressive Exploration Path
+
+  1. --stats         One-line project identity (files, roots, branches, deps)
+  2. --tree          Architecture map: domains by role, entrypoints
+  3. --domain <dir>  Drill into a domain: branches, exports, internal deps
+  4. --search <pat>  Find files by export name or path pattern
+  5. --deps <file>   Trace imports and importers of a specific file
+  6. --topology      Key nodes: foundations (most imported), orchestrators (most imports)
+  7. --guide <topic> Vocabulary discovery + domain matching
+  8. --harness       Policy findings (use --harness --all for TS diagnostics)
+
+## Signal Reference
+
+  [core] [platform] [database] [ai] [process] [output] [entry]
+    Architecture role inferred from package name + dependency position
+  [facade]   Re-exports from sub-modules (barrel file pattern)
+  [entrypoint]  Runtime or binary entry point
+  ←N         Fan-in: imported by N other modules (shown when N >= 3)
+  ·doc       Has module-level JSDoc content
+  ★doc      High-quality documentation (> 20 words)
+  ◆ bridge   Both high fan-in and high fan-out (critical node)
+
+## Exploration Patterns
+
+  To understand a monorepo:
+    --stats → --tree → --domain <package> → --deps <index.ts>
+
+  To find a feature:
+    --guide <topic> → --search <keyword> → --deps <top result>
+
+  To trace a data flow:
+    --deps <source> → note importers → --deps <each importer>
+
+  To assess quality:
+    --harness → --deps <file with findings> → apply fixes`;
+
 export function renderGuide(report: TypeScriptHarnessReport, topic: string): string {
   const tree = report.reasoningTree;
+
+  // No topic: show agent guide
+  if (topic.length === 0) {
+    return AGENT_GUIDE + "\n";
+  }
+
   const lines: string[] = [`[guide] "${topic}"`];
   const topicLower = topic.toLowerCase();
   // Use the topic directly — no hardcoded synonym expansion.

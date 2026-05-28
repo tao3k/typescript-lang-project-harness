@@ -39,7 +39,7 @@ export function renderDomain(report: TypeScriptHarnessReport, domainPath: string
       const rel = relativeTo(tree, b.path);
       const exports = b.exportNames.slice(0, 8).join(", ");
       const fi = fanIn.get(b.path) ?? 0;
-      const fiLabel = fi > 0 ? ` ←${fi}` : "";
+      const fiLabel = fi >= 3 ? ` ←${fi}` : ""; // Only show meaningful fan-in
       const edgeCount = b.childEdges.length;
       const deps = edgeCount > 0 ? ` deps=${edgeCount}` : "";
       lines.push(`  ${rel}${fiLabel}  [${b.roles.join(",")}]  exports: ${exports}${deps}`);

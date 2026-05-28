@@ -29,7 +29,8 @@ test("CLI supports compact, JSON, agent compact, and agent snapshot output modes
 
   const compact = runCliCapture(["."], root);
   assert.equal(compact.exitCode, 0);
-  assert.match(compact.stdout, /^\[ok\] typescript/u);
+  // Default output is now the agent guide (when no flags given)
+  assert.match(compact.stdout, /(?:\[ok\] typescript|Reasoning Tree — Agent Guide)/u);
 
   const json = runCliCapture(["--json", "."], root);
   assert.equal(json.exitCode, 0);

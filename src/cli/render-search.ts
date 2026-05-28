@@ -51,7 +51,8 @@ export function renderSearch(report: TypeScriptHarnessReport, pattern: string): 
       // Doc quality signal (#2)
       const docSignal = docQuality(r.branch.path);
       const docLabel = docSignal > 20 ? " ★doc" : docSignal > 0 ? " ·doc" : "";
-      lines.push(`    ${r.relPath}${roles}${docLabel}  ←${r.fanIn}  → ${exports}${more}`);
+      const fiLabel = r.fanIn >= 3 ? ` ←${r.fanIn}` : "";
+      lines.push(`    ${r.relPath}${roles}${docLabel}${fiLabel}  → ${exports}${more}`);
     }
   }
 

@@ -153,7 +153,13 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
         } else if (i > 0 && argv[i - 1] === "--search") {
           searchPattern = arg;
         } else if (i > 0 && argv[i - 1] === "--guide") {
-          guideTopic = arg;
+          // Only treat as topic if it doesn't look like a project root
+          if (arg === "." || arg === ".." || arg.includes("/")) {
+            // Looks like a path — treat as project root, leave guideTopic empty
+            if (projectRoot === undefined) projectRoot = arg;
+          } else {
+            guideTopic = arg;
+          }
         } else if (projectRoot === undefined) {
           projectRoot = arg;
         } else {
@@ -260,6 +266,13 @@ function renderCliOutput(
   }
   if (args.showGuide) {
     return renderGuide(report, args.guideTopic ?? "");
+  }
+  // Default when no flags: show agent guide as starting point
+  if (!args.showJson && !args.showAgentCompact && !args.showAgentSnapshot &&
+      !args.showTree && !args.showHarness && !args.showStats &&
+      !args.showTopology && !args.showDeps && !args.showDomain &&
+      !args.showSearch && !args.showGuide) {
+    return renderGuide(report, "");
   }
   if (args.showSearch) {
     return renderSearch(report, args.searchPattern ?? "");

@@ -93,15 +93,19 @@ export function renderTopology(report: TypeScriptHarnessReport): string {
     }
   }
 
-  // Orphaned
-  const orphaned = tree.orphanedSourceFiles;
-  if (orphaned.length > 0) {
+  // Orphaned (exclude doc-site patterns)
+  const docSitePatterns = ["/apps/", "/www/", "/docs/", "/examples/", "/public/"];
+  const isDocSite = (f: string) => docSitePatterns.some(p => f.includes(p));
+  const meaningfulOrphans = tree.orphanedSourceFiles.filter(f => !isDocSite(f));
+  if (meaningfulOrphans.length > 0) {
+    const total = tree.orphanedSourceFiles.length;
+    const docSiteNote = total > meaningfulOrphans.length ? ` (${total - meaningfulOrphans.length} doc-site excluded)` : "";
     lines.push("");
-    lines.push(`Orphaned: ${orphaned.length} files`);
-    for (const o of orphaned.slice(0, 5)) {
+    lines.push(`Orphaned: ${meaningfulOrphans.length} files${docSiteNote}`);
+    for (const o of meaningfulOrphans.slice(0, 5)) {
       lines.push(`  ${relativeTo(tree, o)}`);
     }
-    if (orphaned.length > 5) lines.push(`  ... +${orphaned.length - 5} more`);
+    if (meaningfulOrphans.length > 5) lines.push(`  ... +${meaningfulOrphans.length - 5} more`);
   }
 
   return lines.join("\n") + "\n";
