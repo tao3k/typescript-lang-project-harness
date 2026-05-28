@@ -58,6 +58,7 @@ test("rule catalog keeps deterministic pack order and agent advice severity", ()
       "TS-AGENT-R012:info",
       "TS-AGENT-R013:info",
       "TS-AGENT-R014:info",
+      "TS-AGENT-R015:info",
     ],
   );
   assert.deepEqual(
@@ -122,6 +123,7 @@ test("agent policy reports unresolved project imports without blocking", () => {
       "TS-AGENT-R012",
       "TS-AGENT-R013",
       "TS-AGENT-R014",
+      "TS-AGENT-R015",
     ],
   );
   assert.deepEqual(

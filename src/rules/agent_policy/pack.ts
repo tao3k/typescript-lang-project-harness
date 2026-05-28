@@ -115,6 +115,16 @@ const TS_AGENT_R014: TypeScriptHarnessRule = {
   labels: { surface: "agent", parser: "reasoning-tree" },
 };
 
+const TS_AGENT_R015: TypeScriptHarnessRule = {
+  ruleId: "TS-AGENT-R015",
+  packId: "typescript.agent_policy",
+  severity: "info",
+  title: "Facade module exports too many symbols without organization",
+  requirement:
+    "A facade (barrel/index) with >30 re-exports should organize symbols into namespaced sub-modules or split the facade. Pattern from Effect-TS: each subdomain has its own barrel (e.g., Schema.ts, Cause.ts).",
+  labels: { surface: "agent", parser: "reasoning-tree" },
+};
+
 export function typeScriptAgentPolicyRules(): readonly TypeScriptHarnessRule[] {
   return [
     TS_AGENT_R001,
@@ -131,6 +141,7 @@ export function typeScriptAgentPolicyRules(): readonly TypeScriptHarnessRule[] {
     TS_AGENT_R012,
     TS_AGENT_R013,
     TS_AGENT_R014,
+    TS_AGENT_R015,
   ];
 }
 
@@ -156,7 +167,8 @@ export function evaluateAgentPolicyRules(
     .concat(evaluateNativeAlgorithmShapeAdvice(reasoningTree))
     .concat(evaluateNativeDataShapeAdvice(reasoningTree))
     .concat(evaluateMissingModuleDoc(reasoningTree))
-    .concat(evaluateNamedImportDensity(reasoningTree));
+    .concat(evaluateNamedImportDensity(reasoningTree))
+    .concat(evaluateFacadeExportDensity(reasoningTree));
 }
 
 function evaluatePackageEntryAdvice(
@@ -464,6 +476,26 @@ function evaluateNamedImportDensity(
       }));
     })
     .slice(0, 20);
+}
+
+/** R015: Facade modules with excessive exports. */
+function evaluateFacadeExportDensity(
+  reasoningTree: TypeScriptReasoningTree,
+): TypeScriptHarnessFinding[] {
+  return reasoningTree.ownerBranches
+    .filter((b) => b.roles.includes("facade") && b.exportNames.length > 30)
+    .slice(0, 10)
+    .map((b) => ({
+      ruleId: TS_AGENT_R015.ruleId,
+      packId: TS_AGENT_R015.packId,
+      severity: TS_AGENT_R015.severity,
+      title: TS_AGENT_R015.title,
+      summary: `Facade re-exports ${b.exportNames.length} symbols — consider splitting into namespaced sub-modules.`,
+      location: { path: b.path, line: 1, column: 0 },
+      requirement: TS_AGENT_R015.requirement,
+      label: "high facade export density",
+      labels: TS_AGENT_R015.labels,
+    }));
 }
 
 function findingSortKey(finding: TypeScriptHarnessFinding): string {
