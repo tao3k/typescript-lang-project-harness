@@ -95,6 +95,26 @@ const TS_AGENT_R008: TypeScriptHarnessRule = {
   labels: { surface: "agent", parser: "native-syntax" },
 };
 
+const TS_AGENT_R013: TypeScriptHarnessRule = {
+  ruleId: "TS-AGENT-R013",
+  packId: "typescript.agent_policy",
+  severity: "info",
+  title: "Exported module should document its public API intent",
+  requirement:
+    "Modules exporting a public API (>= 3 exports) should carry a module-level JSDoc describing the module's responsibility and contract. Pattern from Effect-TS: every source file begins with a multi-paragraph module doc.",
+  labels: { surface: "agent", parser: "reasoning-tree" },
+};
+
+const TS_AGENT_R014: TypeScriptHarnessRule = {
+  ruleId: "TS-AGENT-R014",
+  packId: "typescript.agent_policy",
+  severity: "info",
+  title: "Module imports many symbols from same source without namespace grouping",
+  requirement:
+    "When a module imports 5+ named symbols from the same dependency, prefer a namespace import (`import * as X from '...'`) for readability. Pattern from Effect-TS: all local deps use namespace imports.",
+  labels: { surface: "agent", parser: "reasoning-tree" },
+};
+
 export function typeScriptAgentPolicyRules(): readonly TypeScriptHarnessRule[] {
   return [
     TS_AGENT_R001,
@@ -109,6 +129,8 @@ export function typeScriptAgentPolicyRules(): readonly TypeScriptHarnessRule[] {
     TS_AGENT_R010,
     TS_AGENT_R011,
     TS_AGENT_R012,
+    TS_AGENT_R013,
+    TS_AGENT_R014,
   ];
 }
 
@@ -132,7 +154,9 @@ export function evaluateAgentPolicyRules(
     .concat(evaluateFacadeIntentAdvice(reasoningTree))
     .concat(evaluateNativeApiShapeAdvice(reasoningTree))
     .concat(evaluateNativeAlgorithmShapeAdvice(reasoningTree))
-    .concat(evaluateNativeDataShapeAdvice(reasoningTree));
+    .concat(evaluateNativeDataShapeAdvice(reasoningTree))
+    .concat(evaluateMissingModuleDoc(reasoningTree))
+    .concat(evaluateNamedImportDensity(reasoningTree));
 }
 
 function evaluatePackageEntryAdvice(
@@ -385,6 +409,61 @@ function sourceModules(tree: TypeScriptReasoningTree): readonly TypeScriptReason
       moduleReport.role !== "declaration" &&
       moduleReport.role !== "config",
   );
+}
+
+/** R013: Modules with exports but no module-level documentation. */
+function evaluateMissingModuleDoc(
+  reasoningTree: TypeScriptReasoningTree,
+): TypeScriptHarnessFinding[] {
+  return reasoningTree.ownerBranches
+    .filter(
+      (b) =>
+        b.exportNames.length >= 3 &&
+        !b.hasIntentDoc &&
+        (b.roles.includes("source") || b.roles.includes("facade")),
+    )
+    .slice(0, 30) // cap to avoid flooding
+    .map((b) => ({
+      ruleId: TS_AGENT_R013.ruleId,
+      packId: TS_AGENT_R013.packId,
+      severity: TS_AGENT_R013.severity,
+      title: TS_AGENT_R013.title,
+      summary: `${b.exportNames.length} exports without a module-level JSDoc describing the public API intent.`,
+      location: { path: b.path, line: 1, column: 0 },
+      requirement: TS_AGENT_R013.requirement,
+      label: "missing module doc",
+      labels: TS_AGENT_R013.labels,
+    }));
+}
+
+/** R014: Files importing many symbols from the same dependency. */
+function evaluateNamedImportDensity(
+  reasoningTree: TypeScriptReasoningTree,
+): TypeScriptHarnessFinding[] {
+  return reasoningTree.ownerBranches
+    .filter((b) => b.roles.includes("source") || b.roles.includes("facade"))
+    .flatMap((b) => {
+      // Group imports by module specifier
+      const groups = new Map<string, number>();
+      for (const dep of reasoningTree.ownerDependencies) {
+        if (dep.fromPath !== b.path || dep.isTestContext) continue;
+        groups.set(dep.moduleSpecifier, (groups.get(dep.moduleSpecifier) ?? 0) + 1);
+      }
+      const denseImports = [...groups.entries()].filter(([, count]) => count >= 5);
+      if (denseImports.length === 0) return [];
+      return denseImports.slice(0, 3).map(([specifier, count]) => ({
+        ruleId: TS_AGENT_R014.ruleId,
+        packId: TS_AGENT_R014.packId,
+        severity: TS_AGENT_R014.severity,
+        title: TS_AGENT_R014.title,
+        summary: `Imports ${count} symbols from '${specifier}' — consider a namespace import (\`import * as X from '${specifier}'\`).`,
+        location: { path: b.path, line: 1, column: 0 },
+        requirement: TS_AGENT_R014.requirement,
+        label: "dense named imports",
+        labels: TS_AGENT_R014.labels,
+      }));
+    })
+    .slice(0, 20);
 }
 
 function findingSortKey(finding: TypeScriptHarnessFinding): string {

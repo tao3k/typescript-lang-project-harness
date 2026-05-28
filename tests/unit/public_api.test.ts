@@ -381,7 +381,7 @@ test("public runner renders compact agent snapshots from parser-native facts", (
 
   assert.equal(api.isTypeScriptHarnessClean(report), true);
   assert.equal(renderedProjectSnapshot, snapshot);
-  assert.match(snapshot, /^Modules: source=3 branches=3 deps=3 paths=1 findings=1/u);
+  assert.match(snapshot, /^Modules: source=3 branches=3 deps=3 paths=1 findings=2/u);
   assert.match(snapshot, /OwnerBranches:/u);
   assert.match(snapshot, /src\/index\.ts \[root, facade\] owner=src/u);
   assert.match(snapshot, /OwnerDependencies:/u);
