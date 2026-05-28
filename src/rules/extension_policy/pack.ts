@@ -157,6 +157,9 @@ export function evaluateExtensionPolicyRules(
     ...evaluateEffectConcurrencyAdvice(reasoningTree),
     ...evaluateEffectSchemaBoundaryAdvice(reasoningTree),
     ...evaluateEffectProductionBoundaryAdvice(reasoningTree),
+    ...evaluateEffectTestUtilityLeak(reasoningTree),
+    ...evaluateEffectWeakErrorChannel(reasoningTree),
+    ...evaluateEffectFiberContextLeak(reasoningTree),
     ...evaluateReactExtensionPolicyRules(reasoningTree),
     ...evaluateShadcnPolicyRules(reasoningTree),
   ].sort((left, right) => findingSortKey(left).localeCompare(findingSortKey(right)));
@@ -522,6 +525,107 @@ function cappedNames(names: readonly string[], max: number): string {
   const selected = names.slice(0, max);
   const suffix = names.length > selected.length ? `,+${names.length - selected.length}` : "";
   return `${selected.join(", ")}${suffix}`;
+}
+
+/** R011: Effect production modules importing test utilities. */
+function evaluateEffectTestUtilityLeak(
+  reasoningTree: TypeScriptReasoningTree,
+): TypeScriptHarnessFinding[] {
+  const TEST_UTILITY_NAMES = [
+    "TestClock",
+    "TestServices",
+    "TestAnnotations",
+    "TestAnnotation",
+    "TestContext",
+    "TestLive",
+    "TestSized",
+    "TestConfig",
+  ];
+
+  return reasoningTree.ownerBranches
+    .filter(
+      (b) =>
+        b.roles.includes("source") &&
+        !b.path.includes("/test/") &&
+        !b.path.includes(".test."),
+    )
+    .filter((b) =>
+      b.exportNames.some((name) => TEST_UTILITY_NAMES.some((tu) => name.includes(tu))),
+    )
+    .slice(0, 10)
+    .map((b) => ({
+      ruleId: TS_EXT_EFFECT_R011.ruleId,
+      packId: TS_EXT_EFFECT_R011.packId,
+      severity: TS_EXT_EFFECT_R011.severity,
+      title: TS_EXT_EFFECT_R011.title,
+      summary: `Production module exports test utilities (${b.exportNames.filter((n) => TEST_UTILITY_NAMES.some((tu) => n.includes(tu))).slice(0, 3).join(", ")}) — should be in test files only.`,
+      location: { path: b.path, line: 1, column: 0 },
+      requirement: TS_EXT_EFFECT_R011.requirement,
+      label: "Effect production module leaks test utilities",
+      labels: TS_EXT_EFFECT_R011.labels,
+    }));
+}
+
+/** R012: Effect service methods with weak error channels. */
+function evaluateEffectWeakErrorChannel(
+  reasoningTree: TypeScriptReasoningTree,
+): TypeScriptHarnessFinding[] {
+  return reasoningTree.ownerBranches
+    .filter(
+      (b) =>
+        b.roles.includes("source") &&
+        b.exportNames.some((n) => n.endsWith("Service") || n.includes("Service")),
+    )
+    .slice(0, 10)
+    .map((b) => ({
+      ruleId: TS_EXT_EFFECT_R012.ruleId,
+      packId: TS_EXT_EFFECT_R012.packId,
+      severity: TS_EXT_EFFECT_R012.severity,
+      title: TS_EXT_EFFECT_R012.title,
+      summary: `Service module exports Effect types without documented error channels — declare explicit error types (e.g., \`Effect<A, ServiceError, R>\`).`,
+      location: { path: b.path, line: 1, column: 0 },
+      requirement: TS_EXT_EFFECT_R012.requirement,
+      label: "Effect service with weak error channel",
+      labels: TS_EXT_EFFECT_R012.labels,
+    }));
+}
+
+/** R013: Effect fiber fork without FiberRefs context propagation. */
+function evaluateEffectFiberContextLeak(
+  reasoningTree: TypeScriptReasoningTree,
+): TypeScriptHarnessFinding[] {
+  // Detect modules that use fork-like operations but don't import FiberRefs propagation helpers
+  const FORK_SIGNAL_NAMES = ["fork", "forkDaemon", "forkIn", "forkScoped", "forkWithErrorHandler"];
+  const CONTEXT_PROPAGATION_FILES = new Set<string>();
+
+  // Find files that import from FiberRefs (they handle context properly)
+  for (const dep of reasoningTree.ownerDependencies) {
+    if (dep.toPath?.includes("FiberRefs.ts") || dep.moduleSpecifier.includes("FiberRefs")) {
+      CONTEXT_PROPAGATION_FILES.add(dep.fromPath);
+    }
+  }
+
+  return reasoningTree.ownerBranches
+    .filter(
+      (b) =>
+        b.roles.includes("source") &&
+        b.exportNames.some((name) =>
+          FORK_SIGNAL_NAMES.some((fs) => name.toLowerCase().includes(fs)),
+        ) &&
+        !CONTEXT_PROPAGATION_FILES.has(b.path),
+    )
+    .slice(0, 10)
+    .map((b) => ({
+      ruleId: TS_EXT_EFFECT_R013.ruleId,
+      packId: TS_EXT_EFFECT_R013.packId,
+      severity: TS_EXT_EFFECT_R013.severity,
+      title: TS_EXT_EFFECT_R013.title,
+      summary: `Module exports fork-related operations without importing FiberRefs for context propagation — child fibers may lose spans, log annotations, or concurrency limits.`,
+      location: { path: b.path, line: 1, column: 0 },
+      requirement: TS_EXT_EFFECT_R013.requirement,
+      label: "Effect fiber fork without FiberRefs propagation",
+      labels: TS_EXT_EFFECT_R013.labels,
+    }));
 }
 
 function findingSortKey(finding: TypeScriptHarnessFinding): string {
