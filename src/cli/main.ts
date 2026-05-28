@@ -268,10 +268,19 @@ function renderCliOutput(
     return renderGuide(report, args.guideTopic ?? "");
   }
   // Default when no flags: show agent guide as starting point
-  if (!args.showJson && !args.showAgentCompact && !args.showAgentSnapshot &&
-      !args.showTree && !args.showHarness && !args.showStats &&
-      !args.showTopology && !args.showDeps && !args.showDomain &&
-      !args.showSearch && !args.showGuide) {
+  if (
+    !args.showJson &&
+    !args.showAgentCompact &&
+    !args.showAgentSnapshot &&
+    !args.showTree &&
+    !args.showHarness &&
+    !args.showStats &&
+    !args.showTopology &&
+    !args.showDeps &&
+    !args.showDomain &&
+    !args.showSearch &&
+    !args.showGuide
+  ) {
     return renderGuide(report, "");
   }
   if (args.showSearch) {

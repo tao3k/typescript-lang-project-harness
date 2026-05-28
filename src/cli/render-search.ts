@@ -11,7 +11,12 @@ export function renderSearch(report: TypeScriptHarnessReport, pattern: string): 
   const branches = tree.ownerBranches;
   const fanIn = computeFanIn(tree);
 
-  type SearchResult = { branch: (typeof branches)[number]; score: number; fanIn: number; relPath: string };
+  type SearchResult = {
+    branch: (typeof branches)[number];
+    score: number;
+    fanIn: number;
+    relPath: string;
+  };
   const results: SearchResult[] = [];
   for (const b of branches) {
     if (b.roles.includes("config")) continue;
@@ -69,7 +74,12 @@ function computeFanIn(tree: TypeScriptReasoningTree): Map<string, number> {
 }
 
 function groupByDomain(
-  results: readonly { branch: { path: string; exportNames: readonly string[]; roles: readonly string[] }; score: number; fanIn: number; relPath: string }[],
+  results: readonly {
+    branch: { path: string; exportNames: readonly string[]; roles: readonly string[] };
+    score: number;
+    fanIn: number;
+    relPath: string;
+  }[],
 ): Map<string, typeof results> {
   const groups = new Map<string, (typeof results)[number][]>();
   for (const r of results) {
@@ -88,8 +98,14 @@ function docQuality(filePath: string): number {
     const match = src.match(/\/\*\*[\s\S]*?\*\//);
     if (!match) return 0;
     const doc = match[0];
-    const clean = doc.replace(/@since.*/g, "").replace(/@category.*/g, "").replace(/@experimental/g, "");
-    return clean.replace(/[\*\s\/]/g, " ").split(/\s+/).filter(w => w.length > 2).length;
+    const clean = doc
+      .replace(/@since.*/g, "")
+      .replace(/@category.*/g, "")
+      .replace(/@experimental/g, "");
+    return clean
+      .replace(/[\*\s\/]/g, " ")
+      .split(/\s+/)
+      .filter((w) => w.length > 2).length;
   } catch {
     return 0;
   }

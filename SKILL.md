@@ -33,17 +33,17 @@ All flags accept a project directory as the last argument. Defaults to `.`.
 
 ## Signal Reference
 
-| Signal | Meaning |
-|---|---|
-| `[core]` `[platform]` `[database]` `[ai]` `[process]` `[output]` `[entry]` | Architecture role inferred from package name and dependency position |
-| `[facade]` | Re-exports from sub-modules (barrel/index file pattern) |
-| `[entrypoint]` | Runtime or binary entry point |
-| `←N` | Fan-in: imported by N other modules. Shown only when N ≥ 3. High fan-in = foundational. |
-| `→N` | Fan-out: imports N other modules. High fan-out = orchestrator. |
-| `·doc` | Has module-level JSDoc content (word count > 5) |
-| `★doc` | High-quality documentation (> 20 meaningful words) |
-| `◆ bridge` | Both high fan-in and high fan-out — critical architectural node |
-| `(N semantic suppressed)` | TS-SEM-R001 diagnostics filtered from harness output |
+| Signal                                                                     | Meaning                                                                                 |
+| -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `[core]` `[platform]` `[database]` `[ai]` `[process]` `[output]` `[entry]` | Architecture role inferred from package name and dependency position                    |
+| `[facade]`                                                                 | Re-exports from sub-modules (barrel/index file pattern)                                 |
+| `[entrypoint]`                                                             | Runtime or binary entry point                                                           |
+| `←N`                                                                       | Fan-in: imported by N other modules. Shown only when N ≥ 3. High fan-in = foundational. |
+| `→N`                                                                       | Fan-out: imports N other modules. High fan-out = orchestrator.                          |
+| `·doc`                                                                     | Has module-level JSDoc content (word count > 5)                                         |
+| `★doc`                                                                     | High-quality documentation (> 20 meaningful words)                                      |
+| `◆ bridge`                                                                 | Both high fan-in and high fan-out — critical architectural node                         |
+| `(N semantic suppressed)`                                                  | TS-SEM-R001 diagnostics filtered from harness output                                    |
 
 ---
 
@@ -62,6 +62,7 @@ All flags accept a project directory as the last argument. Defaults to `.`.
 ```
 
 Example: Understanding performance in Effect-TS
+
 ```
 --guide "performance"
   → Vocabulary: Effect, Fiber, Scope, Micro, Scheduler...
@@ -88,6 +89,7 @@ Example: Understanding performance in Effect-TS
 ```
 
 Example: Understanding a UI library
+
 ```
 --domain packages/ui/src
   → foundations: button, input, dialog
@@ -128,12 +130,15 @@ EXAMPLES:
 ## Understanding the Output
 
 ### `--stats` output
+
 ```
 [stats] files=1773 roots=38 branches=987 deps=5445 ext=1
 ```
+
 1773 TypeScript files, 38 entry points, 987 owner branches, 5445 dependency edges, 1 extension detected.
 
 ### `--tree` output
+
 ```
 Architecture:
   [core] packages/effect/  379 branches ◆ bridge
@@ -144,9 +149,11 @@ Entrypoints:
   ...
 33 internal branches  (use --domain <name> to explore)
 ```
+
 Domain roles, entrypoints with export counts, internal branches collapsed for clarity.
 
 ### `--domain` output
+
 ```
 [domain] packages/shadcn/src (122 branches)
   src/registry/  [facade,source]  18 branches, 137 exports
@@ -159,9 +166,11 @@ Domain roles, entrypoints with export counts, internal branches collapsed for cl
   internal deps (50):
     src/index.ts → src/registry/api.ts
 ```
+
 Structure, external boundary, and internal dependency edges.
 
 ### `--search` output
+
 ```
 [search] "fiber" → 20 matches
   packages/effect/src/
@@ -169,9 +178,11 @@ Structure, external boundary, and internal dependency edges.
     internal/fiberRuntime.ts ·doc ←34  → FiberRuntime, ScopeImpl, ...
     Effect.ts ←147  → Adapter, All, Effect, Blocked, Do...
 ```
+
 Files matching the pattern, grouped by domain, with fan-in and doc signals.
 
 ### `--deps` output
+
 ```
 [deps] src/internal/fiberRuntime.ts ←34 importers
   exports: FiberRuntime, ScopeImpl, ... (103 total)
@@ -180,9 +191,11 @@ Files matching the pattern, grouped by domain, with fan-in and doc signals.
   imported by (34, 1 group):
     [effect/src] Effect.ts, Fiber.ts, cache.ts, core.ts...
 ```
+
 Complete import/export surface of a file with namespace grouping.
 
 ### `--topology` output
+
 ```
 Foundations (most imported):
   ←217 Function.ts     ←142 Option.ts     ←141 Effect.ts
@@ -191,14 +204,17 @@ Orchestrators (most imports):
 Bridges (high fan-in + fan-out):
   ←141 →64 Effect.ts   ←142 →17 Option.ts
 ```
+
 Key architectural nodes identified by graph position.
 
 ### `--harness` output
+
 ```
 [harness] 13 visible / 1471 total (1458 semantic suppressed)
   ✗ TS-MOD-R002  x1  layer boundary (MDXComponents.tsx)
   ⚠ TS-AGENT-R007 x5  nested control flow (ConsoleBlock.tsx, ...)
 ```
+
 Policy violations grouped by rule, with TS-SEM-R001 diagnostics suppressed by default.
 
 ---
@@ -207,16 +223,16 @@ Policy violations grouped by rule, with TS-SEM-R001 diagnostics suppressed by de
 
 Roles are inferred from package/directory names and dependency graph position. Not hardcoded — derived from project structure.
 
-| Role | Trigger | Example |
-|---|---|---|
-| `core` | High fan-in, core library names | `packages/effect/` |
-| `platform` | Platform adapter names | `packages/platform-node/` |
-| `database` | SQL/database names | `packages/sql-pg/` |
-| `ai` | AI/ML names | `packages/ai/` |
-| `process` | Rule/verification/cache names | `packages/cluster/` |
-| `output` | Render/format/printer names | `packages/printer/` |
-| `entry` | CLI/main entry points | `packages/cli/` |
-| `internal` | No clear signal | `scripts/` |
+| Role       | Trigger                         | Example                   |
+| ---------- | ------------------------------- | ------------------------- |
+| `core`     | High fan-in, core library names | `packages/effect/`        |
+| `platform` | Platform adapter names          | `packages/platform-node/` |
+| `database` | SQL/database names              | `packages/sql-pg/`        |
+| `ai`       | AI/ML names                     | `packages/ai/`            |
+| `process`  | Rule/verification/cache names   | `packages/cluster/`       |
+| `output`   | Render/format/printer names     | `packages/printer/`       |
+| `entry`    | CLI/main entry points           | `packages/cli/`           |
+| `internal` | No clear signal                 | `scripts/`                |
 
 ---
 

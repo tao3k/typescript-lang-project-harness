@@ -92,17 +92,21 @@ export function renderDomain(report: TypeScriptHarnessReport, domainPath: string
     fanOut.set(d.fromPath, (fanOut.get(d.fromPath) ?? 0) + 1);
   }
 
-  const foundations = domainBranches.filter(b => (fanIn.get(b.path) ?? 0) >= 10);
-  const orchestrators = domainBranches.filter(b => (fanOut.get(b.path) ?? 0) >= 5);
+  const foundations = domainBranches.filter((b) => (fanIn.get(b.path) ?? 0) >= 10);
+  const orchestrators = domainBranches.filter((b) => (fanOut.get(b.path) ?? 0) >= 5);
   if (foundations.length > 0 || orchestrators.length > 0) {
     lines.push("");
     if (foundations.length > 0) {
-      const names = foundations.slice(0, 5).map(b => path.basename(b.path, ".ts"));
-      lines.push(`  foundations: ${names.join(", ")}${foundations.length > 5 ? ` +${foundations.length - 5}` : ""}`);
+      const names = foundations.slice(0, 5).map((b) => path.basename(b.path, ".ts"));
+      lines.push(
+        `  foundations: ${names.join(", ")}${foundations.length > 5 ? ` +${foundations.length - 5}` : ""}`,
+      );
     }
     if (orchestrators.length > 0) {
-      const names = orchestrators.slice(0, 5).map(b => path.basename(b.path, ".ts"));
-      lines.push(`  orchestrators: ${names.join(", ")}${orchestrators.length > 5 ? ` +${orchestrators.length - 5}` : ""}`);
+      const names = orchestrators.slice(0, 5).map((b) => path.basename(b.path, ".ts"));
+      lines.push(
+        `  orchestrators: ${names.join(", ")}${orchestrators.length > 5 ? ` +${orchestrators.length - 5}` : ""}`,
+      );
     }
   }
 

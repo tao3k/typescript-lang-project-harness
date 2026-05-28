@@ -22,7 +22,7 @@ function isTopologyNoise(filePath: string): boolean {
 /** Check if a keyword suggests benchmark/performance exploration. */
 export function isPerformanceTopic(topic: string): boolean {
   const perfWords = ["benchmark", "performance", "perf", "optimize", "micro"];
-  return perfWords.some(w => topic.toLowerCase().includes(w));
+  return perfWords.some((w) => topic.toLowerCase().includes(w));
 }
 
 export function renderTopology(report: TypeScriptHarnessReport): string {
@@ -95,11 +95,14 @@ export function renderTopology(report: TypeScriptHarnessReport): string {
 
   // Orphaned (exclude doc-site patterns)
   const docSitePatterns = ["/apps/", "/www/", "/docs/", "/examples/", "/public/"];
-  const isDocSite = (f: string) => docSitePatterns.some(p => f.includes(p));
-  const meaningfulOrphans = tree.orphanedSourceFiles.filter(f => !isDocSite(f));
+  const isDocSite = (f: string) => docSitePatterns.some((p) => f.includes(p));
+  const meaningfulOrphans = tree.orphanedSourceFiles.filter((f) => !isDocSite(f));
   if (meaningfulOrphans.length > 0) {
     const total = tree.orphanedSourceFiles.length;
-    const docSiteNote = total > meaningfulOrphans.length ? ` (${total - meaningfulOrphans.length} doc-site excluded)` : "";
+    const docSiteNote =
+      total > meaningfulOrphans.length
+        ? ` (${total - meaningfulOrphans.length} doc-site excluded)`
+        : "";
     lines.push("");
     lines.push(`Orphaned: ${meaningfulOrphans.length} files${docSiteNote}`);
     for (const o of meaningfulOrphans.slice(0, 5)) {

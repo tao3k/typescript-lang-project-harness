@@ -93,15 +93,17 @@ export function renderGuide(report: TypeScriptHarnessReport, topic: string): str
   const related = relatedConcepts(domains, topicLower);
   if (related.length > 0) {
     lines.push("");
-    lines.push(`Refine with: ${related.map(r => `--search "${r}"`).join(", ")}`);
+    lines.push(`Refine with: ${related.map((r) => `--search "${r}"`).join(", ")}`);
   }
 
   // ── Step 4: Top matching domains ──
   const showDomains = domains.slice(0, 4);
   lines.push("");
-  lines.push(showDomains.length < domains.length
-    ? `Top ${showDomains.length} of ${domains.length} matching domains:`
-    : `Matching domains:`);
+  lines.push(
+    showDomains.length < domains.length
+      ? `Top ${showDomains.length} of ${domains.length} matching domains:`
+      : `Matching domains:`,
+  );
 
   for (const d of showDomains) {
     lines.push(`  ${d.dir}/  ${d.branches} branches, ${d.exports} exports`);
@@ -112,7 +114,7 @@ export function renderGuide(report: TypeScriptHarnessReport, topic: string): str
     }
     // Key entry points
     const entries = d.branchesList
-      .filter(b => b.roles.includes("facade") || b.roles.includes("entrypoint"))
+      .filter((b) => b.roles.includes("facade") || b.roles.includes("entrypoint"))
       .slice(0, 2);
     for (const b of entries) {
       const rel = path.relative(tree.projectRoot, b.path) || ".";
@@ -130,7 +132,7 @@ export function renderGuide(report: TypeScriptHarnessReport, topic: string): str
   lines.push(`  --domain ${topDomain.dir}  to see all branches`);
   lines.push(`  --search "<keyword>"  to find specific files`);
   if (topExports.length > 0) {
-    const example = topExports.find(e => !topicLower.includes(e.toLowerCase())) ?? topExports[0]!;
+    const example = topExports.find((e) => !topicLower.includes(e.toLowerCase())) ?? topExports[0]!;
     lines.push(`  try: --search "${example}"`);
   }
 
@@ -147,23 +149,24 @@ interface GuidedDomain {
 }
 
 function extractDomains(tree: TypeScriptReasoningTree, topic: string): GuidedDomain[] {
-  const scored: { dir: string; score: number; branches: TypeScriptReasoningOwnerBranchFact[] }[] = [];
+  const scored: { dir: string; score: number; branches: TypeScriptReasoningOwnerBranchFact[] }[] =
+    [];
 
   // Group branches by domain (top 2-3 dirs for package-level, 4 for sub-domains)
   const domainBranches = new Map<string, TypeScriptReasoningOwnerBranchFact[]>();
   for (const b of tree.ownerBranches) {
     if (b.roles.includes("config")) continue;
     const rel = path.relative(tree.projectRoot, b.path);
-    const parts = rel.split(path.sep).filter(s => s !== ".");
+    const parts = rel.split(path.sep).filter((s) => s !== ".");
     if (parts.length === 0) continue;
     // Package level: packages/effect
     const pkg = parts.slice(0, parts[0] === "packages" ? 2 : 1).join("/");
     // Sub-domain level: packages/effect/benchmark, packages/effect/src
     const sub = parts.length >= 4 ? parts.slice(0, 4).join("/") : parts.join("/");
-    
+
     if (!domainBranches.has(pkg)) domainBranches.set(pkg, []);
     domainBranches.get(pkg)!.push(b);
-    
+
     if (sub !== pkg && parts.length >= 4) {
       if (!domainBranches.has(sub)) domainBranches.set(sub, []);
       domainBranches.get(sub)!.push(b);
@@ -171,7 +174,24 @@ function extractDomains(tree: TypeScriptReasoningTree, topic: string): GuidedDom
   }
 
   // Common stop words that add noise to search
-  const stopWords = new Set(["a", "an", "the", "with", "for", "and", "to", "in", "of", "is", "how", "what", "i", "do", "does", "use"]);
+  const stopWords = new Set([
+    "a",
+    "an",
+    "the",
+    "with",
+    "for",
+    "and",
+    "to",
+    "in",
+    "of",
+    "is",
+    "how",
+    "what",
+    "i",
+    "do",
+    "does",
+    "use",
+  ]);
 
   for (const [dir, branches] of domainBranches) {
     let score = 0;
@@ -181,7 +201,7 @@ function extractDomains(tree: TypeScriptReasoningTree, topic: string): GuidedDom
       if (dir.toLowerCase().includes(word)) score += 5;
     }
     // Match by export names (weaker signal, capped per word)
-    const allExports = new Set(branches.flatMap(b => b.exportNames.map(e => e.toLowerCase())));
+    const allExports = new Set(branches.flatMap((b) => b.exportNames.map((e) => e.toLowerCase())));
     for (const word of topic.split(/\s+/)) {
       if (stopWords.has(word)) continue;
       let matchCount = 0;
@@ -202,13 +222,11 @@ function extractDomains(tree: TypeScriptReasoningTree, topic: string): GuidedDom
       dir,
       branches: branches.length,
       exports: branches.reduce((sum, b) => sum + b.exportNames.length, 0),
-      branchesList: branches
-        .slice(0, 15)
-        .map(b => ({
-          ...b,
-          hasDoc: b.hasIntentDoc && b.importSummary.totalImports > 0,
-          // proxy — we don't have doc quality in the branch object
-        })) as GuidedDomain["branchesList"],
+      branchesList: branches.slice(0, 15).map((b) => ({
+        ...b,
+        hasDoc: b.hasIntentDoc && b.importSummary.totalImports > 0,
+        // proxy — we don't have doc quality in the branch object
+      })) as GuidedDomain["branchesList"],
     }));
 }
 
@@ -216,7 +234,25 @@ function extractDomains(tree: TypeScriptReasoningTree, topic: string): GuidedDom
 
 /** Top export names across matching domains, sorted by frequency (noise filtered). */
 function topExportNames(domains: readonly GuidedDomain[], limit: number): string[] {
-  const noiseWords = new Set(["typeid", "make", "layer", "empty", "map", "head", "flatten", "match", "filter", "get", "fail", "succeed", "zip", "of", "do", "*", "default"]);
+  const noiseWords = new Set([
+    "typeid",
+    "make",
+    "layer",
+    "empty",
+    "map",
+    "head",
+    "flatten",
+    "match",
+    "filter",
+    "get",
+    "fail",
+    "succeed",
+    "zip",
+    "of",
+    "do",
+    "*",
+    "default",
+  ]);
   const counts = new Map<string, number>();
   for (const d of domains) {
     for (const b of d.branchesList) {
@@ -235,7 +271,7 @@ function topExportNames(domains: readonly GuidedDomain[], limit: number): string
 /** Find export names that co-occur with topic-related files. */
 function relatedConcepts(domains: readonly GuidedDomain[], topic: string): string[] {
   // Find files that match the topic
-  const topicWords = topic.split(/\s+/).filter(w => w.length > 2);
+  const topicWords = topic.split(/\s+/).filter((w) => w.length > 2);
   const matchingFiles = new Set<string>();
   for (const d of domains) {
     for (const b of d.branchesList) {
@@ -257,7 +293,7 @@ function relatedConcepts(domains: readonly GuidedDomain[], topic: string): strin
       if (!matchingFiles.has(b.path)) continue;
       for (const exp of b.exportNames) {
         const lower = exp.toLowerCase();
-        if (!topicWords.some(w => lower.includes(w))) {
+        if (!topicWords.some((w) => lower.includes(w))) {
           seen.add(exp);
         }
       }
