@@ -16,6 +16,7 @@ const TYPE_SCRIPT_SEARCH_VIEWS = [
   "dependency",
   "deps",
   "api",
+  "public-external-types",
   "symbol",
   "callsite",
   "import",
@@ -62,6 +63,7 @@ test("semantic-search JSON packets conform to the shared schema envelope", () =>
     jsonPacket(root, ["search", "dependency", "react", "--json", "."]),
     jsonPacket(root, ["search", "deps", "react::jsx", "--json", "."]),
     jsonPacket(root, ["search", "api", "findOrderStatus", "--json", "."]),
+    jsonPacket(root, ["search", "public-external-types", "react", "--json", "."]),
     jsonPacket(root, ["search", "symbol", "findOrderStatus", "--json", "."]),
     jsonPacket(root, ["search", "callsite", "findOrderStatus", "--json", "."]),
     jsonPacket(root, ["search", "import", "./index", "--json", "."]),
@@ -148,6 +150,7 @@ test("semantic language registry JSON documents the TypeScript provider identity
     "search/dependency",
     "search/deps",
     "search/api",
+    "search/public-external-types",
     "search/symbol",
     "search/callsite",
     "search/import",
@@ -191,6 +194,7 @@ test("semantic language registry JSON documents the TypeScript provider identity
           "search/dependency",
           "search/deps",
           "search/api",
+          "search/public-external-types",
           "search/symbol",
           "search/callsite",
           "search/import",
@@ -363,6 +367,12 @@ function expectedSearchCapabilities(
         typeScriptCapability("public-data-api-shape-search"),
         semanticCapability("dependency-version-scope"),
       ];
+    case "search/public-external-types":
+      return [
+        semanticCapability("dependency-manifest-search"),
+        typeScriptCapability("public-external-type-search"),
+        typeScriptCapability("public-api-type-text-search"),
+      ];
     case "search/symbol":
       return [typeScriptCapability("symbol-export-search")];
     case "search/callsite":
@@ -501,6 +511,8 @@ function semanticSearchFixture(): string {
       'import type { ReactNode } from "react";',
       'import type { Core } from "@example/core";',
       'export const status = findOrderStatus("ok");',
+      "export function renderNode(node: ReactNode): ReactNode { return node; }",
+      'export function renderImported(node: import("react").ReactNode): import("react").ReactNode { return node; }',
       "export type StatusNode = ReactNode;",
       "export type CoreStatus = Core;",
     ].join("\n"),

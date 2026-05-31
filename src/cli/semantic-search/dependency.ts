@@ -23,6 +23,7 @@ import {
   dependencyNodesForMatches,
   dependencyPackageRoots,
   ownersForHits,
+  packageRootFromSpecifier,
 } from "./hits.js";
 import type { SemanticSearchBuildOptions, SemanticSearchPacketPayload } from "./types.js";
 
@@ -37,6 +38,8 @@ export function buildDependencyPacketPayload(
     ...manifestMatches.map((match) => dependencyManifestHit(report, match)),
     ...matches.map((match) => dependencyHit(report, match)),
   ];
+  const packageRoots = dependencyPackageRoots(matches, manifestMatches);
+  const queryPackageRoot = packageRootFromSpecifier(query) ?? query.trim();
   const edges = matches.map((match) => dependencyEdge(report, match));
   const owners = ownersForHits(
     report,
@@ -47,7 +50,7 @@ export function buildDependencyPacketPayload(
       kind: "search-dependency",
       fields: {
         q: query,
-        dep: dependencyPackageRoots(matches, manifestMatches).length,
+        dep: packageRoots.length,
         manifest: manifestMatches.length,
         own: owners.length,
         hit: hits.length,
@@ -65,7 +68,12 @@ export function buildDependencyPacketPayload(
     findings: [],
     nextActions: [
       ...owners.slice(0, 5).map((owner) => ({ kind: "owner" as const, target: owner.path })),
-      ...(query.trim() === "" ? [] : [{ kind: "import" as const, target: query }]),
+      ...(queryPackageRoot === ""
+        ? []
+        : [
+            { kind: "public-external-types" as const, target: queryPackageRoot },
+            { kind: "import" as const, target: query },
+          ]),
     ],
     notes: [
       ...(query.trim() === ""
@@ -173,6 +181,7 @@ export function buildDepsPacketPayload(
         ? []
         : [
             { kind: "dependency" as const, target: query.packageRoot },
+            { kind: "public-external-types" as const, target: query.packageRoot },
             ...(query.apiQuery === undefined ? [] : [{ kind: "api" as const, target: query.raw }]),
             ...(query.apiQuery === undefined || versionScope !== "current"
               ? []

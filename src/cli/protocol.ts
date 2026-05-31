@@ -144,7 +144,7 @@ function parseSearchArgs(argv: readonly string[]): ProtocolArgs {
     return {
       kind: "error",
       message:
-        "usage: ts-harness search <workspace|prime|owner|dependency|deps|symbol|callsite|import|tests|text|ingest> ... [--json] [--package PATH] [PROJECT_ROOT]",
+        "usage: ts-harness search <workspace|prime|owner|dependency|deps|api|public-external-types|symbol|callsite|import|tests|text|ingest> ... [--json] [--package PATH] [PROJECT_ROOT]",
     };
   }
   const searchView = typeScriptSemanticSearchViewDescriptor(viewValue);

@@ -24,6 +24,7 @@ export type TypeScriptSemanticSearchView =
   | "dependency"
   | "deps"
   | "api"
+  | "public-external-types"
   | "symbol"
   | "callsite"
   | "import"
@@ -82,6 +83,15 @@ export const TYPE_SCRIPT_SEARCH_VIEW_DESCRIPTORS = [
       semanticCapability("dependency-version-scope"),
     ],
     ingestRequiredFor: [typeScriptIngestSurface("external-api-docs")],
+  }),
+  searchView("public-external-types", {
+    requiresQuery: true,
+    acceptsStdin: false,
+    capabilities: [
+      semanticCapability("dependency-manifest-search"),
+      typeScriptCapability("public-external-type-search"),
+      typeScriptCapability("public-api-type-text-search"),
+    ],
   }),
   searchView("symbol", {
     requiresQuery: true,

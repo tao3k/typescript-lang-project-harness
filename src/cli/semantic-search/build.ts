@@ -29,6 +29,7 @@ import {
 import { detectInput, ingestHits } from "./ingest.js";
 import { buildApiPacketPayload } from "./api.js";
 import { buildDependencyPacketPayload, buildDepsPacketPayload } from "./dependency.js";
+import { buildPublicExternalTypesPacketPayload } from "./public-external-types.js";
 import {
   edgeFact,
   findingGroups,
@@ -80,6 +81,8 @@ export function buildSemanticSearchPacket(
       return basePacket(report, options, buildDepsPacketPayload(report, options));
     case "api":
       return basePacket(report, options, buildApiPacketPayload(report, options));
+    case "public-external-types":
+      return basePacket(report, options, buildPublicExternalTypesPacketPayload(report, options));
     case "symbol":
       return buildSymbolPacket(report, options);
     case "callsite":

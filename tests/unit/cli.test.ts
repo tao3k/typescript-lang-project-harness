@@ -422,6 +422,7 @@ test("CLI exposes semantic-search protocol commands", () => {
     "search/dependency",
     "search/deps",
     "search/api",
+    "search/public-external-types",
     "search/symbol",
     "search/callsite",
     "search/import",
@@ -452,6 +453,7 @@ test("CLI exposes semantic-search protocol commands", () => {
             "search/dependency",
             "search/deps",
             "search/api",
+            "search/public-external-types",
             "search/symbol",
             "search/callsite",
             "search/import",
@@ -541,6 +543,12 @@ function expectedSearchCapabilities(
         typeScriptCapability("public-function-api-shape-search"),
         typeScriptCapability("public-data-api-shape-search"),
         semanticCapability("dependency-version-scope"),
+      ];
+    case "search/public-external-types":
+      return [
+        semanticCapability("dependency-manifest-search"),
+        typeScriptCapability("public-external-type-search"),
+        typeScriptCapability("public-api-type-text-search"),
       ];
     case "search/symbol":
       return [typeScriptCapability("symbol-export-search")];
@@ -634,6 +642,8 @@ test("CLI searches external dependency usage", () => {
       'import type { ReactNode } from "react";',
       'import { jsx } from "react/jsx-runtime";',
       "export type StatusNode = ReactNode;",
+      "export function renderNode(node: ReactNode): ReactNode { return node; }",
+      'export function renderImported(node: import("react").ReactNode): import("react").ReactNode { return node; }',
       "export const render = jsx;",
     ].join("\n"),
   );
@@ -666,6 +676,76 @@ test("CLI searches external dependency usage", () => {
   assert.ok(packet.hits.some((hit) => hit.fields?.packageRoot === "react"));
   assert.ok(packet.hits.some((hit) => hit.reason === "manifest-package-exact"));
 
+  const publicExternalTypes = runCliCapture(
+    ["search", "public-external-types", "react", "."],
+    root,
+  );
+  assert.equal(publicExternalTypes.exitCode, 0);
+  assert.match(publicExternalTypes.stdout, /^\[search-public-external-types\] /u);
+  assert.match(publicExternalTypes.stdout, /\bpackage=react\b/u);
+  assert.match(publicExternalTypes.stdout, /\|api src\/index\.ts:5/u);
+  assert.match(publicExternalTypes.stdout, /\breason=public-external-type\b/u);
+  assert.match(publicExternalTypes.stdout, /\bconfidence=direct\b/u);
+  assert.match(publicExternalTypes.stdout, /\btypeText=import\("react"\)\.ReactNode\b/u);
+  assert.match(publicExternalTypes.stdout, /\|api src\/index\.ts:4/u);
+  assert.match(publicExternalTypes.stdout, /\breason=possible-public-external-type\b/u);
+  assert.match(publicExternalTypes.stdout, /\bconfidence=possible\b/u);
+
+  const publicExternalTypesJson = runCliCapture(
+    ["search", "public-external-types", "react", "--json", "."],
+    root,
+  );
+  assert.equal(publicExternalTypesJson.exitCode, 0);
+  const publicExternalTypesPacket = JSON.parse(publicExternalTypesJson.stdout) as {
+    readonly method: string;
+    readonly view: string;
+    readonly header: {
+      readonly fields: { readonly package?: string; readonly hit?: number };
+    };
+    readonly nodes: readonly {
+      readonly id: string;
+      readonly fields: { readonly confirmed?: number; readonly possible?: number };
+    }[];
+    readonly hits: readonly {
+      readonly reason: string;
+      readonly fields?: {
+        readonly dependency?: string;
+        readonly confidence?: string;
+        readonly typeText?: string;
+      };
+    }[];
+  };
+  assert.equal(publicExternalTypesPacket.method, "search/public-external-types");
+  assert.equal(publicExternalTypesPacket.view, "public-external-types");
+  assert.equal(publicExternalTypesPacket.header.fields.package, "react");
+  assert.ok((publicExternalTypesPacket.header.fields.hit ?? 0) >= 2);
+  assert.ok(
+    publicExternalTypesPacket.nodes.some(
+      (node) =>
+        node.id === "C:react" &&
+        (node.fields.confirmed ?? 0) >= 1 &&
+        (node.fields.possible ?? 0) >= 1,
+    ),
+  );
+  assert.ok(
+    publicExternalTypesPacket.hits.some(
+      (hit) =>
+        hit.reason === "public-external-type" &&
+        hit.fields?.dependency === "react" &&
+        hit.fields.confidence === "direct" &&
+        hit.fields.typeText === 'import("react").ReactNode',
+    ),
+  );
+  assert.ok(
+    publicExternalTypesPacket.hits.some(
+      (hit) =>
+        hit.reason === "possible-public-external-type" &&
+        hit.fields?.dependency === "react" &&
+        hit.fields.confidence === "possible" &&
+        hit.fields.typeText === "ReactNode",
+    ),
+  );
+
   const deps = runCliCapture(["search", "deps", "react/jsx-runtime@19.0.0::jsx", "."], root);
   assert.equal(deps.exitCode, 0);
   assert.match(deps.stdout, /^\[search-deps\] /u);
@@ -678,7 +758,7 @@ test("CLI searches external dependency usage", () => {
   assert.match(deps.stdout, /moduleSpecifier=react\/jsx-runtime/u);
   assert.match(
     deps.stdout,
-    /\|next dependency:react,api:react\/jsx-runtime@19\.0\.0::jsx,text:jsx,tests:jsx/u,
+    /\|next dependency:react,public-external-types:react,api:react\/jsx-runtime@19\.0\.0::jsx,text:jsx,tests:jsx/u,
   );
 
   const depsJson = runCliCapture(
@@ -767,6 +847,7 @@ test("CLI searches external dependency usage", () => {
   assert.ok(mismatchPacket.hits.every((hit) => hit.fields?.moduleSpecifier === undefined));
   assert.deepEqual(mismatchPacket.nextActions, [
     { kind: "dependency", target: "react" },
+    { kind: "public-external-types", target: "react" },
     { kind: "api", target: "react@18.0.0::jsx" },
   ]);
 });
@@ -804,7 +885,7 @@ test("CLI deps search handles scoped packages and range-only versions", () => {
   assert.match(scoped.stdout, /moduleSpecifier=@scope\/sdk\/client/u);
   assert.match(
     scoped.stdout,
-    /\|next dependency:@scope\/sdk,api:@scope\/sdk\/client@2\.0\.0::Client,text:Client,tests:Client/u,
+    /\|next dependency:@scope\/sdk,public-external-types:@scope\/sdk,api:@scope\/sdk\/client@2\.0\.0::Client,text:Client,tests:Client/u,
   );
 
   const scopedJson = runCliCapture(
