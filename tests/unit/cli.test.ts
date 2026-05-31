@@ -93,6 +93,7 @@ test("CLI exposes semantic-search protocol commands", () => {
     [
       'import { findOrderStatus } from "./index.js";',
       'import type { Core } from "@example/core";',
+      'const internalOrderToken = "ready";',
       "export const status = findOrderStatus();",
       "export type CoreStatus = Core;",
     ].join("\n"),
@@ -188,6 +189,14 @@ test("CLI exposes semantic-search protocol commands", () => {
   assert.equal(text.exitCode, 0);
   assert.match(text.stdout, /^\[search-text\] /u);
   assert.match(text.stdout, /\|hit src\/index\.ts/u);
+
+  const sourceText = runCliCapture(["search", "text", "internalOrderToken", "."], root);
+  assert.equal(sourceText.exitCode, 0);
+  assert.match(sourceText.stdout, /^\[search-text\] /u);
+  assert.match(sourceText.stdout, /\|hit src\/consumer\.ts:3:7/u);
+  assert.match(sourceText.stdout, /\bkind=text\b/u);
+  assert.match(sourceText.stdout, /\breason=source-text\b/u);
+  assert.match(sourceText.stdout, /\bsource=parser-visible-source\b/u);
 
   const symbol = runCliCapture(["search", "symbol", "findOrderStatus", "."], root);
   assert.equal(symbol.exitCode, 0);

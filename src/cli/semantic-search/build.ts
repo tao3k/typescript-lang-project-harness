@@ -329,7 +329,7 @@ function buildTextPacket(
             {
               kind: "not-found" as const,
               message:
-                "text search covers parser owner paths and exports; pipe rg output to search ingest for docs, tests, schema files, and other non-source text",
+                "text search covers parser-visible source text, owner paths, and exports; pipe rg output to search ingest for docs, schema files, and other non-parser text",
             },
           ]
         : [];

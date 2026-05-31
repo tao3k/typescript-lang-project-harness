@@ -20,6 +20,7 @@ import type {
 } from "./types.js";
 import { MAX_IMPORT_HITS, MAX_SYMBOL_HITS, MAX_TEXT_HITS } from "./types.js";
 import { edgeFact, ownerFact } from "./facts.js";
+import { sourceTextHits } from "./source-text.js";
 import {
   locationFromSource,
   ownerId,
@@ -51,7 +52,16 @@ export function textHits(
       fields: { matches: exportMatches.slice(0, 6) },
     });
   }
-  return hits.sort((left, right) => right.score - left.score).slice(0, MAX_TEXT_HITS);
+  hits.push(...sourceTextHits(report, query.trim(), needle));
+  return hits.sort(compareHits).slice(0, MAX_TEXT_HITS);
+}
+
+function compareHits(left: SemanticSearchHit, right: SemanticSearchHit): number {
+  const scoreDiff = right.score - left.score;
+  if (scoreDiff !== 0) return scoreDiff;
+  return `${left.ownerPath}:${left.location.line ?? 0}:${left.location.column ?? 0}`.localeCompare(
+    `${right.ownerPath}:${right.location.line ?? 0}:${right.location.column ?? 0}`,
+  );
 }
 
 export function symbolHits(
