@@ -4,6 +4,7 @@
 
 import type { TypeScriptHarnessReport } from "../../model.js";
 import type { SemanticSearchFieldValue, SemanticSearchNode } from "./types.js";
+import { isTestOwnerPath } from "./test-path.js";
 import { relPath } from "./utils.js";
 
 export function primeTypeScriptAxisNodes(
@@ -71,7 +72,8 @@ function tsconfigPrimeNode(report: TypeScriptHarnessReport): SemanticSearchNode 
 
 function testSurfacePrimeNode(report: TypeScriptHarnessReport): SemanticSearchNode {
   const testModules = report.reasoningTree.modules.filter(
-    (moduleReport) => moduleReport.role === "test",
+    (moduleReport) =>
+      moduleReport.role === "test" || isTestOwnerPath(relPath(report, moduleReport.path)),
   );
   const storyModules = report.reasoningTree.modules.filter((moduleReport) =>
     /\.(stories|story)\.[cm]?[jt]sx?$/u.test(moduleReport.path),

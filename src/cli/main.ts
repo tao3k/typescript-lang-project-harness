@@ -27,7 +27,7 @@ SEARCH VIEWS
   search callsite <name>    Owner-level import/reexport sites
   search import <query>     Import/reexport owner edges
   search tests <owner>      Tests that import an owner
-  search text <query>       Owner-grouped path/export search
+  search text <query>       Owner-grouped path/export/source-text search
   search text <query> owner tests
                              Minimal final-only text -> owner -> tests pipe
   search ingest             Detect stdin shape and group hits by owner

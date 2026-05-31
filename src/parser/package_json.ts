@@ -24,6 +24,7 @@ import {
   packageJsonPropertyLocation,
   parsePackageJsonDocument,
 } from "./package_document.js";
+import { pnpmWorkspaceFacts } from "./pnpm_workspace.js";
 import type { ParsedPackageJsonDocument } from "./types.js";
 import { workspacePackageFacts } from "./workspace_packages.js";
 
@@ -52,7 +53,10 @@ export function readPackageJsonFacts(projectRoot: string): PackageJsonFacts {
   const document = parsePackageJsonDocument(packagePath, rawJson);
   const parsed = document.packageJson;
   const scripts = packageScriptFacts(document);
-  const workspaces = packageWorkspaceFacts(document);
+  const workspaces = mergeWorkspaceFacts([
+    ...packageWorkspaceFacts(document),
+    ...pnpmWorkspaceFacts(projectRoot),
+  ]);
   const workspacePackages = workspacePackageFacts(projectRoot, workspaces);
   const facts: PackageJsonFacts = {
     path: packagePath,
@@ -384,6 +388,18 @@ function packageWorkspaceFacts(document: ParsedPackageJsonDocument): PackageJson
     return [];
   }
   return packageWorkspaceFactsFromArray(document, packagesProperty.initializer);
+}
+
+function mergeWorkspaceFacts(
+  workspaces: readonly PackageJsonWorkspaceFact[],
+): PackageJsonWorkspaceFact[] {
+  const byPattern = new Map<string, PackageJsonWorkspaceFact>();
+  for (const workspace of workspaces) {
+    if (!byPattern.has(workspace.pattern)) {
+      byPattern.set(workspace.pattern, workspace);
+    }
+  }
+  return [...byPattern.values()].sort((left, right) => left.pattern.localeCompare(right.pattern));
 }
 
 function packageWorkspaceFactsFromArray(

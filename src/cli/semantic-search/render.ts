@@ -9,6 +9,7 @@ import type {
   SemanticSearchNextAction,
   SemanticSearchPacket,
 } from "./types.js";
+import { isTestOwnerPath } from "./test-path.js";
 import { ownerId } from "./utils.js";
 
 export function renderSemanticSearchPacketJson(packet: SemanticSearchPacket): string {
@@ -44,7 +45,7 @@ export function renderSemanticSearchPacket(packet: SemanticSearchPacket): string
       reason: hit.reason,
       ...(hit.symbol ? { symbol: hit.symbol } : {}),
       ...hitEvidenceFields(packet, ownerByPath.get(hit.ownerPath)?.role, hit),
-      ...(hit.fields ?? {}),
+      ...hit.fields,
     };
     const lineKind = hit.kind === "api" ? "api" : "hit";
     lines.push(`|${lineKind} ${renderLocation(hit.location)} ${renderFields(fields)}`.trimEnd());
@@ -78,7 +79,7 @@ function hitEvidenceFields(
   const surface =
     hit.ownerPath === "."
       ? "workspace"
-      : ownerRole?.includes("test") === true || isTestLikePath(hit.ownerPath)
+      : ownerRole?.includes("test") === true || isTestOwnerPath(hit.ownerPath)
         ? "test"
         : "source";
   return {
@@ -95,10 +96,6 @@ function isPrimeAxisNode(node: { readonly kind: string }): boolean {
     node.kind === "build_tool" ||
     node.kind === "test_surface"
   );
-}
-
-function isTestLikePath(value: string): boolean {
-  return value.includes("/test/") || value.includes("/tests/") || value.includes(".test.");
 }
 
 function renderFields(fields: SemanticSearchFields): string {

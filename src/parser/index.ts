@@ -120,11 +120,34 @@ export function parseTypeScriptProjectFiles(
     options: programInputs.options,
     host,
   };
-  const program = ts.createProgram(
-    programInputs.projectReferences === undefined
-      ? createProgramOptions
-      : { ...createProgramOptions, projectReferences: programInputs.projectReferences },
-  );
+  let program: ts.Program;
+  try {
+    program = ts.createProgram(
+      programInputs.projectReferences === undefined
+        ? createProgramOptions
+        : { ...createProgramOptions, projectReferences: programInputs.projectReferences },
+    );
+  } catch {
+    const resolutionCache = ts.createModuleResolutionCache(
+      scope.projectRoot,
+      (fileName) => fileName,
+      programInputs.options,
+    );
+    return rootNames.map((fileName) => {
+      const standalone = parseTypeScriptSourceFile(fileName);
+      if (standalone.imports.length === 0) return standalone;
+      const resolutions = standalone.imports.map((importFact) =>
+        resolveNativeImportFact(
+          scope,
+          fileName,
+          importFact,
+          programInputs.options,
+          resolutionCache,
+        ),
+      );
+      return { ...standalone, importResolutions: resolutions };
+    });
+  }
   const resolutionCache = ts.createModuleResolutionCache(
     scope.projectRoot,
     (fileName) => fileName,

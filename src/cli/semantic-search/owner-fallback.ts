@@ -5,7 +5,7 @@
 import type { TypeScriptHarnessReport } from "../../model.js";
 import type { SemanticSearchOwner } from "./types.js";
 import { moduleOwnerFact } from "./facts.js";
-import { isTestOwnerPath } from "./hits.js";
+import { isTestOwnerPath } from "./test-path.js";
 import { isProjectPath, normalizeInputPath, relPath } from "./utils.js";
 
 export interface SemanticSearchOwnerFallback {

@@ -14,6 +14,7 @@ import { effectRuntimeBoundaryKind } from "./effect_runtime_boundary.js";
 import { effectTypeParts } from "./effect_type.js";
 import {
   bindingNameText,
+  forEachDescendant,
   isExported,
   isPublicClassMember,
   propertyNameText,
@@ -33,16 +34,14 @@ export function collectEffectRuntimeCalls(
   sourceFile: ts.SourceFile,
 ): TypeScriptEffectRuntimeCallFact[] {
   const calls: TypeScriptEffectRuntimeCallFact[] = [];
-  const visit = (node: ts.Node): void => {
+  forEachDescendant(sourceFile, (node) => {
     if (ts.isCallExpression(node)) {
       const call = effectRuntimeCall(node, sourceFile);
       if (call !== undefined) {
         calls.push(call);
       }
     }
-    ts.forEachChild(node, visit);
-  };
-  visit(sourceFile);
+  });
   return calls;
 }
 
@@ -144,16 +143,14 @@ function effectPromiseInteropRisksForOwner(
 ): TypeScriptEffectPromiseInteropRiskFact[] {
   const ownerLine = locationForNode(sourceFile, ownerNode).line;
   const risks: TypeScriptEffectPromiseInteropRiskFact[] = [];
-  const visit = (node: ts.Node): void => {
+  forEachDescendant(ownerNode, (node) => {
     if (ts.isCallExpression(node)) {
       const risk = effectPromiseInteropRisk(ownerName, ownerLine, node, sourceFile);
       if (risk !== undefined) {
         risks.push(risk);
       }
     }
-    ts.forEachChild(node, visit);
-  };
-  visit(ownerNode);
+  });
   return risks;
 }
 

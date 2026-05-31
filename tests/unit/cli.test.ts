@@ -100,6 +100,7 @@ test("CLI exposes semantic-search protocol commands", () => {
       "export type CoreStatus = Core;",
     ].join("\n"),
   );
+  fs.writeFileSync(path.join(root, "tests", "flow.spec.ts"), "const specOnlyMarker = true;\n");
   const olderSearchPath = path.join(root, "src", "a-old.ts");
   const newerSearchPath = path.join(root, "src", "z-new.ts");
   fs.writeFileSync(olderSearchPath, 'export {};\nconst sharedMtimeNeedle = "older";\n');
@@ -138,7 +139,7 @@ test("CLI exposes semantic-search protocol commands", () => {
   assert.match(prime.stdout, /\|build_tool rspack /u);
   assert.match(prime.stdout, /\bscripts=build\b/u);
   assert.match(prime.stdout, /\|test_surface \. /u);
-  assert.match(prime.stdout, /\btests=1\b/u);
+  assert.match(prime.stdout, /\btests=2\b/u);
   assert.match(prime.stdout, /\|owner src\/index\.ts/u);
 
   const workspace = runCliCapture(["search", "workspace", "."], root);
@@ -252,7 +253,7 @@ test("CLI exposes semantic-search protocol commands", () => {
   );
   assert.ok(
     packet.nodes.some(
-      (node) => node.kind === "test_surface" && node.path === "." && node.fields.tests === 1,
+      (node) => node.kind === "test_surface" && node.path === "." && node.fields.tests === 2,
     ),
   );
   assert.equal(packet.owners.length, 2);
@@ -292,6 +293,11 @@ test("CLI exposes semantic-search protocol commands", () => {
   assert.match(testOnlyTextPipe.stdout, /\btext=.*testOnlyMarker/u);
   assert.doesNotMatch(testOnlyTextPipe.stdout, /\|owner src\/index\.ts/u);
   assert.doesNotMatch(testOnlyTextPipe.stdout, /\|edge O:src\/index\.ts -test->/u);
+
+  const specText = runCliCapture(["search", "text", "specOnlyMarker", "."], root);
+  assert.equal(specText.exitCode, 0);
+  assert.match(specText.stdout, /\|hit tests\/flow\.spec\.ts:1/u);
+  assert.match(specText.stdout, /\bsurface=test\b/u);
 
   const invalidTextPipe = runCliCapture(
     ["search", "text", "findOrderStatus", "tests", "owner", "."],

@@ -53,7 +53,6 @@ import {
   callsiteHits,
   importEdges,
   importHits,
-  isTestOwnerPath,
   ownersForHits,
   ownersForPaths,
   symbolHits,
@@ -63,6 +62,7 @@ import {
   uniqueOwners,
 } from "./hits.js";
 import { ownerFallback } from "./owner-fallback.js";
+import { isTestOwnerPath } from "./test-path.js";
 import { findOwner, relPath, stripNodePrefix } from "./utils.js";
 
 export function buildSemanticSearchPacket(

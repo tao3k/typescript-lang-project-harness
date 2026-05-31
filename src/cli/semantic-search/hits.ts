@@ -640,9 +640,3 @@ export function uniqueOwners(
   }
   return result;
 }
-
-export function isTestOwnerPath(ownerPath: string): boolean {
-  return (
-    ownerPath.includes("/test/") || ownerPath.includes("/tests/") || ownerPath.includes(".test.")
-  );
-}

@@ -394,6 +394,61 @@ test("project harness discovers workspace package facts from package json", () =
   );
 });
 
+test("project harness discovers pnpm workspace package facts", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-pnpm-workspace-"));
+  fs.mkdirSync(path.join(root, "src"));
+  fs.mkdirSync(path.join(root, "packages", "core"), { recursive: true });
+  fs.mkdirSync(path.join(root, "playground", "demo"), { recursive: true });
+  fs.writeFileSync(
+    path.join(root, "package.json"),
+    JSON.stringify({
+      name: "@example/pnpm-workspace-root",
+      type: "module",
+    }),
+  );
+  fs.writeFileSync(
+    path.join(root, "pnpm-workspace.yaml"),
+    ["packages:", "  - 'packages/*'", "  - playground/**", "  - '!ignored/*'"].join("\n"),
+  );
+  fs.writeFileSync(
+    path.join(root, "packages", "core", "package.json"),
+    JSON.stringify({ name: "@example/core" }),
+  );
+  fs.writeFileSync(
+    path.join(root, "playground", "demo", "package.json"),
+    JSON.stringify({ name: "@example/demo" }),
+  );
+  fs.writeFileSync(path.join(root, "tsconfig.json"), JSON.stringify({ include: ["src/**/*.ts"] }));
+  fs.writeFileSync(path.join(root, "src", "index.ts"), "export const ok = 1;\n");
+
+  const report = runTypeScriptProjectHarness(root);
+  const packageJson = report.projectScope?.packageJson;
+  assert.ok(packageJson !== undefined);
+  assert.deepEqual(
+    packageJson.workspaces.map((workspace) => ({
+      pattern: workspace.pattern,
+      path: path.relative(root, workspace.location.path ?? ""),
+      line: workspace.location.line,
+    })),
+    [
+      { pattern: "!ignored/*", path: "pnpm-workspace.yaml", line: 4 },
+      { pattern: "packages/*", path: "pnpm-workspace.yaml", line: 2 },
+      { pattern: "playground/**", path: "pnpm-workspace.yaml", line: 3 },
+    ],
+  );
+  assert.deepEqual(
+    packageJson.workspacePackages.map((workspacePackage) => ({
+      name: workspacePackage.name,
+      path: path.relative(root, workspacePackage.path),
+      pattern: workspacePackage.pattern,
+    })),
+    [
+      { name: "@example/core", path: "packages/core", pattern: "packages/*" },
+      { name: "@example/demo", path: "playground/demo", pattern: "playground/**" },
+    ],
+  );
+});
+
 test("project harness keeps package entry source locations from the TypeScript JSON AST", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-package-json-locations-"));
   fs.mkdirSync(path.join(root, "src"));
