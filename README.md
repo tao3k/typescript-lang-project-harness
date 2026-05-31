@@ -57,12 +57,13 @@ agent surface; `search ... --json` emits
 `agent.semantic-protocols.semantic-search-packet` version `1`, with
 `languageId=typescript`, `providerId=ts-harness`, `binary=ts-harness`,
 `namespace=agent.semantic-protocols.languages.typescript.ts-harness`, and a
-method such as `search/dependency` or `search/deps`. Provider registration is exposed by
-`ts-harness agent doctor --json` through the repo-level
-`schemas/semantic-language-registry.v1.schema.json`; its `methods` list is the
-callable truth, while `methodDescriptors` records per-method command/view/schema
-metadata plus query/stdin/package-scope semantics. Search packets use
-`schemas/semantic-search-packet.v1.schema.json`.
+method such as `search/dependency` or `search/deps`. Provider registration is
+exposed by `ts-harness agent doctor --json` and points at the package-local
+schema files in `schemas/`. Its `methods` list is the callable truth, while
+`methodDescriptors` records per-method command/view/schema metadata plus
+query/stdin/package-scope semantics. The protocol repository keeps the source
+schema copies under its own `schemas/` directory; the TypeScript test suite
+checks package-local copies against the repository copies when both are present.
 
 Project runs anchor at the nearest `package.json` above the requested path.
 Running from a package subdirectory still evaluates the whole package project,

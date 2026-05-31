@@ -210,20 +210,49 @@ test("semantic language registry JSON documents the TypeScript provider identity
   assert.equal(registrySchema.path, "schemas/semantic-language-registry.v1.schema.json");
 });
 
+test("package-local semantic schemas stay synchronized with the protocol repository", () => {
+  for (const schemaFileName of [
+    "semantic-search-packet.v1.schema.json",
+    "semantic-language-registry.v1.schema.json",
+  ]) {
+    const repoSchemaPath = protocolRepositorySchemaPath(schemaFileName);
+    if (repoSchemaPath === undefined) {
+      continue;
+    }
+    assert.deepEqual(
+      readJson(packageSchemaPath(schemaFileName)),
+      readJson(repoSchemaPath),
+      `${schemaFileName} matches the protocol repository schema`,
+    );
+  }
+});
+
 function sharedSemanticSearchSchema(): JsonObject {
-  const testDir = path.dirname(fileURLToPath(import.meta.url));
-  const packageRoot = path.resolve(testDir, "..", "..", "..");
-  const repoRoot = path.resolve(packageRoot, "..", "..");
-  const schemaPath = path.join(repoRoot, "schemas", "semantic-search-packet.v1.schema.json");
-  return JSON.parse(fs.readFileSync(schemaPath, "utf8")) as JsonObject;
+  return readJson(packageSchemaPath("semantic-search-packet.v1.schema.json"));
 }
 
 function sharedSemanticLanguageRegistrySchema(): JsonObject {
+  return readJson(packageSchemaPath("semantic-language-registry.v1.schema.json"));
+}
+
+function packageRoot(): string {
   const testDir = path.dirname(fileURLToPath(import.meta.url));
-  const packageRoot = path.resolve(testDir, "..", "..", "..");
-  const repoRoot = path.resolve(packageRoot, "..", "..");
-  const schemaPath = path.join(repoRoot, "schemas", "semantic-language-registry.v1.schema.json");
-  return JSON.parse(fs.readFileSync(schemaPath, "utf8")) as JsonObject;
+  return path.resolve(testDir, "..", "..", "..");
+}
+
+function packageSchemaPath(schemaFileName: string): string {
+  return path.join(packageRoot(), "schemas", schemaFileName);
+}
+
+function protocolRepositorySchemaPath(schemaFileName: string): string | undefined {
+  const packageRootPath = packageRoot();
+  const repoRoot = path.resolve(packageRootPath, "..", "..");
+  const requestedSchemaPath = path.join(repoRoot, "schemas", schemaFileName);
+  return fs.existsSync(requestedSchemaPath) ? requestedSchemaPath : undefined;
+}
+
+function readJson(filePath: string): JsonObject {
+  return JSON.parse(fs.readFileSync(filePath, "utf8")) as JsonObject;
 }
 
 function semanticSearchFixture(): string {
