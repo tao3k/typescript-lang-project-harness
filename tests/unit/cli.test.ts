@@ -222,6 +222,24 @@ test("CLI exposes semantic-search protocol commands", () => {
   assert.match(tests.stdout, /\|hit tests\/index\.test\.ts:1/u);
   assert.match(tests.stdout, /\|edge O:src\/index\.ts -test-> T:tests\/index\.test\.ts/u);
 
+  const parserVisibleTestOwner = runCliCapture(
+    ["search", "owner", "tests/index.test.ts", "."],
+    root,
+  );
+  assert.equal(parserVisibleTestOwner.exitCode, 0);
+  assert.match(parserVisibleTestOwner.stdout, /^\[search-owner\] /u);
+  assert.match(parserVisibleTestOwner.stdout, /\brole=test\b/u);
+  assert.match(parserVisibleTestOwner.stdout, /\|owner tests\/index\.test\.ts/u);
+  assert.match(parserVisibleTestOwner.stdout, /\bsource=parser-visible-module\b/u);
+  assert.match(parserVisibleTestOwner.stdout, /\bparserOwner=false\b/u);
+  assert.match(parserVisibleTestOwner.stdout, /\bvalid=true\b/u);
+  assert.match(
+    parserVisibleTestOwner.stdout,
+    /module is parser-visible but not a reasoning owner/u,
+  );
+  assert.match(parserVisibleTestOwner.stdout, /\|next .*tests:tests\/index\.test\.ts/u);
+  assert.doesNotMatch(parserVisibleTestOwner.stdout, /\|next ingest:tests\/index\.test\.ts/u);
+
   const pathOnlyOwner = runCliCapture(
     ["search", "owner", "test-fixtures/semantic_search_schema.test.ts", "."],
     root,
@@ -236,7 +254,7 @@ test("CLI exposes semantic-search protocol commands", () => {
     pathOnlyOwner.stdout,
     /\|next ingest:test-fixtures\/semantic_search_schema\.test\.ts/u,
   );
-  assert.match(pathOnlyOwner.stdout, /path exists but is not a parser-visible owner/u);
+  assert.match(pathOnlyOwner.stdout, /path exists but is not parser-visible/u);
 
   const pathOnlyOwnerJson = runCliCapture(
     ["search", "owner", "test-fixtures/semantic_search_schema.test.ts", "--json", "."],

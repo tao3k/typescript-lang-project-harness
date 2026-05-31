@@ -6,6 +6,7 @@ import type {
   TypeScriptHarnessFinding,
   TypeScriptHarnessReport,
   TypeScriptPackageImportOwnerFact,
+  TypeScriptReasoningModule,
   TypeScriptReasoningOwnerBranchFact,
   TypeScriptReasoningOwnerDependencyFact,
   TypeScriptWorkspacePackageFact,
@@ -79,6 +80,37 @@ export function ownerFact(
   };
 }
 
+export function moduleOwnerFact(
+  report: TypeScriptHarnessReport,
+  moduleReport: TypeScriptReasoningModule,
+): SemanticSearchOwner {
+  const ownerPath = relPath(report, moduleReport.path);
+  const nextActions: SemanticSearchNextAction[] = [
+    { kind: "owner", target: ownerPath },
+    { kind: "text", target: ownerPath, ownerPath },
+  ];
+  if (moduleReport.role === "test") {
+    nextActions.push({ kind: "tests", target: ownerPath });
+  }
+  return {
+    path: ownerPath,
+    role: moduleReport.role,
+    public: isPublicModule(moduleReport),
+    exports: moduleReport.exportNames,
+    nextActions,
+    fields: {
+      source: "parser-visible-module",
+      parserOwner: false,
+      layer: moduleReport.layer,
+      lines: moduleReport.lineCount,
+      valid: moduleReport.isValid,
+      syntaxDiagnostics: moduleReport.syntaxDiagnosticCount,
+      semanticDiagnostics: moduleReport.semanticDiagnosticCount,
+      imports: moduleReport.importSpecifiers.length,
+    },
+  };
+}
+
 export function ownerNextActions(
   branch: TypeScriptReasoningOwnerBranchFact,
   ownerPath: string,
@@ -97,6 +129,15 @@ export function isPublicOwner(branch: TypeScriptReasoningOwnerBranchFact): boole
     branch.roles.includes("facade") ||
     branch.roles.includes("entrypoint") ||
     branch.exportNames.length > 0
+  );
+}
+
+function isPublicModule(moduleReport: TypeScriptReasoningModule): boolean {
+  return (
+    moduleReport.role !== "test" &&
+    (moduleReport.role === "facade" ||
+      moduleReport.role === "entrypoint" ||
+      moduleReport.exportNames.length > 0)
   );
 }
 

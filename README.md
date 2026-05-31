@@ -65,13 +65,16 @@ query/stdin/package-scope semantics. The protocol repository keeps the source
 schema copies under its own `schemas/` directory; the TypeScript test suite
 checks package-local copies against the repository copies when both are present.
 
-`search owner` resolves parser-visible TypeScript owners first. If an existing
-project path is outside the parser owner set, the CLI returns a path-only owner
-with `source=path-only`, `parserOwner=false`, and `next=ingest:<path>` rather
-than treating the path as a hard miss. `search text` covers parser-visible
-source text, owner paths, and exports; docs, schema files, and other non-parser
-text should be expanded with `rg` or `fd` and piped back through
-`search ingest`.
+`search owner` resolves reasoning owners first, then parser-visible modules,
+then existing project paths. If a parser-visible module is outside the reasoning
+owner graph, the CLI returns `source=parser-visible-module`,
+`parserOwner=false`, role/layer metadata, line counts, validity, and diagnostic
+counts. If an existing path is outside the parser module set, it returns a
+path-only owner with `source=path-only`, `parserOwner=false`, and
+`next=ingest:<path>` rather than treating the path as a hard miss. `search text`
+covers parser-visible source text, owner paths, and exports; docs, schema files,
+and other non-parser text should be expanded with `rg` or `fd` and piped back
+through `search ingest`.
 
 Project runs anchor at the nearest `package.json` above the requested path.
 Running from a package subdirectory still evaluates the whole package project,

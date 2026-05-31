@@ -15,7 +15,6 @@ import {
 import type {
   SemanticSearchBuildOptions,
   SemanticSearchEdge,
-  SemanticSearchOwner,
   SemanticSearchPacket,
   SemanticSearchPacketPayload,
 } from "./types.js";
@@ -59,7 +58,8 @@ import {
   textHits,
   uniqueOwners,
 } from "./hits.js";
-import { findOwner, isProjectPath, normalizeInputPath, relPath, stripNodePrefix } from "./utils.js";
+import { ownerFallback } from "./owner-fallback.js";
+import { findOwner, relPath, stripNodePrefix } from "./utils.js";
 
 export function buildSemanticSearchPacket(
   report: TypeScriptHarnessReport,
@@ -214,30 +214,30 @@ function buildOwnerPacket(
   const query = options.query ?? "";
   const branch = findOwner(report, query);
   if (branch === undefined) {
-    const pathOwner = pathOnlyOwner(report, query);
-    if (pathOwner !== undefined) {
+    const fallback = ownerFallback(report, query);
+    if (fallback !== undefined) {
+      const owner = fallback.owner;
       return basePacket(report, options, {
         header: {
           kind: "search-owner",
           fields: {
             q: query,
-            role: pathOwner.role,
-            public: pathOwner.public,
+            role: owner.role,
+            public: owner.public,
             edge: 0,
             find: 0,
           },
         },
-        nodes: [ownerNode(pathOwner)],
+        nodes: [ownerNode(owner)],
         edges: [],
-        owners: [pathOwner],
+        owners: [owner],
         hits: [],
         findings: [],
-        nextActions: pathOwner.nextActions ?? [],
+        nextActions: owner.nextActions ?? [],
         notes: [
           {
             kind: "owner-not-found" as const,
-            message:
-              "path exists but is not a parser-visible owner; use search ingest for line evidence",
+            message: fallback.message,
           },
         ],
       });
@@ -288,30 +288,6 @@ function buildOwnerPacket(
     nextActions: owner.nextActions ?? [],
     notes: [],
   });
-}
-
-function pathOnlyOwner(
-  report: TypeScriptHarnessReport,
-  query: string,
-): SemanticSearchOwner | undefined {
-  const projectRoot = report.reasoningTree.projectRoot;
-  if (!isProjectPath(projectRoot, query)) {
-    return undefined;
-  }
-  const ownerPath = normalizeInputPath(projectRoot, query);
-  if (ownerPath === ".." || ownerPath.startsWith("../")) {
-    return undefined;
-  }
-  return {
-    path: ownerPath,
-    role: isTestOwnerPath(ownerPath) ? "test" : "file",
-    public: false,
-    nextActions: [{ kind: "ingest" as const, target: ownerPath }],
-    fields: {
-      source: "path-only",
-      parserOwner: false,
-    },
-  };
 }
 
 function buildTextPacket(

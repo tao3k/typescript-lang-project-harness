@@ -19,7 +19,7 @@ import type {
   SemanticSearchOwner,
 } from "./types.js";
 import { MAX_IMPORT_HITS, MAX_SYMBOL_HITS, MAX_TEXT_HITS } from "./types.js";
-import { edgeFact, ownerFact } from "./facts.js";
+import { edgeFact, moduleOwnerFact, ownerFact } from "./facts.js";
 import { sourceTextHits } from "./source-text.js";
 import {
   locationFromSource,
@@ -560,6 +560,12 @@ export function ownersForHits(
   const byPath = new Map(
     report.reasoningTree.ownerBranches.map((branch) => [relPath(report, branch.path), branch]),
   );
+  const modulesByPath = new Map(
+    report.reasoningTree.modules.map((moduleReport) => [
+      relPath(report, moduleReport.path),
+      moduleReport,
+    ]),
+  );
   const owners: SemanticSearchOwner[] = [];
   const seen = new Set<string>();
   for (const hit of hits) {
@@ -569,12 +575,17 @@ export function ownersForHits(
     if (branch !== undefined) {
       owners.push(ownerFact(report, branch));
     } else {
-      owners.push({
-        path: hit.ownerPath,
-        role: "unknown",
-        public: false,
-        fields: {},
-      });
+      const moduleReport = modulesByPath.get(hit.ownerPath);
+      owners.push(
+        moduleReport === undefined
+          ? {
+              path: hit.ownerPath,
+              role: "unknown",
+              public: false,
+              fields: {},
+            }
+          : moduleOwnerFact(report, moduleReport),
+      );
     }
   }
   return owners;
