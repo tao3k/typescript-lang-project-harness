@@ -30,6 +30,7 @@ import { detectInput, ingestHits } from "./ingest.js";
 import { buildApiPacketPayload } from "./api.js";
 import { buildDependencyPacketPayload, buildDepsPacketPayload } from "./dependency.js";
 import { buildPublicExternalTypesPacketPayload } from "./public-external-types.js";
+import { primeTypeScriptAxisNodes } from "./prime-axes.js";
 import {
   edgeFact,
   findingGroups,
@@ -187,21 +188,27 @@ function buildPrimePacket(
     .slice(0, MAX_PRIME_EDGES);
   const findings = findingGroups(report).slice(0, MAX_FINDINGS);
   const nextActions = primeNextActions(owners);
+  const primeAxisNodes = primeTypeScriptAxisNodes(report);
   return basePacket(report, options, {
     header: {
       kind: "search-prime",
       fields: {
         mode: "package",
         package: tree.packageName ?? ".",
-        src: tree.modules.length,
-        own: tree.ownerBranches.length,
-        edge: tree.ownerDependencies.length,
-        find: report.findings.length,
+        sourceFiles: tree.modules.length,
+        owners: tree.ownerBranches.length,
+        edges: tree.ownerDependencies.length,
+        findings: report.findings.length,
+        extensions: tree.packageExtensions.length,
+        buildTools: tree.packageBuildTools.length,
+        workspaces: tree.workspacePackages.length,
+        projectReferences: tree.projectReferences.length,
       },
     },
     packages: [packageFact(report)],
     nodes: [
       packageNode(report),
+      ...primeAxisNodes,
       ...owners.map((owner) => ownerNode(owner)),
       ...findings.map((finding) => findingNode(finding)),
     ],
@@ -363,9 +370,9 @@ function testEdgesForOwners(
   report: TypeScriptHarnessReport,
   owners: readonly SemanticSearchOwner[],
 ): readonly SemanticSearchEdge[] {
-  const edges = owners.flatMap((owner) =>
-    testEdges(report, findOwner(report, owner.path), owner.path),
-  );
+  const edges = owners
+    .filter((owner) => !owner.role.includes("test") && !isTestOwnerPath(owner.path))
+    .flatMap((owner) => testEdges(report, findOwner(report, owner.path), owner.path));
   return uniqueEdges(edges);
 }
 

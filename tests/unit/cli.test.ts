@@ -59,6 +59,8 @@ test("CLI exposes semantic-search protocol commands", () => {
     path.join(root, "package.json"),
     JSON.stringify({
       name: "@example/search-cli",
+      scripts: { build: "rspack build" },
+      dependencies: { react: "^19.0.0", "@rspack/core": "^1.0.0" },
       workspaces: ["packages/*"],
     }),
   );
@@ -114,7 +116,7 @@ test("CLI exposes semantic-search protocol commands", () => {
   );
   fs.writeFileSync(
     path.join(root, "tests", "index.test.ts"),
-    'import { findOrderStatus } from "../src/index.js";\nfindOrderStatus("ready", true);\n',
+    'import { findOrderStatus } from "../src/index.js";\nconst testOnlyMarker = "ready";\nfindOrderStatus("ready", true);\n',
   );
   fs.writeFileSync(
     path.join(root, "test-fixtures", "semantic_search_schema.test.ts"),
@@ -124,6 +126,19 @@ test("CLI exposes semantic-search protocol commands", () => {
   const prime = runCliCapture(["search", "prime", "."], root);
   assert.equal(prime.exitCode, 0);
   assert.match(prime.stdout, /^\[search-prime\] /u);
+  assert.match(prime.stdout, /\bsourceFiles=\d+\b/u);
+  assert.match(prime.stdout, /\bowners=\d+\b/u);
+  assert.match(prime.stdout, /\bextensions=1\b/u);
+  assert.match(prime.stdout, /\bbuildTools=1\b/u);
+  assert.match(prime.stdout, /\|tsconfig tsconfig\.json /u);
+  assert.match(prime.stdout, /\bpathAliases=1\b/u);
+  assert.match(prime.stdout, /\bpaths=@example\/core\b/u);
+  assert.match(prime.stdout, /\|extension react /u);
+  assert.match(prime.stdout, /\bactivation=dependency\b/u);
+  assert.match(prime.stdout, /\|build_tool rspack /u);
+  assert.match(prime.stdout, /\bscripts=build\b/u);
+  assert.match(prime.stdout, /\|test_surface \. /u);
+  assert.match(prime.stdout, /\btests=1\b/u);
   assert.match(prime.stdout, /\|owner src\/index\.ts/u);
 
   const workspace = runCliCapture(["search", "workspace", "."], root);
@@ -185,6 +200,18 @@ test("CLI exposes semantic-search protocol commands", () => {
     readonly namespace: string;
     readonly method: string;
     readonly view: string;
+    readonly header: {
+      readonly fields: {
+        readonly sourceFiles?: number;
+        readonly extensions?: number;
+        readonly buildTools?: number;
+      };
+    };
+    readonly nodes: readonly {
+      readonly kind: string;
+      readonly path?: string;
+      readonly fields: Record<string, unknown>;
+    }[];
     readonly owners: readonly unknown[];
   };
   assert.equal(packet.schemaId, "agent.semantic-protocols.semantic-search-packet");
@@ -197,12 +224,46 @@ test("CLI exposes semantic-search protocol commands", () => {
   assert.equal(packet.namespace, "agent.semantic-protocols.languages.typescript.ts-harness");
   assert.equal(packet.method, "search/prime");
   assert.equal(packet.view, "prime");
+  assert.equal(packet.header.fields.extensions, 1);
+  assert.equal(packet.header.fields.buildTools, 1);
+  assert.ok((packet.header.fields.sourceFiles ?? 0) >= 1);
+  assert.ok(
+    packet.nodes.some(
+      (node) =>
+        node.kind === "tsconfig" && node.path === "tsconfig.json" && node.fields.pathAliases === 1,
+    ),
+  );
+  assert.ok(
+    packet.nodes.some(
+      (node) =>
+        node.kind === "extension" &&
+        node.path === "react" &&
+        node.fields.activation === "dependency",
+    ),
+  );
+  assert.ok(
+    packet.nodes.some(
+      (node) =>
+        node.kind === "build_tool" &&
+        node.path === "rspack" &&
+        Array.isArray(node.fields.scripts) &&
+        node.fields.scripts.includes("build"),
+    ),
+  );
+  assert.ok(
+    packet.nodes.some(
+      (node) => node.kind === "test_surface" && node.path === "." && node.fields.tests === 1,
+    ),
+  );
   assert.equal(packet.owners.length, 2);
 
   const text = runCliCapture(["search", "text", "OrderStatus", "."], root);
   assert.equal(text.exitCode, 0);
   assert.match(text.stdout, /^\[search-text\] /u);
   assert.match(text.stdout, /\|hit src\/index\.ts/u);
+  assert.match(text.stdout, /\bsurface=source\b/u);
+  assert.match(text.stdout, /\bownerRole=source\b/u);
+  assert.match(text.stdout, /\btext=.*findOrderStatus/u);
 
   const textOwnerTestsPipe = runCliCapture(
     ["search", "text", "findOrderStatus", "owner", "tests", "."],
@@ -217,6 +278,20 @@ test("CLI exposes semantic-search protocol commands", () => {
     textOwnerTestsPipe.stdout,
     /\|edge O:src\/index\.ts -test-> T:tests\/index\.test\.ts/u,
   );
+
+  const testOnlyTextPipe = runCliCapture(
+    ["search", "text", "testOnlyMarker", "owner", "tests", "."],
+    root,
+  );
+  assert.equal(testOnlyTextPipe.exitCode, 0);
+  assert.match(testOnlyTextPipe.stdout, /^\[search-text\] /u);
+  assert.match(testOnlyTextPipe.stdout, /\|owner tests\/index\.test\.ts/u);
+  assert.match(testOnlyTextPipe.stdout, /\|hit tests\/index\.test\.ts:2/u);
+  assert.match(testOnlyTextPipe.stdout, /\bsurface=test\b/u);
+  assert.match(testOnlyTextPipe.stdout, /\bownerRole=test\b/u);
+  assert.match(testOnlyTextPipe.stdout, /\btext=.*testOnlyMarker/u);
+  assert.doesNotMatch(testOnlyTextPipe.stdout, /\|owner src\/index\.ts/u);
+  assert.doesNotMatch(testOnlyTextPipe.stdout, /\|edge O:src\/index\.ts -test->/u);
 
   const invalidTextPipe = runCliCapture(
     ["search", "text", "findOrderStatus", "tests", "owner", "."],

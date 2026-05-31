@@ -104,7 +104,17 @@ export interface SemanticSearchFact {
 
 export interface SemanticSearchNode {
   readonly id: string;
-  readonly kind: "package" | "owner" | "dependency" | "test" | "finding" | "symbol";
+  readonly kind:
+    | "package"
+    | "owner"
+    | "dependency"
+    | "test"
+    | "finding"
+    | "symbol"
+    | "tsconfig"
+    | "extension"
+    | "build_tool"
+    | "test_surface";
   readonly path?: string;
   readonly fields: SemanticSearchFields;
 }
