@@ -178,13 +178,14 @@ function escapeScalar(value: string | number | boolean): string {
 }
 
 function renderLocation(location: SemanticSearchLocation): string {
-  if (location.line !== undefined && location.column !== undefined) {
-    return `${location.path}:${location.line}:${location.column}`;
-  }
+  const fields: Record<string, SemanticSearchFieldValue> = { path: location.path };
   if (location.line !== undefined) {
-    return `${location.path}:${location.line}`;
+    fields.line = location.line;
   }
-  return location.path;
+  if (location.column !== undefined) {
+    fields.column = location.column;
+  }
+  return renderFields(fields);
 }
 
 function renderNextActionFragment(action: SemanticSearchNextAction): string {

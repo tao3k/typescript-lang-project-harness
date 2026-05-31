@@ -269,7 +269,7 @@ test("CLI exposes semantic-search protocol commands", () => {
   const text = runCliCapture(["search", "text", "OrderStatus", "."], root);
   assert.equal(text.exitCode, 0);
   assert.match(text.stdout, /^\[search-text\] /u);
-  assert.match(text.stdout, /\|hit src\/index\.ts/u);
+  assert.match(text.stdout, /\|hit path=src\/index\.ts\b/u);
   assert.match(text.stdout, /\bsurface=source\b/u);
   assert.match(text.stdout, /\bownerRole=source\b/u);
   assert.match(text.stdout, /\btext=.*findOrderStatus/u);
@@ -282,7 +282,7 @@ test("CLI exposes semantic-search protocol commands", () => {
   assert.match(textOwnerTestsPipe.stdout, /^\[search-text\] /u);
   assert.match(textOwnerTestsPipe.stdout, /\bpipes=owner,tests\b/u);
   assert.match(textOwnerTestsPipe.stdout, /\|owner src\/index\.ts/u);
-  assert.match(textOwnerTestsPipe.stdout, /\|hit tests\/index\.test\.ts:1/u);
+  assert.match(textOwnerTestsPipe.stdout, /\|hit path=tests\/index\.test\.ts line=1\b/u);
   assert.match(
     textOwnerTestsPipe.stdout,
     /\|edge O:src\/index\.ts -test-> T:tests\/index\.test\.ts/u,
@@ -309,7 +309,7 @@ test("CLI exposes semantic-search protocol commands", () => {
   assert.equal(testOnlyTextPipe.exitCode, 0);
   assert.match(testOnlyTextPipe.stdout, /^\[search-text\] /u);
   assert.match(testOnlyTextPipe.stdout, /\|owner tests\/index\.test\.ts/u);
-  assert.match(testOnlyTextPipe.stdout, /\|hit tests\/index\.test\.ts:2/u);
+  assert.match(testOnlyTextPipe.stdout, /\|hit path=tests\/index\.test\.ts line=2\b/u);
   assert.match(testOnlyTextPipe.stdout, /\bsurface=test\b/u);
   assert.match(testOnlyTextPipe.stdout, /\bownerRole=test\b/u);
   assert.match(testOnlyTextPipe.stdout, /\btext=.*testOnlyMarker/u);
@@ -318,7 +318,7 @@ test("CLI exposes semantic-search protocol commands", () => {
 
   const specText = runCliCapture(["search", "text", "specOnlyMarker", "."], root);
   assert.equal(specText.exitCode, 0);
-  assert.match(specText.stdout, /\|hit tests\/flow\.spec\.ts:1/u);
+  assert.match(specText.stdout, /\|hit path=tests\/flow\.spec\.ts line=1\b/u);
   assert.match(specText.stdout, /\bsurface=test\b/u);
 
   const invalidTextPipe = runCliCapture(
@@ -331,7 +331,7 @@ test("CLI exposes semantic-search protocol commands", () => {
   const sourceText = runCliCapture(["search", "text", "internalOrderToken", "."], root);
   assert.equal(sourceText.exitCode, 0);
   assert.match(sourceText.stdout, /^\[search-text\] /u);
-  assert.match(sourceText.stdout, /\|hit src\/consumer\.ts:3:7/u);
+  assert.match(sourceText.stdout, /\|hit path=src\/consumer\.ts line=3 column=7\b/u);
   assert.match(sourceText.stdout, /\bkind=text\b/u);
   assert.match(sourceText.stdout, /\breason=source-text\b/u);
   assert.match(sourceText.stdout, /\bsource=parser-visible-source\b/u);
@@ -339,25 +339,25 @@ test("CLI exposes semantic-search protocol commands", () => {
   const recencyText = runCliCapture(["search", "text", "sharedMtimeNeedle", "."], root);
   assert.equal(recencyText.exitCode, 0);
   assert.match(recencyText.stdout, /^\[search-text\] /u);
-  assert.match(recencyText.stdout, /\|hit src\/z-new\.ts:2/u);
-  assert.match(recencyText.stdout, /\|hit src\/a-old\.ts:2/u);
+  assert.match(recencyText.stdout, /\|hit path=src\/z-new\.ts line=2\b/u);
+  assert.match(recencyText.stdout, /\|hit path=src\/a-old\.ts line=2\b/u);
   assert.ok(
-    recencyText.stdout.indexOf("|hit src/z-new.ts:2") <
-      recencyText.stdout.indexOf("|hit src/a-old.ts:2"),
+    recencyText.stdout.indexOf("|hit path=src/z-new.ts line=2") <
+      recencyText.stdout.indexOf("|hit path=src/a-old.ts line=2"),
     recencyText.stdout,
   );
 
   const symbol = runCliCapture(["search", "symbol", "findOrderStatus", "."], root);
   assert.equal(symbol.exitCode, 0);
   assert.match(symbol.stdout, /^\[search-symbol\] /u);
-  assert.match(symbol.stdout, /\|hit src\/index\.ts:1/u);
+  assert.match(symbol.stdout, /\|hit path=src\/index\.ts line=1\b/u);
   assert.match(symbol.stdout, /kind=symbol/u);
 
   const api = runCliCapture(["search", "api", "findOrderStatus", "."], root);
   assert.equal(api.exitCode, 0);
   assert.match(api.stdout, /^\[search-api\] /u);
   assert.match(api.stdout, /\bsource=native-parser\b/u);
-  assert.match(api.stdout, /\|api src\/index\.ts:1/u);
+  assert.match(api.stdout, /\|api path=src\/index\.ts line=1\b/u);
   assert.match(api.stdout, /\bkind=api\b/u);
   assert.match(api.stdout, /\bapiKind=function\b/u);
   assert.match(api.stdout, /\bparams=input:string,strict:boolean\b/u);
@@ -371,19 +371,19 @@ test("CLI exposes semantic-search protocol commands", () => {
   const callsite = runCliCapture(["search", "callsite", "findOrderStatus", "."], root);
   assert.equal(callsite.exitCode, 0);
   assert.match(callsite.stdout, /^\[search-callsite\] /u);
-  assert.match(callsite.stdout, /\|hit src\/consumer\.ts:1/u);
+  assert.match(callsite.stdout, /\|hit path=src\/consumer\.ts line=1\b/u);
   assert.match(callsite.stdout, /reason=import-owner/u);
 
   const imports = runCliCapture(["search", "import", "./index", "."], root);
   assert.equal(imports.exitCode, 0);
   assert.match(imports.stdout, /^\[search-import\] /u);
-  assert.match(imports.stdout, /\|hit src\/consumer\.ts:1/u);
+  assert.match(imports.stdout, /\|hit path=src\/consumer\.ts line=1\b/u);
   assert.match(imports.stdout, /\|edge O:src\/consumer\.ts -import-> O:src\/index\.ts/u);
 
   const tests = runCliCapture(["search", "tests", "src/index.ts", "."], root);
   assert.equal(tests.exitCode, 0);
   assert.match(tests.stdout, /^\[search-tests\] /u);
-  assert.match(tests.stdout, /\|hit tests\/index\.test\.ts:1/u);
+  assert.match(tests.stdout, /\|hit path=tests\/index\.test\.ts line=1\b/u);
   assert.match(tests.stdout, /\|edge O:src\/index\.ts -test-> T:tests\/index\.test\.ts/u);
 
   const ownerSeeds = runCliCapture(
@@ -460,7 +460,7 @@ test("CLI exposes semantic-search protocol commands", () => {
   const ingest = runCliCapture(["search", "ingest", "."], root, "src/index.ts:1:findOrderStatus\n");
   assert.equal(ingest.exitCode, 0);
   assert.match(ingest.stdout, /^\[search-ingest\] src=rg-n/u);
-  assert.match(ingest.stdout, /\|hit src\/index\.ts:1/u);
+  assert.match(ingest.stdout, /\|hit path=src\/index\.ts line=1\b/u);
 
   const recencyIngest = runCliCapture(
     ["search", "ingest", "."],
@@ -469,8 +469,8 @@ test("CLI exposes semantic-search protocol commands", () => {
   );
   assert.equal(recencyIngest.exitCode, 0);
   assert.ok(
-    recencyIngest.stdout.indexOf("|hit src/z-new.ts:2") <
-      recencyIngest.stdout.indexOf("|hit src/a-old.ts:2"),
+    recencyIngest.stdout.indexOf("|hit path=src/z-new.ts line=2") <
+      recencyIngest.stdout.indexOf("|hit path=src/a-old.ts line=2"),
     recencyIngest.stdout,
   );
 
@@ -963,9 +963,9 @@ test("CLI searches external dependency usage", () => {
   const dependency = runCliCapture(["search", "dependency", "react", "."], root);
   assert.equal(dependency.exitCode, 0);
   assert.match(dependency.stdout, /^\[search-dependency\] /u);
-  assert.match(dependency.stdout, /\|hit package\.json:1:\d+ .*reason=manifest-package-exact/u);
+  assert.match(dependency.stdout, /\|hit path=package\.json line=1 column=\d+ .*reason=manifest-package-exact/u);
   assert.match(dependency.stdout, /source=dependencies/u);
-  assert.match(dependency.stdout, /\|hit src\/index\.ts:1/u);
+  assert.match(dependency.stdout, /\|hit path=src\/index\.ts line=1\b/u);
   assert.match(dependency.stdout, /moduleSpecifier=react/u);
   assert.match(dependency.stdout, /\|edge O:src\/index\.ts -dependency-> C:react/u);
 
@@ -995,11 +995,11 @@ test("CLI searches external dependency usage", () => {
   assert.equal(publicExternalTypes.exitCode, 0);
   assert.match(publicExternalTypes.stdout, /^\[search-public-external-types\] /u);
   assert.match(publicExternalTypes.stdout, /\bpackage=react\b/u);
-  assert.match(publicExternalTypes.stdout, /\|api src\/index\.ts:5/u);
+  assert.match(publicExternalTypes.stdout, /\|api path=src\/index\.ts line=5\b/u);
   assert.match(publicExternalTypes.stdout, /\breason=public-external-type\b/u);
   assert.match(publicExternalTypes.stdout, /\bconfidence=direct\b/u);
   assert.match(publicExternalTypes.stdout, /\btypeText=import\("react"\)\.ReactNode\b/u);
-  assert.match(publicExternalTypes.stdout, /\|api src\/index\.ts:4/u);
+  assert.match(publicExternalTypes.stdout, /\|api path=src\/index\.ts line=4\b/u);
   assert.match(publicExternalTypes.stdout, /\breason=possible-public-external-type\b/u);
   assert.match(publicExternalTypes.stdout, /\bconfidence=possible\b/u);
 
@@ -1066,7 +1066,7 @@ test("CLI searches external dependency usage", () => {
   assert.match(deps.stdout, /\bcurrentWorkspaceVersion=19\.0\.0\b/u);
   assert.match(deps.stdout, /\bversionStatus=matched\b/u);
   assert.match(deps.stdout, /\bapi=jsx\b/u);
-  assert.match(deps.stdout, /\|hit src\/index\.ts:2/u);
+  assert.match(deps.stdout, /\|hit path=src\/index\.ts line=2\b/u);
   assert.match(deps.stdout, /moduleSpecifier=react\/jsx-runtime/u);
   assert.match(
     deps.stdout,
