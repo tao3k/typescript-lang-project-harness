@@ -142,6 +142,14 @@ test("CLI exposes semantic-search protocol commands", () => {
   assert.match(prime.stdout, /\btests=2\b/u);
   assert.match(prime.stdout, /\|owner src\/index\.ts/u);
 
+  const primeSeeds = runCliCapture(["search", "prime", "--view", "seeds", "."], root);
+  assert.equal(primeSeeds.exitCode, 0);
+  assert.match(primeSeeds.stdout, /^\[search-prime\] /u);
+  assert.match(primeSeeds.stdout, /\|flow prime->owner\|deps\|symbol\|tests/u);
+  assert.match(primeSeeds.stdout, /\|seed owner:src\/index\.ts,/u);
+  assert.match(primeSeeds.stdout, /\|seed symbol:findOrderStatus,/u);
+  assert.doesNotMatch(primeSeeds.stdout, /\|owner /u);
+
   const workspace = runCliCapture(["search", "workspace", "."], root);
   assert.equal(workspace.exitCode, 0);
   assert.match(workspace.stdout, /^\[search-workspace\] /u);
@@ -280,6 +288,20 @@ test("CLI exposes semantic-search protocol commands", () => {
     /\|edge O:src\/index\.ts -test-> T:tests\/index\.test\.ts/u,
   );
 
+  const textOwnerTestsPipeSeeds = runCliCapture(
+    ["search", "text", "findOrderStatus", "owner", "tests", "--view", "seeds", "."],
+    root,
+  );
+  assert.equal(textOwnerTestsPipeSeeds.exitCode, 0);
+  assert.match(textOwnerTestsPipeSeeds.stdout, /^\[search-text\] /u);
+  assert.match(textOwnerTestsPipeSeeds.stdout, /\bpipes=owner,tests\b/u);
+  assert.match(
+    textOwnerTestsPipeSeeds.stdout,
+    /\|seed owner:src\/index\.ts,tests\/index\.test\.ts/u,
+  );
+  assert.match(textOwnerTestsPipeSeeds.stdout, /\|seed tests:tests\/index\.test\.ts/u);
+  assert.doesNotMatch(textOwnerTestsPipeSeeds.stdout, /\|hit /u);
+
   const testOnlyTextPipe = runCliCapture(
     ["search", "text", "testOnlyMarker", "owner", "tests", "."],
     root,
@@ -363,6 +385,16 @@ test("CLI exposes semantic-search protocol commands", () => {
   assert.match(tests.stdout, /^\[search-tests\] /u);
   assert.match(tests.stdout, /\|hit tests\/index\.test\.ts:1/u);
   assert.match(tests.stdout, /\|edge O:src\/index\.ts -test-> T:tests\/index\.test\.ts/u);
+
+  const ownerSeeds = runCliCapture(
+    ["search", "owner", "src/index.ts", "--view", "seeds", "."],
+    root,
+  );
+  assert.equal(ownerSeeds.exitCode, 0);
+  assert.match(ownerSeeds.stdout, /^\[search-owner\] /u);
+  assert.match(ownerSeeds.stdout, /\|seed owner:src\/index\.ts/u);
+  assert.match(ownerSeeds.stdout, /\|seed symbol:findOrderStatus/u);
+  assert.doesNotMatch(ownerSeeds.stdout, /\|edge /u);
 
   const parserVisibleTestOwner = runCliCapture(
     ["search", "owner", "tests/index.test.ts", "."],
@@ -648,6 +680,144 @@ test("CLI ranks workspace packages before test fixtures", () => {
   );
 });
 
+test("CLI installs and runs Codex agent hooks", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-agent-hooks-cli-"));
+  fs.mkdirSync(path.join(root, "src"));
+  fs.mkdirSync(path.join(root, "tests"));
+  fs.writeFileSync(path.join(root, "tsconfig.json"), JSON.stringify({ include: ["src/**/*.ts"] }));
+  fs.writeFileSync(path.join(root, "src", "index.ts"), "export const ok = 1;\n");
+  fs.writeFileSync(path.join(root, "README.md"), "# Example\n");
+
+  const install = runCliCapture(["agent", "install", "--client", "codex", "."], root);
+  assert.equal(install.exitCode, 0);
+  assert.match(
+    install.stdout,
+    /^\[agent-install\] client=codex path=.codex\/config.toml mode=created/u,
+  );
+  const config = fs.readFileSync(path.join(root, ".codex", "config.toml"), "utf8");
+  assert.match(config, /# BEGIN ts-harness agent hooks/u);
+  assert.match(config, /ts-harness agent hook --client codex pre-tool/u);
+  assert.match(config, /\[\[hooks\.SubagentStart\]\]/u);
+
+  const deniedRead = runCliCapture(
+    ["agent", "hook", "--client", "codex", "pre-tool", "."],
+    root,
+    JSON.stringify({ tool_name: "Read", tool_input: { file_path: "src/index.ts" } }),
+  );
+  assert.equal(deniedRead.exitCode, 0);
+  const deniedPayload = JSON.parse(deniedRead.stdout) as {
+    readonly hookSpecificOutput: {
+      readonly permissionDecision: string;
+      readonly permissionDecisionReason: string;
+    };
+    readonly systemMessage: string;
+  };
+  assert.equal(deniedPayload.hookSpecificOutput.permissionDecision, "deny");
+  assert.match(deniedPayload.systemMessage, /^\[ts-harness-flow\] blocked=read-source/u);
+  assert.match(deniedPayload.systemMessage, /\|cmd ts-harness search prime --view seeds \./u);
+  assert.match(
+    deniedPayload.systemMessage,
+    /\|cmd ts-harness search owner src\/index\.ts --view seeds \./u,
+  );
+  assert.match(
+    deniedPayload.systemMessage,
+    /\|cmd ts-harness search text <query> owner tests --view seeds \./u,
+  );
+  assert.match(
+    deniedPayload.systemMessage,
+    /\|pipe <candidate-lines> \| ts-harness search ingest/u,
+  );
+  assert.doesNotMatch(deniedPayload.systemMessage, /README|SKILL|docs\/|src\/cli\/agent-hooks/u);
+
+  const guide = runCliCapture(["agent", "guide", "--client", "codex", "."], root);
+  assert.equal(guide.exitCode, 0);
+  assert.match(guide.stdout, /^\[ts-harness-guide\] project=/u);
+  assert.match(
+    guide.stdout,
+    /\|cmd ts-harness search deps <dep\[\/subpath\]\[@version\]\[::api\]>/u,
+  );
+  assert.doesNotMatch(guide.stdout, /README|SKILL|docs\/|src\/cli\/agent-hooks/u);
+
+  const allowedRead = runCliCapture(
+    ["agent", "hook", "--client", "codex", "pre-tool", "."],
+    root,
+    JSON.stringify({ tool_name: "Read", tool_input: { file_path: "README.md" } }),
+  );
+  assert.equal(allowedRead.exitCode, 0);
+  assert.equal(allowedRead.stdout, "");
+
+  const searchBin = ["r", "g"].join("");
+  const deniedSearch = runCliCapture(
+    ["agent", "hook", "--client", "codex", "pre-tool", "."],
+    root,
+    JSON.stringify({
+      tool_name: "exec_command",
+      tool_input: { cmd: `${searchBin} -n OrderStatus src tests` },
+    }),
+  );
+  assert.equal(deniedSearch.exitCode, 0);
+  assert.match(deniedSearch.stdout, /blocked=raw-search/u);
+
+  const allowedPipe = runCliCapture(
+    ["agent", "hook", "--client", "codex", "pre-tool", "."],
+    root,
+    JSON.stringify({
+      tool_name: "exec_command",
+      tool_input: { cmd: `${searchBin} -n OrderStatus src tests | ts-harness search ingest .` },
+    }),
+  );
+  assert.equal(allowedPipe.exitCode, 0);
+  assert.equal(allowedPipe.stdout, "");
+
+  const absoluteRead = runCliCapture(
+    ["agent", "hook", "--client", "codex", "pre-tool", path.dirname(root)],
+    path.dirname(root),
+    JSON.stringify({
+      tool_name: "Bash",
+      tool_input: { command: `sed -n '1,20p' ${path.join(root, "src", "index.ts")}` },
+    }),
+  );
+  assert.equal(absoluteRead.exitCode, 0);
+  const absolutePayload = JSON.parse(absoluteRead.stdout) as { readonly systemMessage: string };
+  assert.match(absolutePayload.systemMessage, /\|cmd ts-harness search prime --view seeds /u);
+  assert.match(
+    absolutePayload.systemMessage,
+    new RegExp(
+      `\\|cmd ts-harness search owner src/index\\.ts --view seeds ${escapeRegExp(root)}`,
+      "u",
+    ),
+  );
+
+  const mixedRoot = fs.mkdtempSync(path.join(os.tmpdir(), "ts-agent-hooks-mixed-"));
+  fs.mkdirSync(path.join(mixedRoot, ".codex"));
+  fs.writeFileSync(
+    path.join(mixedRoot, ".codex", "config.toml"),
+    [
+      "# Existing Rust harness block",
+      "[[hooks.PreToolUse]]",
+      'matcher = "Read|Bash"',
+      "command = '''",
+      'exec rs-harness agent hook --client codex pre-tool "$repo_root"',
+      "'''",
+      "",
+    ].join("\n"),
+  );
+  const merged = runCliCapture(["agent", "install", "--client", "codex", "."], mixedRoot);
+  assert.equal(merged.exitCode, 0);
+  assert.match(merged.stdout, /mode=merged/u);
+  const mixedConfig = fs.readFileSync(path.join(mixedRoot, ".codex", "config.toml"), "utf8");
+  assert.match(mixedConfig, /rs-harness agent hook --client codex pre-tool/u);
+  assert.match(mixedConfig, /# BEGIN ts-harness agent hooks/u);
+  assert.match(mixedConfig, /ts-harness agent hook --client codex pre-tool/u);
+
+  const updated = runCliCapture(["agent", "install", "--client", "codex", "."], mixedRoot);
+  assert.equal(updated.exitCode, 0);
+  assert.match(updated.stdout, /mode=updated/u);
+  const updatedConfig = fs.readFileSync(path.join(mixedRoot, ".codex", "config.toml"), "utf8");
+  assert.equal(updatedConfig.match(/# BEGIN ts-harness agent hooks/gu)?.length, 1);
+  assert.equal(updatedConfig.match(/ts-harness agent hook --client codex pre-tool/gu)?.length, 1);
+});
+
 function expectedSearchCapabilities(
   method: string,
 ): readonly { readonly languageId: string; readonly namespace: string; readonly name: string }[] {
@@ -747,6 +917,10 @@ function typeScriptCapability(name: string): {
   readonly name: string;
 } {
   return { languageId: "typescript", namespace: "typescript", name };
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
 }
 
 test("CLI searches external dependency usage", () => {

@@ -10,13 +10,17 @@ import type {
   SemanticSearchPacket,
 } from "./types.js";
 import { isTestOwnerPath } from "./test-path.js";
-import { ownerId } from "./utils.js";
+import { ownerId, stripNodePrefix } from "./utils.js";
 
 export function renderSemanticSearchPacketJson(packet: SemanticSearchPacket): string {
   return `${JSON.stringify(packet, null, 2)}\n`;
 }
 
 export function renderSemanticSearchPacket(packet: SemanticSearchPacket): string {
+  if (packet.renderMode === "seeds") {
+    return renderSemanticSearchSeedPacket(packet);
+  }
+
   const lines = [`[${packet.header.kind}] ${renderFields(packet.header.fields)}`];
   const ownerByPath = new Map(packet.owners.map((owner) => [owner.path, owner]));
   for (const pkg of packet.packages ?? []) {
@@ -66,6 +70,58 @@ export function renderSemanticSearchPacket(packet: SemanticSearchPacket): string
     lines.push(`|next ${packet.nextActions.map(renderNextActionFragment).join(",")}`);
   }
   return `${lines.join("\n")}\n`;
+}
+
+function renderSemanticSearchSeedPacket(packet: SemanticSearchPacket): string {
+  const lines = [`[${packet.header.kind}] ${renderFields(packet.header.fields)}`];
+  lines.push("|flow prime->owner|deps|symbol|tests pipe=text:owner,tests ingest=stdin");
+  for (const [kind, targets] of seedGroups(packet)) {
+    lines.push(`|seed ${kind}:${targets.join(",")}`);
+  }
+  for (const note of packet.notes) {
+    lines.push(`|note kind=${note.kind} message=${escapeFieldValue(note.message)}`);
+  }
+  return `${lines.join("\n")}\n`;
+}
+
+function seedGroups(packet: SemanticSearchPacket): Map<string, string[]> {
+  const groups = new Map<string, string[]>();
+  for (const owner of packet.owners) {
+    addSeed(groups, "owner", owner.path);
+    for (const exportName of owner.exports ?? []) {
+      addSeed(groups, "symbol", exportName);
+    }
+    for (const action of owner.nextActions ?? []) {
+      addSeed(groups, action.kind, action.target);
+    }
+  }
+  for (const hit of packet.hits) {
+    addSeed(groups, "owner", hit.ownerPath);
+    if (hit.symbol !== undefined) {
+      addSeed(groups, "symbol", hit.symbol);
+    }
+    if (hit.kind === "api") {
+      addSeed(groups, "api", hit.symbol ?? hit.ownerPath);
+    }
+  }
+  for (const action of packet.nextActions) {
+    addSeed(groups, action.kind, action.target);
+  }
+  for (const edge of packet.edges) {
+    if (edge.kind === "test") {
+      addSeed(groups, "tests", stripNodePrefix(edge.to));
+    } else if (edge.kind === "dependency" && edge.to.startsWith("C:")) {
+      addSeed(groups, "deps", stripNodePrefix(edge.to));
+    }
+  }
+  return groups;
+}
+
+function addSeed(groups: Map<string, string[]>, kind: string, target: string): void {
+  const values = groups.get(kind) ?? [];
+  if (values.length >= 8 || values.includes(target)) return;
+  values.push(target);
+  groups.set(kind, values);
 }
 
 function hitEvidenceFields(

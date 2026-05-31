@@ -34,18 +34,27 @@ The public binary is `ts-harness`.
 
 ```shell
 ts-harness search workspace .
-ts-harness search prime .
-ts-harness search owner src/index.ts .
+ts-harness search prime --view seeds .
+ts-harness search owner src/index.ts --view seeds .
 ts-harness search text OrderStatus .
 rg -n "OrderStatus" src tests | ts-harness search ingest .
 
 ts-harness check --changed .
 ts-harness check --full .
 ts-harness agent doctor --json .
+ts-harness agent install --client codex .
+ts-harness agent guide --client codex .
 ```
 
 Compact text is the default agent surface. `--json` emits the shared semantic
 search packet, and `agent doctor --json` emits the semantic language registry.
+`agent install --client codex` writes `.codex/config.toml` so Codex hooks route
+raw TypeScript/JavaScript source reads and broad candidate searches back through
+`ts-harness search` packets. Existing multi-language hook config is preserved:
+the installer updates its own marked block or appends one when another harness
+already owns hooks. `agent guide --client codex` prints the command-line guide
+used in hook denials; every actionable line uses the installed `ts-harness`
+binary.
 The provider identity is:
 
 ```text

@@ -1,12 +1,15 @@
 #+TITLE: TypeScript Project Harness Agent Skill
 
 Use =ts-harness= as a semantic-language provider for TypeScript projects.  The
-public CLI protocol has exactly three entrypoints:
+public CLI protocol has three top-level entrypoints:
 
 #+begin_src shell
 ts-harness search <view> ... [--json] [--package PATH] [PROJECT_ROOT]
 ts-harness check [--changed | --full] [--json] [PROJECT_ROOT]
 ts-harness agent doctor [--json] [PROJECT_ROOT]
+ts-harness agent install --client codex [PROJECT_ROOT]
+ts-harness agent guide --client codex [PROJECT_ROOT]
+ts-harness agent hook --client codex <event> [PROJECT_ROOT]
 #+end_src
 
 Do not use direct renderer flags.  =--tree=, =--stats=, =--harness=,
@@ -32,6 +35,29 @@ Use =agent doctor --json= when an integration needs the provider registry:
 #+begin_src shell
 ts-harness agent doctor --json .
 #+end_src
+
+Use =agent install --client codex= when Codex should enforce search-first
+source access in a repository:
+
+#+begin_src shell
+ts-harness agent install --client codex .
+#+end_src
+
+The installed hooks deny raw TypeScript/JavaScript source reads and broad
+source searches unless the candidates flow into =ts-harness search ingest=.
+The denial message includes a compact command-line guide.  Every actionable
+line starts with =|cmd= or =|pipe= and uses only the installed =ts-harness=
+binary:
+
+#+begin_src shell
+ts-harness agent guide --client codex .
+#+end_src
+
+If =.codex/config.toml= already exists, installation preserves other language
+harness blocks and updates or appends only the marked =ts-harness= block.
+Run installation from the Codex session root that owns the conversation.  If the
+session is rooted at a Rust harness repo while work touches a TypeScript repo,
+install into that Rust root too, so Codex loads a concatenated root config.
 
 The registry is the capability source of truth.  Call only methods listed in
 =methods=; read =methodDescriptors= for command, view, output schema,

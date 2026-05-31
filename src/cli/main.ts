@@ -12,6 +12,9 @@ Usage:
   ts-harness search <view> ... [--json] [--package <path>] [project-root]
   ts-harness check [--changed | --full] [--json] [project-root]
   ts-harness agent doctor [--json] [project-root]
+  ts-harness agent install --client codex [project-root]
+  ts-harness agent guide --client codex [project-root]
+  ts-harness agent hook --client codex <event> [project-root]
 
 SEARCH VIEWS
   search workspace          Workspace package/router index
@@ -41,6 +44,12 @@ CHECK
 AGENT
   agent doctor              Print semantic-language provider readiness
   agent doctor --json       Semantic language registry document
+  agent install --client codex
+                            Write .codex/config.toml hook delegation
+  agent guide --client codex
+                            Print command-line search flow guide
+  agent hook --client codex <event>
+                            Codex hook runtime; consumes hook JSON on stdin
 
 GENERAL
   --help             This help
@@ -60,6 +69,8 @@ EXAMPLES
   ts-harness search text OrderStatus .
   rg -n "OrderStatus" src tests | ts-harness search ingest .
   ts-harness check --changed .
+  ts-harness agent install --client codex .
+  ts-harness agent guide --client codex .
 
 `;
 

@@ -14,6 +14,30 @@ direnv exec . npm run harness
 direnv exec . git diff --check
 ```
 
+## Global CLI Install
+
+Install the local checkout as the global `ts-harness` binary before testing
+agent hook flows from other repositories:
+
+```shell
+direnv exec . npm install -g --prefix /opt/homebrew .
+ts-harness agent doctor .
+ts-harness search prime --view seeds .
+ts-harness agent install --client codex .
+ts-harness agent guide --client codex .
+```
+
+The explicit prefix avoids the devenv/Nix global npm prefix, which may be
+read-only. On Linux, use the writable global prefix that is already on
+`PATH`, for example `--prefix ~/.local`.
+Run the install command from the repository that should own the active Codex
+session; it writes `.codex/config.toml` delegating hook events to the global
+`ts-harness` binary. Existing config is merged, not overwritten, so
+Rust+TypeScript repositories can keep both harness hook blocks. For a Codex
+session rooted at a Rust harness repo while editing a TypeScript harness repo,
+install into the Rust session root as well; that root config is the one Codex
+loads for the current conversation.
+
 ## Native Parser Boundary
 
 This package is parser-first. TypeScript source semantics must be extracted
