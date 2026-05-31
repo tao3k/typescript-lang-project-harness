@@ -31,6 +31,7 @@ export interface SemanticSearchBuildOptions {
   readonly view: SemanticSearchView;
   readonly renderMode?: SemanticSearchRenderMode;
   readonly query?: string;
+  readonly pipes?: readonly SemanticSearchView[];
   readonly stdin?: string;
 }
 

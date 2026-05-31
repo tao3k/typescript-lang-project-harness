@@ -45,6 +45,7 @@ interface SearchArgs {
   readonly query: string | undefined;
   readonly projectRoot: string | undefined;
   readonly packagePath: string | undefined;
+  readonly pipes: readonly TypeScriptSemanticSearchView[];
   readonly json: boolean;
   readonly renderMode: SemanticSearchRenderMode | undefined;
 }
@@ -123,6 +124,7 @@ export function runProtocolCli(
     const packet = buildSemanticSearchPacket(report, {
       view: args.view,
       ...(args.query !== undefined ? { query: args.query } : {}),
+      ...(args.pipes.length > 0 ? { pipes: args.pipes } : {}),
       ...(args.renderMode !== undefined ? { renderMode: args.renderMode } : {}),
       ...(args.view === "ingest" ? { stdin: streams.stdin ?? "" } : {}),
     });
@@ -184,15 +186,23 @@ function parseSearchArgs(argv: readonly string[]): ProtocolArgs {
     if (query === undefined) {
       return { kind: "error", message: `search ${viewValue} requires a query` };
     }
-    if (positionals.length > 2) {
+    const { pipes, projectRoot, error } = parseSearchPipePositionals(
+      positionals.slice(1),
+      searchView.acceptedPipes ?? [],
+    );
+    if (error !== undefined) {
+      return { kind: "error", message: error };
+    }
+    if (positionals.length > 2 && pipes.length === 0) {
       return { kind: "error", message: "expected at most one PROJECT_ROOT argument" };
     }
     return {
       kind: "search",
       view: searchView.view,
       query,
-      projectRoot: positionals[1],
+      projectRoot,
       packagePath,
+      pipes,
       json,
       renderMode,
     };
@@ -207,9 +217,38 @@ function parseSearchArgs(argv: readonly string[]): ProtocolArgs {
     query: undefined,
     projectRoot: positionals[0],
     packagePath,
+    pipes: [],
     json,
     renderMode,
   };
+}
+
+function parseSearchPipePositionals(
+  positionals: readonly string[],
+  acceptedPipes: readonly TypeScriptSemanticSearchView[],
+): {
+  readonly pipes: readonly TypeScriptSemanticSearchView[];
+  readonly projectRoot: string | undefined;
+  readonly error?: string;
+} {
+  const pipes: TypeScriptSemanticSearchView[] = [];
+  let index = 0;
+  while (index < positionals.length && positionals[index] === acceptedPipes[index]) {
+    pipes.push(positionals[index]! as TypeScriptSemanticSearchView);
+    index += 1;
+  }
+  const remaining = positionals.slice(index);
+  if (remaining.length > 1) {
+    return {
+      pipes,
+      projectRoot: remaining[0],
+      error:
+        acceptedPipes.length === 0
+          ? "expected at most one PROJECT_ROOT argument"
+          : `expected pipes (${acceptedPipes.join(",")}) before PROJECT_ROOT`,
+    };
+  }
+  return { pipes, projectRoot: remaining[0] };
 }
 
 function parseCheckArgs(argv: readonly string[]): ProtocolArgs {

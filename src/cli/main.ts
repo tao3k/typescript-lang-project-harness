@@ -25,6 +25,8 @@ SEARCH VIEWS
   search import <query>     Import/reexport owner edges
   search tests <owner>      Tests that import an owner
   search text <query>       Owner-grouped path/export search
+  search text <query> owner tests
+                             Minimal final-only text -> owner -> tests pipe
   search ingest             Detect stdin shape and group hits by owner
   --package <path>          Run the selected search in a workspace package scope
 

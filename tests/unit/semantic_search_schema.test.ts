@@ -115,6 +115,21 @@ test("semantic language registry JSON documents the TypeScript provider identity
     "registry schema languageRegistration",
   );
   const methodDescriptorSchema = record(defs.methodDescriptor, "registry schema methodDescriptor");
+  const commonCapabilityDescriptorSchema = record(
+    defs.capabilityDescriptor,
+    "registry schema capabilityDescriptor",
+  );
+  const typeScriptCapabilitySchema = sharedTypeScriptCapabilitiesSchema();
+  const typeScriptCapabilityDescriptorSchema = record(
+    record(typeScriptCapabilitySchema.$defs, "typescript capability schema.$defs")
+      .capabilityDescriptor,
+    "typescript capabilityDescriptor",
+  );
+  const typeScriptIngestSurfaceSchema = record(
+    record(typeScriptCapabilitySchema.$defs, "typescript capability schema.$defs")
+      .ingestSurfaceDescriptor,
+    "typescript ingestSurfaceDescriptor",
+  );
   const languages = array(registry.languages, "registry.languages");
   assert.equal(languages.length, 1);
   const language = record(languages[0], "registry.languages[0]");
@@ -181,6 +196,52 @@ test("semantic language registry JSON documents the TypeScript provider identity
       );
       assert.equal(descriptor.acceptsStdin, descriptor.method === "search/ingest");
       assert.equal(descriptor.supportsPackageScope, true);
+      assert.deepEqual(
+        descriptor.acceptedPipes === undefined
+          ? []
+          : stringArray(descriptor.acceptedPipes, `${String(descriptor.method)} acceptedPipes`),
+        String(descriptor.method) === "search/text" ? ["owner", "tests"] : [],
+      );
+      const capabilities = array(
+        descriptor.capabilities,
+        `${String(descriptor.method)} capabilities`,
+      ).map((capability, index) =>
+        record(capability, `${String(descriptor.method)} capabilities[${index}]`),
+      );
+      for (const capability of capabilities) {
+        assertSchemaObject(
+          capability,
+          commonCapabilityDescriptorSchema,
+          `${String(descriptor.method)} common capability`,
+        );
+        assertSchemaObject(
+          capability,
+          typeScriptCapabilityDescriptorSchema,
+          `${String(descriptor.method)} TypeScript capability`,
+        );
+      }
+      assert.deepEqual(capabilities, expectedSearchCapabilities(String(descriptor.method)));
+      const ingestRequiredFor = descriptor.ingestRequiredFor;
+      const surfaces =
+        ingestRequiredFor === undefined
+          ? []
+          : array(ingestRequiredFor, `${String(descriptor.method)} ingestRequiredFor`).map(
+              (surface, index) =>
+                record(surface, `${String(descriptor.method)} ingestRequiredFor[${index}]`),
+            );
+      for (const surface of surfaces) {
+        assertSchemaObject(
+          surface,
+          commonCapabilityDescriptorSchema,
+          `${String(descriptor.method)} common ingest surface`,
+        );
+        assertSchemaObject(
+          surface,
+          typeScriptIngestSurfaceSchema,
+          `${String(descriptor.method)} TypeScript ingest surface`,
+        );
+      }
+      assert.deepEqual(surfaces, expectedSearchIngestRequiredFor(String(descriptor.method)));
     } else if (String(descriptor.method).startsWith("check/")) {
       assert.equal(descriptor.command, "check");
       assert.equal(Object.hasOwn(descriptor, "view"), false);
@@ -188,6 +249,9 @@ test("semantic language registry JSON documents the TypeScript provider identity
       assert.equal(Object.hasOwn(descriptor, "requiresQuery"), false);
       assert.equal(Object.hasOwn(descriptor, "acceptsStdin"), false);
       assert.equal(Object.hasOwn(descriptor, "supportsPackageScope"), false);
+      assert.equal(Object.hasOwn(descriptor, "acceptedPipes"), false);
+      assert.equal(Object.hasOwn(descriptor, "capabilities"), false);
+      assert.equal(Object.hasOwn(descriptor, "ingestRequiredFor"), false);
     } else if (String(descriptor.method).startsWith("agent/")) {
       assert.equal(descriptor.command, "agent");
       assert.equal(Object.hasOwn(descriptor, "view"), false);
@@ -197,6 +261,9 @@ test("semantic language registry JSON documents the TypeScript provider identity
       assert.equal(Object.hasOwn(descriptor, "requiresQuery"), false);
       assert.equal(Object.hasOwn(descriptor, "acceptsStdin"), false);
       assert.equal(Object.hasOwn(descriptor, "supportsPackageScope"), false);
+      assert.equal(Object.hasOwn(descriptor, "acceptedPipes"), false);
+      assert.equal(Object.hasOwn(descriptor, "capabilities"), false);
+      assert.equal(Object.hasOwn(descriptor, "ingestRequiredFor"), false);
     }
   }
   const schemas = array(language.schemas, "registry.languages[0].schemas");
@@ -208,6 +275,16 @@ test("semantic language registry JSON documents the TypeScript provider identity
   assert.equal(registrySchema.schemaId, "agent.semantic-protocols.semantic-language-registry");
   assert.equal(registrySchema.schemaVersion, "1");
   assert.equal(registrySchema.path, "schemas/semantic-language-registry.v1.schema.json");
+  const typeScriptCapabilitiesSchema = record(schemas[2], "registry.languages[0].schemas[2]");
+  assert.equal(
+    typeScriptCapabilitiesSchema.schemaId,
+    "agent.semantic-protocols.languages.typescript.ts-harness.capabilities",
+  );
+  assert.equal(typeScriptCapabilitiesSchema.schemaVersion, "1");
+  assert.equal(
+    typeScriptCapabilitiesSchema.path,
+    "schemas/typescript-semantic-capabilities.v1.schema.json",
+  );
 });
 
 test("package-local semantic schemas stay synchronized with the protocol repository", () => {
@@ -225,10 +302,113 @@ test("package-local semantic schemas stay synchronized with the protocol reposit
       `${schemaFileName} matches the protocol repository schema`,
     );
   }
+
+  const typeScriptCapabilityTemplatePath = protocolRepositorySchemaPath(
+    "typescript-semantic-capabilities-template.v1.schema.json",
+  );
+  if (typeScriptCapabilityTemplatePath !== undefined) {
+    const local = sharedTypeScriptCapabilitiesSchema();
+    const template = readJson(typeScriptCapabilityTemplatePath);
+    assert.deepEqual(
+      record(local.$defs, "local TypeScript capabilities $defs"),
+      record(template.$defs, "template TypeScript capabilities $defs"),
+      "TypeScript capability vocabulary matches the protocol repository template",
+    );
+  }
 });
 
 function sharedSemanticSearchSchema(): JsonObject {
   return readJson(packageSchemaPath("semantic-search-packet.v1.schema.json"));
+}
+
+function sharedTypeScriptCapabilitiesSchema(): JsonObject {
+  return readJson(packageSchemaPath("typescript-semantic-capabilities.v1.schema.json"));
+}
+
+function expectedSearchCapabilities(
+  method: string,
+): readonly { readonly languageId: string; readonly namespace: string; readonly name: string }[] {
+  switch (method) {
+    case "search/workspace":
+      return [semanticCapability("workspace-router")];
+    case "search/prime":
+      return [semanticCapability("package-prime-map")];
+    case "search/owner":
+      return [
+        semanticCapability("reasoning-owner-search"),
+        typeScriptCapability("parser-visible-module-owner-search"),
+        typeScriptCapability("test-owner-search"),
+        semanticCapability("path-owner-fallback"),
+      ];
+    case "search/dependency":
+      return [
+        semanticCapability("dependency-manifest-search"),
+        typeScriptCapability("dependency-local-usage-search"),
+      ];
+    case "search/deps":
+      return [
+        semanticCapability("dependency-manifest-search"),
+        typeScriptCapability("dependency-local-usage-search"),
+        semanticCapability("dependency-version-scope"),
+        typeScriptCapability("dependency-api-token-usage-search"),
+      ];
+    case "search/symbol":
+      return [typeScriptCapability("symbol-export-search")];
+    case "search/callsite":
+      return [typeScriptCapability("owner-callsite-search")];
+    case "search/import":
+      return [typeScriptCapability("import-edge-search")];
+    case "search/tests":
+      return [typeScriptCapability("test-owner-search")];
+    case "search/text":
+      return [
+        semanticCapability("owner-path-text-search"),
+        typeScriptCapability("export-text-search"),
+        typeScriptCapability("parser-visible-source-text-search"),
+      ];
+    case "search/ingest":
+      return [
+        semanticCapability("external-candidate-ingest"),
+        semanticCapability("stdin-shape-detection"),
+        semanticCapability("owner-grouped-ingest"),
+      ];
+    default:
+      return [];
+  }
+}
+
+function expectedSearchIngestRequiredFor(
+  method: string,
+): readonly { readonly languageId: string; readonly namespace: string; readonly name: string }[] {
+  switch (method) {
+    case "search/owner":
+      return [typeScriptCapability("non-parser-path")];
+    case "search/text":
+      return [
+        typeScriptCapability("non-parser-text"),
+        typeScriptCapability("docs-text"),
+        typeScriptCapability("schema-json"),
+        typeScriptCapability("generated-artifact"),
+      ];
+    default:
+      return [];
+  }
+}
+
+function semanticCapability(name: string): {
+  readonly languageId: string;
+  readonly namespace: string;
+  readonly name: string;
+} {
+  return { languageId: "typescript", namespace: "semantic", name };
+}
+
+function typeScriptCapability(name: string): {
+  readonly languageId: string;
+  readonly namespace: string;
+  readonly name: string;
+} {
+  return { languageId: "typescript", namespace: "typescript", name };
 }
 
 function sharedSemanticLanguageRegistrySchema(): JsonObject {

@@ -15,6 +15,7 @@ import {
 import type {
   SemanticSearchBuildOptions,
   SemanticSearchEdge,
+  SemanticSearchOwner,
   SemanticSearchPacket,
   SemanticSearchPacketPayload,
 } from "./types.js";
@@ -296,7 +297,19 @@ function buildTextPacket(
 ): SemanticSearchPacket {
   const query = options.query ?? "";
   const hits = textHits(report, query);
-  const owners = ownersForHits(report, hits);
+  const pipes = options.pipes ?? [];
+  const textOwners = ownersForHits(report, hits);
+  const testEdgesForText = pipes.includes("tests") ? testEdgesForOwners(report, textOwners) : [];
+  const testHitsForText =
+    testEdgesForText.length > 0 ? testHits(report, testEdgesForText, query) : [];
+  const owners = uniqueOwners([
+    ...textOwners,
+    ...ownersForPaths(
+      report,
+      testEdgesForText.flatMap((edge) => [stripNodePrefix(edge.from), stripNodePrefix(edge.to)]),
+    ),
+    ...ownersForHits(report, testHitsForText),
+  ]);
   const notes =
     query.trim() === ""
       ? [{ kind: "empty-query" as const, message: "text search requires a non-empty query" }]
@@ -312,12 +325,23 @@ function buildTextPacket(
   return basePacket(report, options, {
     header: {
       kind: "search-text",
-      fields: { q: query, own: owners.length, hit: hits.length, view: "hits" },
+      fields: {
+        q: query,
+        own: owners.length,
+        hit: hits.length + testHitsForText.length,
+        view: testEdgesForText.length > 0 ? "both" : "hits",
+        pipes,
+        ...(testEdgesForText.length > 0 ? { test: testHitsForText.length } : {}),
+      },
     },
-    nodes: owners.map((owner) => ownerNode(owner)),
-    edges: [],
+    nodes: owners.map((owner) =>
+      owner.role.includes("test") || isTestOwnerPath(owner.path)
+        ? testNode(owner)
+        : ownerNode(owner),
+    ),
+    edges: testEdgesForText,
     owners,
-    hits,
+    hits: [...hits, ...testHitsForText],
     findings: [],
     nextActions:
       owners.length > 0
@@ -327,6 +351,30 @@ function buildTextPacket(
           : [{ kind: "ingest" as const, target: query }],
     notes,
   });
+}
+
+function testEdgesForOwners(
+  report: TypeScriptHarnessReport,
+  owners: readonly SemanticSearchOwner[],
+): readonly SemanticSearchEdge[] {
+  const edges = owners.flatMap((owner) =>
+    testEdges(report, findOwner(report, owner.path), owner.path),
+  );
+  return uniqueEdges(edges);
+}
+
+function uniqueEdges(edges: readonly SemanticSearchEdge[]): readonly SemanticSearchEdge[] {
+  const seen = new Set<string>();
+  const unique: SemanticSearchEdge[] = [];
+  for (const edge of edges) {
+    const key = `${edge.from}:${edge.kind}:${edge.to}:${edge.label ?? ""}`;
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    unique.push(edge);
+  }
+  return unique;
 }
 
 function buildSymbolPacket(

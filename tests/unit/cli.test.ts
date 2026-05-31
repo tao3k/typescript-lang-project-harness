@@ -190,6 +190,27 @@ test("CLI exposes semantic-search protocol commands", () => {
   assert.match(text.stdout, /^\[search-text\] /u);
   assert.match(text.stdout, /\|hit src\/index\.ts/u);
 
+  const textOwnerTestsPipe = runCliCapture(
+    ["search", "text", "findOrderStatus", "owner", "tests", "."],
+    root,
+  );
+  assert.equal(textOwnerTestsPipe.exitCode, 0);
+  assert.match(textOwnerTestsPipe.stdout, /^\[search-text\] /u);
+  assert.match(textOwnerTestsPipe.stdout, /\bpipes=owner,tests\b/u);
+  assert.match(textOwnerTestsPipe.stdout, /\|owner src\/index\.ts/u);
+  assert.match(textOwnerTestsPipe.stdout, /\|hit tests\/index\.test\.ts:1/u);
+  assert.match(
+    textOwnerTestsPipe.stdout,
+    /\|edge O:src\/index\.ts -test-> T:tests\/index\.test\.ts/u,
+  );
+
+  const invalidTextPipe = runCliCapture(
+    ["search", "text", "findOrderStatus", "tests", "owner", "."],
+    root,
+  );
+  assert.equal(invalidTextPipe.exitCode, 2);
+  assert.match(invalidTextPipe.stderr, /expected pipes \(owner,tests\) before PROJECT_ROOT/u);
+
   const sourceText = runCliCapture(["search", "text", "internalOrderToken", "."], root);
   assert.equal(sourceText.exitCode, 0);
   assert.match(sourceText.stdout, /^\[search-text\] /u);
@@ -324,6 +345,17 @@ test("CLI exposes semantic-search protocol commands", () => {
         readonly requiresQuery?: boolean;
         readonly acceptsStdin?: boolean;
         readonly supportsPackageScope?: boolean;
+        readonly acceptedPipes?: readonly string[];
+        readonly capabilities?: readonly {
+          readonly languageId: string;
+          readonly namespace: string;
+          readonly name: string;
+        }[];
+        readonly ingestRequiredFor?: readonly {
+          readonly languageId: string;
+          readonly namespace: string;
+          readonly name: string;
+        }[];
         readonly supportsJson: boolean;
         readonly supportsCompact: boolean;
       }[];
@@ -374,6 +406,11 @@ test("CLI exposes semantic-search protocol commands", () => {
           ].includes(method),
           acceptsStdin: method === "search/ingest",
           supportsPackageScope: true,
+          ...(method === "search/text" ? { acceptedPipes: ["owner", "tests"] } : {}),
+          capabilities: expectedSearchCapabilities(method),
+          ...(expectedSearchIngestRequiredFor(method).length === 0
+            ? {}
+            : { ingestRequiredFor: expectedSearchIngestRequiredFor(method) }),
           supportsJson: true,
           supportsCompact: true,
         })),
@@ -404,6 +441,11 @@ test("CLI exposes semantic-search protocol commands", () => {
         schemaVersion: "1",
         path: "schemas/semantic-language-registry.v1.schema.json",
       },
+      {
+        schemaId: "agent.semantic-protocols.languages.typescript.ts-harness.capabilities",
+        schemaVersion: "1",
+        path: "schemas/typescript-semantic-capabilities.v1.schema.json",
+      },
     ],
   });
 
@@ -411,6 +453,92 @@ test("CLI exposes semantic-search protocol commands", () => {
   assert.equal(unknownProtocolCommand.exitCode, 2);
   assert.match(unknownProtocolCommand.stderr, /unknown command: agent-client/u);
 });
+
+function expectedSearchCapabilities(
+  method: string,
+): readonly { readonly languageId: string; readonly namespace: string; readonly name: string }[] {
+  switch (method) {
+    case "search/workspace":
+      return [semanticCapability("workspace-router")];
+    case "search/prime":
+      return [semanticCapability("package-prime-map")];
+    case "search/owner":
+      return [
+        semanticCapability("reasoning-owner-search"),
+        typeScriptCapability("parser-visible-module-owner-search"),
+        typeScriptCapability("test-owner-search"),
+        semanticCapability("path-owner-fallback"),
+      ];
+    case "search/dependency":
+      return [
+        semanticCapability("dependency-manifest-search"),
+        typeScriptCapability("dependency-local-usage-search"),
+      ];
+    case "search/deps":
+      return [
+        semanticCapability("dependency-manifest-search"),
+        typeScriptCapability("dependency-local-usage-search"),
+        semanticCapability("dependency-version-scope"),
+        typeScriptCapability("dependency-api-token-usage-search"),
+      ];
+    case "search/symbol":
+      return [typeScriptCapability("symbol-export-search")];
+    case "search/callsite":
+      return [typeScriptCapability("owner-callsite-search")];
+    case "search/import":
+      return [typeScriptCapability("import-edge-search")];
+    case "search/tests":
+      return [typeScriptCapability("test-owner-search")];
+    case "search/text":
+      return [
+        semanticCapability("owner-path-text-search"),
+        typeScriptCapability("export-text-search"),
+        typeScriptCapability("parser-visible-source-text-search"),
+      ];
+    case "search/ingest":
+      return [
+        semanticCapability("external-candidate-ingest"),
+        semanticCapability("stdin-shape-detection"),
+        semanticCapability("owner-grouped-ingest"),
+      ];
+    default:
+      return [];
+  }
+}
+
+function expectedSearchIngestRequiredFor(
+  method: string,
+): readonly { readonly languageId: string; readonly namespace: string; readonly name: string }[] {
+  switch (method) {
+    case "search/owner":
+      return [typeScriptCapability("non-parser-path")];
+    case "search/text":
+      return [
+        typeScriptCapability("non-parser-text"),
+        typeScriptCapability("docs-text"),
+        typeScriptCapability("schema-json"),
+        typeScriptCapability("generated-artifact"),
+      ];
+    default:
+      return [];
+  }
+}
+
+function semanticCapability(name: string): {
+  readonly languageId: string;
+  readonly namespace: string;
+  readonly name: string;
+} {
+  return { languageId: "typescript", namespace: "semantic", name };
+}
+
+function typeScriptCapability(name: string): {
+  readonly languageId: string;
+  readonly namespace: string;
+  readonly name: string;
+} {
+  return { languageId: "typescript", namespace: "typescript", name };
+}
 
 test("CLI searches external dependency usage", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-semantic-search-dependency-"));
