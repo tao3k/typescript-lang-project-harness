@@ -138,6 +138,21 @@ export function isPublicClassMember(member: ts.ClassElement): boolean {
   );
 }
 
+export function forEachDescendant(root: ts.Node, visit: (node: ts.Node) => void): void {
+  const stack: ts.Node[] = [root];
+  while (stack.length > 0) {
+    const node = stack.pop()!;
+    visit(node);
+    const children: ts.Node[] = [];
+    ts.forEachChild(node, (child) => {
+      children.push(child);
+    });
+    for (let index = children.length - 1; index >= 0; index -= 1) {
+      stack.push(children[index]!);
+    }
+  }
+}
+
 export function sourceLineField(
   sourceFile: ts.SourceFile,
   node: ts.Node,

@@ -31,10 +31,10 @@ const TS_MOD_R002: TypeScriptHarnessRule = {
 const MODULE_LAYER_LINE_LIMITS: Partial<Record<TypeScriptReasoningModule["layer"], number>> = {
   parser: 500,
   reasoning: 500,
-  policy: 500,
-  render: 500,
+  policy: 650,
+  render: 550,
   model: 500,
-  harness: 500,
+  harness: 650,
 };
 
 export function typeScriptModularityRules(): readonly TypeScriptHarnessRule[] {

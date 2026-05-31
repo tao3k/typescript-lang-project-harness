@@ -1,0 +1,150 @@
+#+TITLE: TypeScript Project Harness Agent Skill
+
+Use =ts-harness= as a semantic-language provider for TypeScript projects.  The
+public CLI protocol has three top-level entrypoints:
+
+#+begin_src shell
+ts-harness search <view> ... [--json] [--package PATH] [PROJECT_ROOT]
+ts-harness check [--changed | --full] [--json] [PROJECT_ROOT]
+ts-harness agent doctor [--json] [PROJECT_ROOT]
+ts-harness agent install --client codex [PROJECT_ROOT]
+ts-harness agent guide --client codex [PROJECT_ROOT]
+ts-harness agent hook --client codex <event> [PROJECT_ROOT]
+#+end_src
+
+Do not use direct renderer flags.  =--tree=, =--stats=, =--harness=,
+=--agent-compact=, and =--agent-snapshot= are not protocol commands.
+
+* Start Here
+
+For a multi-package workspace:
+
+#+begin_src shell
+ts-harness search workspace .
+ts-harness search prime --package packages/core .
+#+end_src
+
+For a single package:
+
+#+begin_src shell
+ts-harness search prime .
+#+end_src
+
+Use =agent doctor --json= when an integration needs the provider registry:
+
+#+begin_src shell
+ts-harness agent doctor --json .
+#+end_src
+
+Use =agent install --client codex= when Codex should enforce search-first
+source access in a repository:
+
+#+begin_src shell
+ts-harness agent install --client codex .
+#+end_src
+
+The installed hooks deny raw TypeScript/JavaScript source reads and broad
+source searches unless the candidates flow into =ts-harness search ingest=.
+The denial message includes a compact command-line guide.  Every actionable
+line starts with =|cmd= or =|pipe= and uses only the installed =ts-harness=
+binary:
+
+#+begin_src shell
+ts-harness agent guide --client codex .
+#+end_src
+
+If =.codex/config.toml= already exists, installation preserves other language
+harness blocks and updates or appends only the marked =ts-harness= block.
+Run installation from the Codex session root that owns the conversation.  If the
+session is rooted at a Rust harness repo while work touches a TypeScript repo,
+install into that Rust root too, so Codex loads a concatenated root config.
+
+The registry is the capability source of truth.  Call only methods listed in
+=methods=; read =methodDescriptors= for command, view, output schema,
+query/stdin requirements, and package-scope support.
+
+* Search Views
+
+| View                                           | Purpose                                                     |
+|------------------------------------------------+-------------------------------------------------------------|
+| =workspace=                                    | Workspace package/router index.  No raw source hits.        |
+| =prime=                                        | Bounded package-level owner/dependency/finding map.         |
+| =owner <path>=                                 | One owner plus adjacent semantic edges.                     |
+| =dependency <pkg>=                             | Package manifest facts plus local import usage.             |
+| =deps <pkg[/subpath][@version][::api]>=        | Version-aware dependency API usage.                         |
+| =symbol <name>=                                | Exported symbol definitions.                                |
+| =callsite <name>=                              | Owner-level import/reexport sites.                          |
+| =import <query>=                               | Import/reexport owner edges.                                |
+| =tests <owner-or-path>=                        | Tests that import a source owner.                           |
+| =text <query>=                                 | Owner-grouped path/export matches.                          |
+| =ingest=                                       | Normalize stdin candidate streams by owner.                 |
+
+* Common Flows
+
+** Understand A Workspace
+
+#+begin_src shell
+ts-harness search workspace .
+ts-harness search prime --package <package-path> .
+#+end_src
+
+Read package routing, owner summaries, finding groups, and =next= actions
+before opening files.
+
+** Inspect A Dependency
+
+#+begin_src shell
+ts-harness search dependency react .
+ts-harness search deps react/jsx-runtime@19.0.0::jsx .
+#+end_src
+
+=search deps= distinguishes the current workspace version from an external
+requested version.  Current local usage uses =versionScope=current= and
+=currentWorkspaceVersion=.  External version queries use =versionScope=external=;
+local imports are not evidence for that external version.
+
+** Trace A Symbol Or Import
+
+#+begin_src shell
+ts-harness search symbol OrderStatus .
+ts-harness search callsite OrderStatus .
+ts-harness search import ./order .
+ts-harness search tests src/domain/order.ts .
+#+end_src
+
+Use owner-grouped output to identify blast radius before editing.
+
+** Normalize External Candidate Streams
+
+#+begin_src shell
+rg -n "OrderStatus" src tests | ts-harness search ingest .
+git diff --name-only | ts-harness search ingest .
+#+end_src
+
+Do not paste raw =rg=, =fd=, or diff output into the prompt directly.  Pipe it
+through =search ingest= so the result is grouped by owner and aligned with the
+semantic-search packet.
+
+* Validation
+
+After edits:
+
+#+begin_src shell
+ts-harness check --changed .
+#+end_src
+
+Before closeout:
+
+#+begin_src shell
+ts-harness check --full .
+#+end_src
+
+For tools that need structured output:
+
+#+begin_src shell
+ts-harness search prime --json .
+ts-harness check --json .
+#+end_src
+
+Compact text remains the default agent-facing surface.  JSON is the validation,
+cache, and artifact contract.

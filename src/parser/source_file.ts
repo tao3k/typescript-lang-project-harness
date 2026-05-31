@@ -16,21 +16,74 @@ import {
   parseDiagnosticsForSourceFile,
 } from "./diagnostics.js";
 import { collectTypeScriptNativeSyntaxFacts } from "./native_syntax/index.js";
+import { forEachDescendant } from "./native_syntax/helpers.js";
 
 export function parseTypeScriptSourceFile(filePathInput: string): TypeScriptModuleReport {
   const filePath = path.resolve(filePathInput);
   const sourceText = fs.readFileSync(filePath, "utf8");
-  const sourceFile = ts.createSourceFile(
-    filePath,
-    sourceText,
-    ts.ScriptTarget.Latest,
-    true,
-    toCompilerScriptKind(scriptKindForPath(filePath)),
-  );
+  let sourceFile: ts.SourceFile;
+  try {
+    sourceFile = ts.createSourceFile(
+      filePath,
+      sourceText,
+      ts.ScriptTarget.Latest,
+      true,
+      toCompilerScriptKind(scriptKindForPath(filePath)),
+    );
+  } catch (error) {
+    return invalidModuleReport(filePath, sourceText, error);
+  }
   const diagnostics = parseDiagnosticsForSourceFile(sourceFile).map((diagnostic) =>
     nativeDiagnosticFromTsDiagnostic(diagnostic, filePath, sourceText),
   );
   return moduleReportFromSourceFile(sourceFile, diagnostics, [], []);
+}
+
+function invalidModuleReport(
+  filePath: string,
+  sourceText: string,
+  error: unknown,
+): TypeScriptModuleReport {
+  const message = error instanceof Error ? error.message : String(error);
+  return {
+    path: filePath,
+    isValid: false,
+    scriptKind: scriptKindForPath(filePath),
+    isDeclarationFile: filePath.endsWith(".d.ts") || filePath.endsWith(".d.mts"),
+    hasIntentDoc: false,
+    lineCount: sourceText.split(/\r\n|\r|\n/u).length,
+    diagnostics: [
+      {
+        code: 0,
+        message,
+        category: "error",
+        location: { path: filePath, line: 1, column: 0 },
+        sourceLine: sourceText.split(/\r\n|\r|\n/u)[0] ?? "",
+        relatedInformation: [],
+      },
+    ],
+    semanticDiagnostics: [],
+    imports: [],
+    importResolutions: [],
+    exports: [],
+    publicFunctionParams: [],
+    publicTupleApiSurfaces: [],
+    publicDataFields: [],
+    publicTypeAliases: [],
+    publicDiscriminatedUnionVariantFields: [],
+    publicFunctionControlFlows: [],
+    publicAsyncEffectSurfaces: [],
+    effectRuntimeCalls: [],
+    effectPromiseInteropRisks: [],
+    effectResourceScopeRisks: [],
+    effectConcurrencySignals: [],
+    effectSchemaBoundarySignals: [],
+    effectProductionBoundarySignals: [],
+    effectServiceMethods: [],
+    reactRenderPuritySignals: [],
+    reactHookCallSignals: [],
+    reactStaticDefinitionSignals: [],
+  };
 }
 
 export function moduleReportFromSourceFile(
@@ -74,7 +127,7 @@ export function moduleReportFromSourceFile(
 
 export function collectImportFacts(sourceFile: ts.SourceFile): TypeScriptImportFact[] {
   const facts: TypeScriptImportFact[] = [];
-  const visit = (node: ts.Node): void => {
+  forEachDescendant(sourceFile, (node) => {
     if (ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier)) {
       facts.push({
         moduleSpecifier: node.moduleSpecifier.text,
@@ -130,9 +183,7 @@ export function collectImportFacts(sourceFile: ts.SourceFile): TypeScriptImportF
         });
       }
     }
-    ts.forEachChild(node, visit);
-  };
-  visit(sourceFile);
+  });
   return facts;
 }
 

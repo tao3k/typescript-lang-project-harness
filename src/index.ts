@@ -31,6 +31,8 @@ export type {
   TypeScriptPackageBuildToolName,
   TypeScriptPackageBuildToolSignalFact,
   TypeScriptPackageBuildToolSignalKind,
+  TypeScriptPackageDependencyFact,
+  TypeScriptPackageDependencySource,
   TypeScriptPackageImportOwnerFact,
   TypeScriptPackageEntryResolutionFact,
   TypeScriptPackageExtensionActivation,

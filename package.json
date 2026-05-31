@@ -5,10 +5,11 @@
   "description": "Project-level TypeScript language harness with native parser facts and compact diagnostics for agents",
   "license": "Apache-2.0",
   "bin": {
-    "typescript-project-harness": "./dist/src/cli/main.js"
+    "ts-harness": "./dist/src/cli/main.js"
   },
   "files": [
     "dist",
+    "schemas",
     "README.md",
     "docs"
   ],
@@ -22,13 +23,17 @@
   "scripts": {
     "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
     "build": "npm run clean && tsc -p tsconfig.json && chmod +x dist/src/cli/main.js",
-    "check": "tsc -p tsconfig.json --noEmit",
+    "check": "npm run check:implementation",
+    "check:implementation": "tsc -p tsconfig.json --noEmit",
+    "check:policy": "npm run build && node --test \"dist/tests/unit/self_policy.test.js\"",
     "prepare": "npm run build",
     "format": "oxfmt --write .",
     "format:check": "oxfmt --check .",
     "lint": "oxlint .",
-    "test": "npm run build && node --test \"dist/tests/**/*.test.js\"",
-    "harness": "npm run build && node dist/src/cli/main.js ."
+    "test": "npm run test:implementation && npm run test:policy",
+    "test:implementation": "npm run build && find dist/tests -name \"*.test.js\" ! -name \"self_policy.test.js\" -print | xargs node --test",
+    "test:policy": "npm run build && node --test \"dist/tests/unit/self_policy.test.js\"",
+    "harness": "npm run build && node dist/src/cli/main.js check --full ."
   },
   "dependencies": {
     "typescript": "^5.9.3"

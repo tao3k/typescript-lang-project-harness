@@ -291,9 +291,13 @@ function uniqueTargetFileCount(findings: readonly TypeScriptHarnessFinding[]): n
 function renderTaskHeader(finding: TypeScriptHarnessFinding, count: number, index: number): string {
   const context = compactTaskContext(finding);
   const contextSuffix = context === "" ? "" : ` (${context})`;
-  return `[${finding.ruleId}] ${finding.severity} x${count}: ${agentTaskTitle(
+  return `[${finding.ruleId}] ${capitalizeSeverity(finding.severity)} x${count}: ${agentTaskTitle(
     finding,
   )}${contextSuffix} task=${index}`;
+}
+
+function capitalizeSeverity(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
 function agentTaskTitle(finding: TypeScriptHarnessFinding): string {

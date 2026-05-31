@@ -98,6 +98,62 @@ test("project harness reports malformed project reference package json without t
   );
 });
 
+test("project parser records package dependency facts from package json", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-package-deps-"));
+  fs.mkdirSync(path.join(root, "src"));
+  fs.writeFileSync(
+    path.join(root, "package.json"),
+    JSON.stringify({
+      name: "@example/package-deps",
+      dependencies: { react: "^19.0.0" },
+      devDependencies: { typescript: "^5.9.3" },
+      peerDependencies: { "@types/react": "^19.0.0" },
+      optionalDependencies: { sharp: "^0.34.0" },
+    }),
+  );
+  fs.writeFileSync(path.join(root, "tsconfig.json"), JSON.stringify({ include: ["src/**/*.ts"] }));
+  fs.writeFileSync(path.join(root, "src", "index.ts"), "export const ok = 1;\n");
+
+  const report = runTypeScriptProjectHarness(root);
+
+  const dependencies = report.projectScope?.packageJson.dependencies ?? [];
+  assert.deepEqual(
+    dependencies.map((dependency) => ({
+      name: dependency.name,
+      versionRange: dependency.versionRange,
+      source: dependency.source,
+      path: path.relative(root, dependency.location.path ?? ""),
+    })),
+    [
+      {
+        name: "react",
+        versionRange: "^19.0.0",
+        source: "dependencies",
+        path: "package.json",
+      },
+      {
+        name: "typescript",
+        versionRange: "^5.9.3",
+        source: "devDependencies",
+        path: "package.json",
+      },
+      {
+        name: "sharp",
+        versionRange: "^0.34.0",
+        source: "optionalDependencies",
+        path: "package.json",
+      },
+      {
+        name: "@types/react",
+        versionRange: "^19.0.0",
+        source: "peerDependencies",
+        path: "package.json",
+      },
+    ],
+  );
+  assert.deepEqual(report.reasoningTree.packageDependencies, dependencies);
+});
+
 test("project policy reports referenced package config shape as advice", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-reference-config-"));
   fs.mkdirSync(path.join(root, "src"));
@@ -335,6 +391,61 @@ test("project harness discovers workspace package facts from package json", () =
   assert.match(
     rendered,
     /src\/index\.ts --package-name\/type-import--> packages\/core owner=workspace/u,
+  );
+});
+
+test("project harness discovers pnpm workspace package facts", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-pnpm-workspace-"));
+  fs.mkdirSync(path.join(root, "src"));
+  fs.mkdirSync(path.join(root, "packages", "core"), { recursive: true });
+  fs.mkdirSync(path.join(root, "playground", "demo"), { recursive: true });
+  fs.writeFileSync(
+    path.join(root, "package.json"),
+    JSON.stringify({
+      name: "@example/pnpm-workspace-root",
+      type: "module",
+    }),
+  );
+  fs.writeFileSync(
+    path.join(root, "pnpm-workspace.yaml"),
+    ["packages:", "  - 'packages/*'", "  - playground/**", "  - '!ignored/*'"].join("\n"),
+  );
+  fs.writeFileSync(
+    path.join(root, "packages", "core", "package.json"),
+    JSON.stringify({ name: "@example/core" }),
+  );
+  fs.writeFileSync(
+    path.join(root, "playground", "demo", "package.json"),
+    JSON.stringify({ name: "@example/demo" }),
+  );
+  fs.writeFileSync(path.join(root, "tsconfig.json"), JSON.stringify({ include: ["src/**/*.ts"] }));
+  fs.writeFileSync(path.join(root, "src", "index.ts"), "export const ok = 1;\n");
+
+  const report = runTypeScriptProjectHarness(root);
+  const packageJson = report.projectScope?.packageJson;
+  assert.ok(packageJson !== undefined);
+  assert.deepEqual(
+    packageJson.workspaces.map((workspace) => ({
+      pattern: workspace.pattern,
+      path: path.relative(root, workspace.location.path ?? ""),
+      line: workspace.location.line,
+    })),
+    [
+      { pattern: "!ignored/*", path: "pnpm-workspace.yaml", line: 4 },
+      { pattern: "packages/*", path: "pnpm-workspace.yaml", line: 2 },
+      { pattern: "playground/**", path: "pnpm-workspace.yaml", line: 3 },
+    ],
+  );
+  assert.deepEqual(
+    packageJson.workspacePackages.map((workspacePackage) => ({
+      name: workspacePackage.name,
+      path: path.relative(root, workspacePackage.path),
+      pattern: workspacePackage.pattern,
+    })),
+    [
+      { name: "@example/core", path: "packages/core", pattern: "packages/*" },
+      { name: "@example/demo", path: "playground/demo", pattern: "playground/**" },
+    ],
   );
 });
 

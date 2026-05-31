@@ -4,13 +4,39 @@
 
 ```shell
 direnv exec . npm install
-direnv exec . npm run check
+direnv exec . npm run check:implementation
+direnv exec . npm run check:policy
 direnv exec . npm run lint
 direnv exec . npm run format:check
-direnv exec . npm test
+direnv exec . npm run test:implementation
+direnv exec . npm run test:policy
 direnv exec . npm run harness
 direnv exec . git diff --check
 ```
+
+## Global CLI Install
+
+Install the local checkout as the global `ts-harness` binary before testing
+agent hook flows from other repositories:
+
+```shell
+direnv exec . npm install -g --prefix /opt/homebrew .
+ts-harness agent doctor .
+ts-harness search prime --view seeds .
+ts-harness agent install --client codex .
+ts-harness agent guide --client codex .
+```
+
+The explicit prefix avoids the devenv/Nix global npm prefix, which may be
+read-only. On Linux, use the writable global prefix that is already on
+`PATH`, for example `--prefix ~/.local`.
+Run the install command from the repository that should own the active Codex
+session; it writes `.codex/config.toml` delegating hook events to the global
+`ts-harness` binary. Existing config is merged, not overwritten, so
+Rust+TypeScript repositories can keep both harness hook blocks. For a Codex
+session rooted at a Rust harness repo while editing a TypeScript harness repo,
+install into the Rust session root as well; that root config is the one Codex
+loads for the current conversation.
 
 ## Native Parser Boundary
 
@@ -82,7 +108,9 @@ Module-role classification should use explicit parser-visible suffix lists for
 supported module script kinds instead of dynamic regular-expression helpers.
 The whole package project is modularity-governed: large parser, reasoning,
 policy, render, model, and harness modules should be split by concern before
-they exceed their layer line budgets.
+they exceed their layer line budgets. Parser, reasoning, and model stay at the
+strict 500-line budget; policy and harness orchestration files may be larger
+while still capped, and render files use a narrower orchestration budget.
 Rule packs should stay in the `src/rules/` pack structure: catalog metadata,
 the engine, and individual pack modules are separate concerns. `src/rules.ts`
 is a facade, not the policy implementation body.
@@ -125,8 +153,9 @@ package-manager policy.
 The repository runs its own harness through `tests/unit/self_policy.test.ts`.
 Those tests call the project runner against the repository root, so the package
 must stay clean under the same default policy downstream TypeScript projects
-will consume. Self-apply means zero default findings, including `info` advice,
-not merely zero blocking findings.
+will consume. Implementation self-apply means zero blocking findings. Policy
+self-apply additionally requires zero TypeScript modularity findings and keeps
+remaining advisory output bounded and visible until its dedicated cleanup lane.
 Use `assertTypeScriptProjectHarnessAgentClean()` for test-gate self-apply paths
 that should expose advice as repair feedback. Keep
 `assertTypeScriptProjectHarnessClean()` blocking-only so library callers can
@@ -138,13 +167,13 @@ for speed and expects `tsc --noEmit` to own type-check failure; pass
 the harness itself.
 Agent-clean failures must stay compact: group advice by rule and cap
 first-finding detail instead of dumping every advisory card or raw JSON.
-M6 semantic diagnostics, modularity advice, test-layout advice, package
-metadata diagnostics, and agent advice are rendered by default but remain
-`info`; do not promote advisory findings to blocking without an explicit policy
-decision.
+M6 semantic diagnostics, test-layout advice, package metadata diagnostics, and
+agent advice are rendered by default but remain `info`; do not promote advisory
+findings to blocking without an explicit policy decision. Modularity advice is
+also `info` for downstream projects, but this repository's policy self-apply
+test requires it to be empty.
 Policy config helpers may disable rules, disable built-in packs, override
-severities, or adjust blocking severities for callers. The repository default
-self-apply surface should still stay at zero findings.
+severities, or adjust blocking severities for callers.
 
 ## Renderer Contract
 
