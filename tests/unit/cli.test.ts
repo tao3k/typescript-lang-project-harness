@@ -591,6 +591,63 @@ test("CLI exposes semantic-search protocol commands", () => {
   assert.match(unknownProtocolCommand.stderr, /unknown command: agent-client/u);
 });
 
+test("CLI ranks workspace packages before test fixtures", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-workspace-ranking-cli-"));
+  fs.mkdirSync(path.join(root, "src"));
+  fs.writeFileSync(path.join(root, "src", "index.ts"), "export const ok = 1;\n");
+  fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ name: "@example/root" }));
+  fs.writeFileSync(path.join(root, "tsconfig.json"), JSON.stringify({ include: ["src/**/*.ts"] }));
+  fs.writeFileSync(
+    path.join(root, "pnpm-workspace.yaml"),
+    ["packages:", "  - 'packages/*'", "  - 'packages/**/__tests__/**'"].join("\n"),
+  );
+  for (const name of ["core", "vite", "z-alpha", "z-beta"]) {
+    const packageRoot = path.join(root, "packages", name);
+    fs.mkdirSync(packageRoot, { recursive: true });
+    fs.writeFileSync(
+      path.join(packageRoot, "package.json"),
+      JSON.stringify({ name: `@example/${name}` }),
+    );
+  }
+  for (let index = 0; index < 30; index += 1) {
+    const fixtureRoot = path.join(
+      root,
+      "packages",
+      "vite",
+      "src",
+      "node",
+      "__tests__",
+      "fixtures",
+      `fixture-${String(index).padStart(2, "0")}`,
+    );
+    fs.mkdirSync(fixtureRoot, { recursive: true });
+    fs.writeFileSync(
+      path.join(fixtureRoot, "package.json"),
+      JSON.stringify({ name: `@example/fixture-${index}` }),
+    );
+  }
+
+  const workspace = runCliCapture(["search", "workspace", "."], root);
+
+  assert.equal(workspace.exitCode, 0);
+  assert.match(workspace.stdout, /\bmode=workspace-index\b/u);
+  const packageIds = workspace.stdout
+    .split("\n")
+    .filter((line) => line.startsWith("|package ") && !line.startsWith("|package . "))
+    .map((line) => line.split(" ")[1]);
+  assert.deepEqual(packageIds.slice(0, 4), [
+    "packages/core",
+    "packages/vite",
+    "packages/z-alpha",
+    "packages/z-beta",
+  ]);
+  assert.match(workspace.stdout, /\|package packages\/z-alpha .*surface=source/u);
+  assert.match(
+    workspace.stdout,
+    /\|package packages\/vite\/src\/node\/__tests__\/fixtures\/fixture-00 .*surface=test/u,
+  );
+});
+
 function expectedSearchCapabilities(
   method: string,
 ): readonly { readonly languageId: string; readonly namespace: string; readonly name: string }[] {

@@ -64,6 +64,7 @@ import {
 import { ownerFallback } from "./owner-fallback.js";
 import { isTestOwnerPath } from "./test-path.js";
 import { findOwner, relPath, stripNodePrefix } from "./utils.js";
+import { rankedWorkspacePackages } from "./workspace-ranking.js";
 
 export function buildSemanticSearchPacket(
   report: TypeScriptHarnessReport,
@@ -104,7 +105,7 @@ function buildWorkspacePacket(
   options: SemanticSearchBuildOptions,
 ): SemanticSearchPacket {
   const tree = report.reasoningTree;
-  const workspacePackages = tree.workspacePackages.slice(0, MAX_WORKSPACE_PACKAGES);
+  const workspacePackages = rankedWorkspacePackages(report).slice(0, MAX_WORKSPACE_PACKAGES);
   const packageFacts = [
     workspaceRootPackageFact(report),
     ...workspacePackages.map((workspacePackage) => workspacePackageFact(report, workspacePackage)),

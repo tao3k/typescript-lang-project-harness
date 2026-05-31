@@ -22,6 +22,7 @@ import type {
 } from "./types.js";
 import { compareProjectPathsByRecency } from "./recency.js";
 import { locationFromSource, locationPath, ownerId, relPath, testId } from "./utils.js";
+import { workspacePackageSurface } from "./workspace-ranking.js";
 
 export function rankedOwners(
   report: TypeScriptHarnessReport,
@@ -205,11 +206,13 @@ export function workspacePackageFact(
   workspacePackage: TypeScriptWorkspacePackageFact,
 ): SemanticSearchFact {
   const packagePath = relPath(report, workspacePackage.path);
+  const surface = workspacePackageSurface(packagePath);
   return {
     id: packagePath,
     fields: {
       ...(workspacePackage.name === undefined ? {} : { name: workspacePackage.name }),
       role: "workspace-package",
+      surface,
       pattern: workspacePackage.pattern,
       ...(workspacePackage.packageType === undefined ? {} : { type: workspacePackage.packageType }),
       ...(workspacePackage.configPath === undefined
