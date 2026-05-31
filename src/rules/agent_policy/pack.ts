@@ -160,20 +160,32 @@ export function evaluateAgentPolicyRules(
   reasoningTree: TypeScriptReasoningTree,
 ): TypeScriptHarnessFinding[] {
   const NON_TS_ASSET_EXTENSIONS = [
-    ".css", ".scss", ".less",
-    ".svg", ".png", ".jpg", ".jpeg", ".gif", ".ico",
-    ".woff", ".woff2", ".ttf", ".eot",
-    ".json", ".yaml", ".yml",
-    ".html", ".md", ".txt",
+    ".css",
+    ".scss",
+    ".less",
+    ".svg",
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".gif",
+    ".ico",
+    ".woff",
+    ".woff2",
+    ".ttf",
+    ".eot",
+    ".json",
+    ".yaml",
+    ".yml",
+    ".html",
+    ".md",
+    ".txt",
   ];
 
   return reasoningTree.ownerDependencies
     .filter((dependency) => {
       if (dependency.resolution !== "unresolved") return false;
       // Skip known non-TypeScript asset imports
-      return !NON_TS_ASSET_EXTENSIONS.some((ext) =>
-        dependency.moduleSpecifier.endsWith(ext),
-      );
+      return !NON_TS_ASSET_EXTENSIONS.some((ext) => dependency.moduleSpecifier.endsWith(ext));
     })
     .map((dependency) => ({
       ruleId: TS_AGENT_R001.ruleId,

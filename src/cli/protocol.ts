@@ -1,0 +1,296 @@
+/**
+ * Protocol command parsing and dispatch for the ts-harness CLI.
+ */
+
+import path from "node:path";
+
+import { renderTypeScriptProjectHarness, renderTypeScriptProjectHarnessJson } from "../render.js";
+import { runTypeScriptProjectHarness } from "../runner.js";
+import { isTypeScriptHarnessClean } from "../model.js";
+import {
+  SEMANTIC_LANGUAGE_PROTOCOL_ID,
+  SEMANTIC_LANGUAGE_REGISTRY_VERSION,
+  TYPE_SCRIPT_BINARY,
+  TYPE_SCRIPT_LANGUAGE_ID,
+  TYPE_SCRIPT_PROVIDER_NAMESPACE,
+  TYPE_SCRIPT_PROVIDER_ID,
+  semanticLanguageRegistryDocument,
+  typeScriptSemanticSearchViewDescriptor,
+  typeScriptSemanticLanguageRegistration,
+  type TypeScriptSemanticSearchView,
+} from "./semantic-language.js";
+import {
+  buildSemanticSearchPacket,
+  renderSemanticSearchPacket,
+  renderSemanticSearchPacketJson,
+  type SemanticSearchRenderMode,
+} from "./semantic-search.js";
+
+export interface CliStreams {
+  readonly stdout: { write(chunk: string): unknown };
+  readonly stderr: { write(chunk: string): unknown };
+  readonly stdin?: string;
+}
+
+export type ProtocolArgs =
+  | SearchArgs
+  | CheckArgs
+  | AgentArgs
+  | ProtocolHelpArgs
+  | ProtocolErrorArgs;
+
+interface SearchArgs {
+  readonly kind: "search";
+  readonly view: TypeScriptSemanticSearchView;
+  readonly query: string | undefined;
+  readonly projectRoot: string | undefined;
+  readonly packagePath: string | undefined;
+  readonly json: boolean;
+  readonly renderMode: SemanticSearchRenderMode | undefined;
+}
+
+interface CheckArgs {
+  readonly kind: "check";
+  readonly mode: "changed" | "full";
+  readonly projectRoot: string | undefined;
+  readonly json: boolean;
+}
+
+interface AgentArgs {
+  readonly kind: "agent";
+  readonly action: "doctor";
+  readonly projectRoot: string | undefined;
+  readonly json: boolean;
+}
+
+interface ProtocolHelpArgs {
+  readonly kind: "help";
+}
+
+interface ProtocolErrorArgs {
+  readonly kind: "error";
+  readonly message: string;
+}
+
+export function parseProtocolArgs(argv: readonly string[]): ProtocolArgs | undefined {
+  const command = argv[0];
+  if (command === undefined) return undefined;
+  if (command === "--help" || command === "-h") return { kind: "help" };
+  if (command === "search") return parseSearchArgs(argv.slice(1));
+  if (command === "check") return parseCheckArgs(argv.slice(1));
+  if (command === "agent") return parseAgentArgs(argv.slice(1));
+  return undefined;
+}
+
+export function runProtocolCli(
+  args: ProtocolArgs,
+  streams: CliStreams,
+  cwd: string,
+  helpText: string,
+): number {
+  if (args.kind === "help") {
+    streams.stdout.write(helpText);
+    return 0;
+  }
+  if (args.kind === "error") {
+    streams.stderr.write(`${args.message}\n`);
+    return 2;
+  }
+  if (args.kind === "agent") {
+    const projectRoot = path.resolve(cwd, args.projectRoot ?? ".");
+    streams.stdout.write(
+      args.json ? renderAgentDoctorJson(projectRoot) : renderAgentDoctor(projectRoot),
+    );
+    return 0;
+  }
+
+  const projectRoot =
+    args.kind === "search"
+      ? searchProjectRoot(cwd, args.projectRoot, args.packagePath)
+      : path.resolve(cwd, args.projectRoot ?? ".");
+  try {
+    const report = runTypeScriptProjectHarness(projectRoot);
+    if (args.kind === "check") {
+      if (args.json) {
+        streams.stdout.write(renderTypeScriptProjectHarnessJson(report));
+      } else {
+        const compact = renderTypeScriptProjectHarness(report);
+        streams.stdout.write(compact === "" ? "[ok] typescript\n" : `${compact}\n`);
+      }
+      return isTypeScriptHarnessClean(report) ? 0 : 1;
+    }
+
+    const packet = buildSemanticSearchPacket(report, {
+      view: args.view,
+      ...(args.query !== undefined ? { query: args.query } : {}),
+      ...(args.renderMode !== undefined ? { renderMode: args.renderMode } : {}),
+      ...(args.view === "ingest" ? { stdin: streams.stdin ?? "" } : {}),
+    });
+    streams.stdout.write(
+      args.json ? renderSemanticSearchPacketJson(packet) : renderSemanticSearchPacket(packet),
+    );
+    return 0;
+  } catch (error) {
+    streams.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+    return 3;
+  }
+}
+
+function parseSearchArgs(argv: readonly string[]): ProtocolArgs {
+  const viewValue = argv[0];
+  if (viewValue === undefined || viewValue === "--help" || viewValue === "-h") {
+    return {
+      kind: "error",
+      message:
+        "usage: ts-harness search <workspace|prime|owner|dependency|deps|symbol|callsite|import|tests|text|ingest> ... [--json] [--package PATH] [PROJECT_ROOT]",
+    };
+  }
+  const searchView = typeScriptSemanticSearchViewDescriptor(viewValue);
+  if (searchView === undefined) {
+    return { kind: "error", message: `unknown search view: ${viewValue}` };
+  }
+
+  let json = false;
+  let renderMode: SemanticSearchRenderMode | undefined;
+  let packagePath: string | undefined;
+  const positionals: string[] = [];
+  for (let index = 1; index < argv.length; index++) {
+    const arg = argv[index]!;
+    if (arg === "--json") {
+      json = true;
+    } else if (arg === "--view") {
+      const value = argv[index + 1];
+      if (!isSemanticSearchRenderMode(value)) {
+        return { kind: "error", message: "--view requires graph, hits, both, or seeds" };
+      }
+      renderMode = value;
+      index += 1;
+    } else if (arg === "--package") {
+      const value = argv[index + 1];
+      if (value === undefined || value.startsWith("-")) {
+        return { kind: "error", message: "--package requires a package path" };
+      }
+      packagePath = value;
+      index += 1;
+    } else if (arg.startsWith("-")) {
+      return { kind: "error", message: `unknown search option: ${arg}` };
+    } else {
+      positionals.push(arg);
+    }
+  }
+
+  if (searchView.requiresQuery) {
+    const query = positionals[0];
+    if (query === undefined) {
+      return { kind: "error", message: `search ${viewValue} requires a query` };
+    }
+    if (positionals.length > 2) {
+      return { kind: "error", message: "expected at most one PROJECT_ROOT argument" };
+    }
+    return {
+      kind: "search",
+      view: searchView.view,
+      query,
+      projectRoot: positionals[1],
+      packagePath,
+      json,
+      renderMode,
+    };
+  }
+
+  if (positionals.length > 1) {
+    return { kind: "error", message: "expected at most one PROJECT_ROOT argument" };
+  }
+  return {
+    kind: "search",
+    view: searchView.view,
+    query: undefined,
+    projectRoot: positionals[0],
+    packagePath,
+    json,
+    renderMode,
+  };
+}
+
+function parseCheckArgs(argv: readonly string[]): ProtocolArgs {
+  let json = false;
+  let mode: "changed" | "full" = "full";
+  const positionals: string[] = [];
+  for (const arg of argv) {
+    if (arg === "--json") {
+      json = true;
+    } else if (arg === "--changed") {
+      mode = "changed";
+    } else if (arg === "--full") {
+      mode = "full";
+    } else if (arg === "--help" || arg === "-h") {
+      return {
+        kind: "error",
+        message: "usage: ts-harness check [--changed | --full] [--json] [PROJECT_ROOT]",
+      };
+    } else if (arg.startsWith("-")) {
+      return { kind: "error", message: `unknown check option: ${arg}` };
+    } else {
+      positionals.push(arg);
+    }
+  }
+  if (positionals.length > 1) {
+    return { kind: "error", message: "expected at most one PROJECT_ROOT argument" };
+  }
+  return { kind: "check", mode, projectRoot: positionals[0], json };
+}
+
+function parseAgentArgs(argv: readonly string[]): ProtocolArgs {
+  const action = argv[0] ?? "doctor";
+  if (action !== "doctor") {
+    return { kind: "error", message: `unknown agent action: ${action}` };
+  }
+  let json = false;
+  const positionals: string[] = [];
+  for (const arg of argv.slice(1)) {
+    if (arg === "--json") {
+      json = true;
+    } else if (arg === "--help" || arg === "-h") {
+      continue;
+    } else if (arg.startsWith("-")) {
+      return { kind: "error", message: `unknown agent option: ${arg}` };
+    } else {
+      positionals.push(arg);
+    }
+  }
+  if (positionals.length > 1) {
+    return { kind: "error", message: "expected at most one PROJECT_ROOT argument" };
+  }
+  return { kind: "agent", action: "doctor", projectRoot: positionals[0], json };
+}
+
+function searchProjectRoot(
+  cwd: string,
+  projectRoot: string | undefined,
+  packagePath: string | undefined,
+): string {
+  const root = path.resolve(cwd, projectRoot ?? ".");
+  return packagePath === undefined ? root : path.resolve(root, packagePath);
+}
+
+function isSemanticSearchRenderMode(value: string | undefined): value is SemanticSearchRenderMode {
+  return value === "graph" || value === "hits" || value === "both" || value === "seeds";
+}
+
+function renderAgentDoctor(projectRoot: string): string {
+  const registration = typeScriptSemanticLanguageRegistration();
+  return (
+    [
+      `[agent-doctor] status=ok protocol=${SEMANTIC_LANGUAGE_PROTOCOL_ID} registry=semantic-language-registry.v${SEMANTIC_LANGUAGE_REGISTRY_VERSION}`,
+      `|project ${projectRoot}`,
+      `|language id=${TYPE_SCRIPT_LANGUAGE_ID} provider=${TYPE_SCRIPT_PROVIDER_ID} binary=${TYPE_SCRIPT_BINARY}`,
+      `|namespace ${TYPE_SCRIPT_PROVIDER_NAMESPACE}`,
+      `|method ${registration.methods.join(",")}`,
+      "|schema semantic-search-packet.v1",
+    ].join("\n") + "\n"
+  );
+}
+
+function renderAgentDoctorJson(projectRoot: string): string {
+  return `${JSON.stringify(semanticLanguageRegistryDocument(projectRoot), null, 2)}\n`;
+}

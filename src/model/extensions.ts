@@ -1,4 +1,5 @@
 import type { SourceLocation } from "../model.js";
+import type { TypeScriptPackageDependencySource } from "./package_dependencies.js";
 
 export type TypeScriptPackageExtensionName = "effect" | "react" | "shadcn";
 
@@ -7,11 +8,7 @@ export type TypeScriptPackageExtensionActivation =
   | "config-enabled"
   | "config-enabled-missing-dependency";
 
-export type TypeScriptPackageExtensionDependencySource =
-  | "dependencies"
-  | "devDependencies"
-  | "peerDependencies"
-  | "optionalDependencies";
+export type TypeScriptPackageExtensionDependencySource = TypeScriptPackageDependencySource;
 
 export type TypeScriptPackageExtensionConfigSource =
   | "typescriptProjectHarness"

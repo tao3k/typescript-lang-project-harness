@@ -35,19 +35,46 @@ console.log(renderTypeScriptProjectHarnessAgentCompactText(report));
 The CLI runs the same project harness:
 
 ```shell
-typescript-project-harness .
-typescript-project-harness --json .
-typescript-project-harness --agent-compact .
-typescript-project-harness --agent-snapshot .
+ts-harness search workspace .
+ts-harness search prime --package packages/core .
+ts-harness search prime .
+ts-harness search dependency react .
+ts-harness search deps react/jsx-runtime@19.0.0::jsx .
+ts-harness search symbol OrderStatus .
+ts-harness search callsite OrderStatus .
+ts-harness search import ./order .
+ts-harness search tests src/domain/order.ts .
+ts-harness search text OrderStatus .
+rg -n "OrderStatus" src tests | ts-harness search ingest .
+ts-harness check --changed .
+ts-harness check --full .
+ts-harness check --json .
+ts-harness agent doctor --json .
 ```
+
+`search` emits the shared semantic-search protocol. Compact text is the default
+agent surface; `search ... --json` emits
+`agent.semantic-protocols.semantic-search-packet` version `1`, with
+`languageId=typescript`, `providerId=ts-harness`, `binary=ts-harness`,
+`namespace=agent.semantic-protocols.languages.typescript.ts-harness`, and a
+method such as `search/dependency` or `search/deps`. Provider registration is exposed by
+`ts-harness agent doctor --json` through the repo-level
+`schemas/semantic-language-registry.v1.schema.json`; its `methods` list is the
+callable truth, while `methodDescriptors` records per-method command/view/schema
+metadata plus query/stdin/package-scope semantics. Search packets use
+`schemas/semantic-search-packet.v1.schema.json`.
 
 Project runs anchor at the nearest `package.json` above the requested path.
 Running from a package subdirectory still evaluates the whole package project,
 including `tsconfig`, package metadata, roots, modules, and edges relative to
 that package root.
-Use `typescript-project-harness --agent-compact .` from downstream
-`package.json` scripts when a shell command should surface agent repair
-instructions without adding a project-local runner script. For `npm test` or
+For `search deps`, the current workspace package metadata and lockfile define
+the `currentWorkspaceVersion`. A query for another version is marked as
+`versionScope=external`; current local imports are not attributed to that
+external version.
+Use `ts-harness check --full .` from downstream `package.json` scripts when a
+shell command should surface agent repair instructions without adding a
+project-local runner script. For `npm test` or
 `npm check` embedded in a test framework, use
 `assertTypeScriptProjectHarnessEmbeddedClean()`; it prints compact agent advice
 by default and fails only on blocking findings. The embedded assertion defaults
@@ -75,7 +102,7 @@ Default project execution runs these packs in descriptor order:
 The current surface implements the native parser boundary, source syntax
 diagnostics, native TypeScript `Program` semantic diagnostics with TypeScript
 diagnostic codes, parseable `tsconfig.json` policy, TypeScript JSON AST-backed
-package/config facts, reasoning-tree snapshots, project-level workspace
+package/config/dependency facts, reasoning-tree snapshots, project-level workspace
 package snapshots, Rust-style source-shape counters for shadowed/orphaned
 source owners, non-blocking package metadata diagnostics,
 modularity/test-layout advice, and the first non-blocking agent advice rules.
@@ -233,10 +260,11 @@ AST facts rather than matching raw text or duplicating the whole React ESLint
 surface.
 
 For agent repair loops, `renderTypeScriptProjectHarnessAgentCompactText(report)`
-and `--agent-compact` emit task-oriented repair instructions, while
+emits task-oriented repair instructions for library consumers, while
 `renderTypeScriptReasoningTree(report)` emits a single-package Rust-style owner
-snapshot from reasoning tree facts and the `--agent-snapshot` CLI flag emits the
-project-level snapshot. When parser-owned
+snapshot from reasoning tree facts. The public CLI protocol exposes those
+surfaces through `ts-harness check ...` and `ts-harness search prime ...` rather
+than separate agent-named output flags. When parser-owned
 workspace or project-reference package facts are present, the CLI groups each
 package scope under a compact `pkg <path>` heading and runs that package from
 its own `package.json` anchor and local `tsconfig.json`. Each package snapshot
@@ -341,10 +369,12 @@ development:
 
 ```shell
 npm ci
-npm run check
+npm run check:implementation
+npm run check:policy
 npm run lint
 npm run format:check
-npm test
+npm run test:implementation
+npm run test:policy
 npm run harness
 git diff --check
 ```

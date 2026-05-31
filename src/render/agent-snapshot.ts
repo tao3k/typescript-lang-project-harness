@@ -110,7 +110,10 @@ export function renderTypeScriptProjectHarnessAgentSnapshot(
 
 function renderFinding(report: TypeScriptHarnessReport, finding: TypeScriptHarnessFinding): string {
   const location = renderLocation(report, finding);
-  const lines = [`[${finding.ruleId}] ${finding.severity}: ${finding.title}`, location];
+  const lines = [
+    `[${finding.ruleId}] ${capitalizeSeverity(finding.severity)}: ${finding.title}`,
+    location,
+  ];
   if (finding.sourceLine !== undefined) {
     lines.push(`> ${finding.sourceLine.trimEnd()}`);
   }

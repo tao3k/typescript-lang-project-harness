@@ -98,6 +98,62 @@ test("project harness reports malformed project reference package json without t
   );
 });
 
+test("project parser records package dependency facts from package json", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-package-deps-"));
+  fs.mkdirSync(path.join(root, "src"));
+  fs.writeFileSync(
+    path.join(root, "package.json"),
+    JSON.stringify({
+      name: "@example/package-deps",
+      dependencies: { react: "^19.0.0" },
+      devDependencies: { typescript: "^5.9.3" },
+      peerDependencies: { "@types/react": "^19.0.0" },
+      optionalDependencies: { sharp: "^0.34.0" },
+    }),
+  );
+  fs.writeFileSync(path.join(root, "tsconfig.json"), JSON.stringify({ include: ["src/**/*.ts"] }));
+  fs.writeFileSync(path.join(root, "src", "index.ts"), "export const ok = 1;\n");
+
+  const report = runTypeScriptProjectHarness(root);
+
+  const dependencies = report.projectScope?.packageJson.dependencies ?? [];
+  assert.deepEqual(
+    dependencies.map((dependency) => ({
+      name: dependency.name,
+      versionRange: dependency.versionRange,
+      source: dependency.source,
+      path: path.relative(root, dependency.location.path ?? ""),
+    })),
+    [
+      {
+        name: "react",
+        versionRange: "^19.0.0",
+        source: "dependencies",
+        path: "package.json",
+      },
+      {
+        name: "typescript",
+        versionRange: "^5.9.3",
+        source: "devDependencies",
+        path: "package.json",
+      },
+      {
+        name: "sharp",
+        versionRange: "^0.34.0",
+        source: "optionalDependencies",
+        path: "package.json",
+      },
+      {
+        name: "@types/react",
+        versionRange: "^19.0.0",
+        source: "peerDependencies",
+        path: "package.json",
+      },
+    ],
+  );
+  assert.deepEqual(report.reasoningTree.packageDependencies, dependencies);
+});
+
 test("project policy reports referenced package config shape as advice", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-reference-config-"));
   fs.mkdirSync(path.join(root, "src"));

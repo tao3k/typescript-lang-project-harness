@@ -79,7 +79,7 @@ target details:
   conditional path, and its TypeScript JSON AST location.
 - `TypeScriptPackageEntryResolutionFact` carries those condition paths into
   package owner resolution and `TS-AGENT-R002` advice.
-- `--agent-snapshot` renders package entry ownership as owner dependencies,
+- `ts-harness search prime` renders package entry ownership as owner dependencies,
   such as `package exports:. [import] --owner--> src/index.ts`, and groups
   unresolved package targets through `FindingGroups:` instead of repeating full
   diagnostic cards.

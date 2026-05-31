@@ -1,0 +1,214 @@
+/**
+ * Packet payload builders for dependency and deps semantic-search views.
+ */
+
+import type { TypeScriptHarnessReport } from "../../model.js";
+import {
+  dependencyApiHit,
+  dependencyApiManifestHit,
+  dependencyApiNode,
+  dependencyApiUsageMatches,
+  dependencyWorkspaceVersion,
+  dependencyVersionScope,
+  dependencyVersionStatus,
+  parseDependencyApiQuery,
+} from "./deps.js";
+import { ownerNode } from "./facts.js";
+import {
+  dependencyEdge,
+  dependencyHit,
+  dependencyImportMatches,
+  dependencyManifestHit,
+  dependencyManifestMatches,
+  dependencyNodesForMatches,
+  dependencyPackageRoots,
+  ownersForHits,
+} from "./hits.js";
+import type { SemanticSearchBuildOptions, SemanticSearchPacketPayload } from "./types.js";
+
+export function buildDependencyPacketPayload(
+  report: TypeScriptHarnessReport,
+  options: SemanticSearchBuildOptions,
+): SemanticSearchPacketPayload {
+  const query = options.query ?? "";
+  const manifestMatches = dependencyManifestMatches(report, query);
+  const matches = dependencyImportMatches(report, query);
+  const hits = [
+    ...manifestMatches.map((match) => dependencyManifestHit(report, match)),
+    ...matches.map((match) => dependencyHit(report, match)),
+  ];
+  const edges = matches.map((match) => dependencyEdge(report, match));
+  const owners = ownersForHits(
+    report,
+    matches.map((match) => dependencyHit(report, match)),
+  );
+  return {
+    header: {
+      kind: "search-dependency",
+      fields: {
+        q: query,
+        dep: dependencyPackageRoots(matches, manifestMatches).length,
+        manifest: manifestMatches.length,
+        own: owners.length,
+        hit: hits.length,
+        edge: edges.length,
+        view: "graph",
+      },
+    },
+    nodes: [
+      ...owners.map((owner) => ownerNode(owner)),
+      ...dependencyNodesForMatches(matches, manifestMatches, query),
+    ],
+    edges,
+    owners,
+    hits,
+    findings: [],
+    nextActions: [
+      ...owners.slice(0, 5).map((owner) => ({ kind: "owner" as const, target: owner.path })),
+      ...(query.trim() === "" ? [] : [{ kind: "import" as const, target: query }]),
+    ],
+    notes: [
+      ...(query.trim() === ""
+        ? [{ kind: "empty-query" as const, message: "dependency search requires a package query" }]
+        : []),
+      ...(query.trim() !== "" && hits.length === 0
+        ? [{ kind: "not-found" as const, message: `dependency usage not found: ${query}` }]
+        : []),
+      {
+        kind: "fact-scope" as const,
+        message:
+          "dependency view combines parser-owned package dependency facts with TypeScript import-resolution usage facts",
+      },
+    ],
+  };
+}
+
+export function buildDepsPacketPayload(
+  report: TypeScriptHarnessReport,
+  options: SemanticSearchBuildOptions,
+): SemanticSearchPacketPayload {
+  const queryText = options.query ?? "";
+  const query = parseDependencyApiQuery(queryText);
+  const manifestMatches =
+    query === undefined ? [] : dependencyManifestMatches(report, query.packageRoot);
+  const allDependencyMatches =
+    query === undefined ? [] : dependencyImportMatches(report, query.packageRoot);
+  const workspaceVersion =
+    query === undefined
+      ? {}
+      : dependencyWorkspaceVersion(report, query.packageRoot, manifestMatches);
+  const versionStatus =
+    query === undefined
+      ? "unknown"
+      : dependencyVersionStatus(query, manifestMatches, workspaceVersion);
+  const versionScope = dependencyVersionScope(versionStatus);
+  const matches =
+    query === undefined || versionScope !== "current"
+      ? []
+      : dependencyApiUsageMatches(report, query, allDependencyMatches);
+  const hits =
+    query === undefined
+      ? []
+      : [
+          ...manifestMatches.map((match) =>
+            dependencyApiManifestHit(
+              report,
+              match,
+              query,
+              workspaceVersion,
+              versionStatus,
+              versionScope,
+            ),
+          ),
+          ...matches.map((match) =>
+            dependencyApiHit(report, match, query, workspaceVersion, versionStatus, versionScope),
+          ),
+        ];
+  const edges = matches.map((match) => dependencyEdge(report, match));
+  const owners = ownersForHits(report, hits);
+  return {
+    header: {
+      kind: "search-deps",
+      fields: {
+        q: queryText,
+        dep: query === undefined ? 0 : 1,
+        ...(query === undefined ? {} : { package: query.packageRoot }),
+        ...(query?.requestedVersion === undefined
+          ? {}
+          : { requestedVersion: query.requestedVersion }),
+        ...(workspaceVersion.currentWorkspaceVersion === undefined
+          ? {}
+          : { currentWorkspaceVersion: workspaceVersion.currentWorkspaceVersion }),
+        ...(workspaceVersion.workspaceVersionSource === undefined
+          ? {}
+          : { workspaceVersionSource: workspaceVersion.workspaceVersionSource }),
+        versionStatus,
+        versionScope,
+        ...(query?.apiQuery === undefined ? {} : { api: query.apiQuery }),
+        manifest: manifestMatches.length,
+        usage: matches.length,
+        hit: hits.length,
+        view: "hits",
+      },
+    },
+    nodes:
+      query === undefined
+        ? []
+        : [
+            dependencyApiNode(
+              query,
+              manifestMatches,
+              matches,
+              workspaceVersion,
+              versionStatus,
+              versionScope,
+            ),
+          ],
+    edges,
+    owners,
+    hits,
+    findings: [],
+    nextActions:
+      query === undefined
+        ? []
+        : [
+            { kind: "dependency" as const, target: query.packageRoot },
+            ...(query.apiQuery === undefined || versionScope !== "current"
+              ? []
+              : [
+                  { kind: "text" as const, target: query.apiQuery },
+                  { kind: "tests" as const, target: query.apiQuery },
+                ]),
+          ],
+    notes: [
+      ...(queryText.trim() === ""
+        ? [{ kind: "empty-query" as const, message: "deps search requires a dependency query" }]
+        : []),
+      ...(queryText.trim() !== "" && query === undefined
+        ? [
+            {
+              kind: "not-found" as const,
+              message: `dependency query is not a package: ${queryText}`,
+            },
+          ]
+        : []),
+      ...(query !== undefined && hits.length === 0
+        ? [{ kind: "not-found" as const, message: `dependency API usage not found: ${queryText}` }]
+        : []),
+      ...(versionScope === "external"
+        ? [
+            {
+              kind: "fact-scope" as const,
+              message:
+                "requested dependency version is outside the current workspace resolution; local import usage is not attributed to that version",
+            },
+          ]
+        : []),
+      {
+        kind: "fact-scope" as const,
+        message:
+          "deps view anchors API usage to package manifest, lockfile version, and TypeScript import facts; external API docs require a separate provider",
+      },
+    ],
+  };
+}

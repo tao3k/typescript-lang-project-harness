@@ -36,6 +36,8 @@ import type {
   TypeScriptPackageBuildToolName,
   TypeScriptPackageBuildToolSignalFact,
   TypeScriptPackageBuildToolSignalKind,
+  TypeScriptPackageDependencyFact,
+  TypeScriptPackageDependencySource,
   TypeScriptPackageImportOwnerFact,
   TypeScriptPackageEntryResolutionFact,
   TypeScriptPackageExtensionActivation,
@@ -156,6 +158,8 @@ type PublicModelContract = readonly [
   TypeScriptPackageBuildToolName,
   TypeScriptPackageBuildToolSignalFact,
   TypeScriptPackageBuildToolSignalKind,
+  TypeScriptPackageDependencyFact,
+  TypeScriptPackageDependencySource,
   TypeScriptPackageImportOwnerFact,
   TypeScriptPackageEntryResolutionFact,
   TypeScriptPackageExtensionActivation,
@@ -407,9 +411,9 @@ test("public agent-clean assertion surfaces advisory findings as test-gate feedb
       assert.match(error.message, /AgentCompactText: mode=advice findings=3 tasks=3/u);
       assert.match(error.message, /Directive: edit listed targets/u);
       assert.match(error.message, /RepairTasks:/u);
-      assert.match(error.message, /\[TS-AGENT-R004\] info x1: .+ task=1/u);
-      assert.match(error.message, /\[TS-AGENT-R005\] info x1: .+ task=2/u);
-      assert.match(error.message, /\[TS-AGENT-R006\] info x1: .+ task=3/u);
+      assert.match(error.message, /\[TS-AGENT-R004\] Info x1: .+ task=1/u);
+      assert.match(error.message, /\[TS-AGENT-R005\] Info x1: .+ task=2/u);
+      assert.match(error.message, /\[TS-AGENT-R006\] Info x1: .+ task=3/u);
       assert.match(error.message, /Public function exposes multiple flag parameters/u);
       assert.match(error.message, /targets:\n   - @ src\/api\.ts/u);
       assert.match(error.message, /fix:/u);
