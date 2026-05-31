@@ -15,6 +15,7 @@ import {
 import type {
   SemanticSearchBuildOptions,
   SemanticSearchEdge,
+  SemanticSearchOwner,
   SemanticSearchPacket,
   SemanticSearchPacketPayload,
 } from "./types.js";
@@ -58,7 +59,7 @@ import {
   textHits,
   uniqueOwners,
 } from "./hits.js";
-import { findOwner, locationPath, relPath, stripNodePrefix } from "./utils.js";
+import { findOwner, isProjectPath, normalizeInputPath, relPath, stripNodePrefix } from "./utils.js";
 
 export function buildSemanticSearchPacket(
   report: TypeScriptHarnessReport,
@@ -213,6 +214,35 @@ function buildOwnerPacket(
   const query = options.query ?? "";
   const branch = findOwner(report, query);
   if (branch === undefined) {
+    const pathOwner = pathOnlyOwner(report, query);
+    if (pathOwner !== undefined) {
+      return basePacket(report, options, {
+        header: {
+          kind: "search-owner",
+          fields: {
+            q: query,
+            role: pathOwner.role,
+            public: pathOwner.public,
+            edge: 0,
+            find: 0,
+          },
+        },
+        nodes: [ownerNode(pathOwner)],
+        edges: [],
+        owners: [pathOwner],
+        hits: [],
+        findings: [],
+        nextActions: pathOwner.nextActions ?? [],
+        notes: [
+          {
+            kind: "owner-not-found" as const,
+            message:
+              "path exists but is not a parser-visible owner; use search ingest for line evidence",
+          },
+        ],
+      });
+    }
+
     return basePacket(report, options, {
       header: {
         kind: "search-owner",
@@ -260,6 +290,30 @@ function buildOwnerPacket(
   });
 }
 
+function pathOnlyOwner(
+  report: TypeScriptHarnessReport,
+  query: string,
+): SemanticSearchOwner | undefined {
+  const projectRoot = report.reasoningTree.projectRoot;
+  if (!isProjectPath(projectRoot, query)) {
+    return undefined;
+  }
+  const ownerPath = normalizeInputPath(projectRoot, query);
+  if (ownerPath === ".." || ownerPath.startsWith("../")) {
+    return undefined;
+  }
+  return {
+    path: ownerPath,
+    role: isTestOwnerPath(ownerPath) ? "test" : "file",
+    public: false,
+    nextActions: [{ kind: "ingest" as const, target: ownerPath }],
+    fields: {
+      source: "path-only",
+      parserOwner: false,
+    },
+  };
+}
+
 function buildTextPacket(
   report: TypeScriptHarnessReport,
   options: SemanticSearchBuildOptions,
@@ -267,6 +321,18 @@ function buildTextPacket(
   const query = options.query ?? "";
   const hits = textHits(report, query);
   const owners = ownersForHits(report, hits);
+  const notes =
+    query.trim() === ""
+      ? [{ kind: "empty-query" as const, message: "text search requires a non-empty query" }]
+      : hits.length === 0
+        ? [
+            {
+              kind: "not-found" as const,
+              message:
+                "text search covers parser owner paths and exports; pipe rg output to search ingest for docs, tests, schema files, and other non-source text",
+            },
+          ]
+        : [];
   return basePacket(report, options, {
     header: {
       kind: "search-text",
@@ -277,13 +343,13 @@ function buildTextPacket(
     owners,
     hits,
     findings: [],
-    nextActions: owners
-      .slice(0, 5)
-      .map((owner) => ({ kind: "owner" as const, target: owner.path })),
-    notes:
-      query.trim() === ""
-        ? [{ kind: "empty-query" as const, message: "text search requires a non-empty query" }]
-        : [],
+    nextActions:
+      owners.length > 0
+        ? owners.slice(0, 5).map((owner) => ({ kind: "owner" as const, target: owner.path }))
+        : query.trim() === ""
+          ? []
+          : [{ kind: "ingest" as const, target: query }],
+    notes,
   });
 }
 

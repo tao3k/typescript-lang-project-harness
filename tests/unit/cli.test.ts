@@ -53,6 +53,7 @@ test("CLI exposes semantic-search protocol commands", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-semantic-search-cli-"));
   fs.mkdirSync(path.join(root, "src"));
   fs.mkdirSync(path.join(root, "tests"));
+  fs.mkdirSync(path.join(root, "test-fixtures"));
   fs.mkdirSync(path.join(root, "packages", "core", "src"), { recursive: true });
   fs.writeFileSync(
     path.join(root, "package.json"),
@@ -99,6 +100,10 @@ test("CLI exposes semantic-search protocol commands", () => {
   fs.writeFileSync(
     path.join(root, "tests", "index.test.ts"),
     'import { findOrderStatus } from "../src/index.js";\nfindOrderStatus();\n',
+  );
+  fs.writeFileSync(
+    path.join(root, "test-fixtures", "semantic_search_schema.test.ts"),
+    "export const schemaFixture = true;\n",
   );
 
   const prime = runCliCapture(["search", "prime", "."], root);
@@ -207,6 +212,49 @@ test("CLI exposes semantic-search protocol commands", () => {
   assert.match(tests.stdout, /^\[search-tests\] /u);
   assert.match(tests.stdout, /\|hit tests\/index\.test\.ts:1/u);
   assert.match(tests.stdout, /\|edge O:src\/index\.ts -test-> T:tests\/index\.test\.ts/u);
+
+  const pathOnlyOwner = runCliCapture(
+    ["search", "owner", "test-fixtures/semantic_search_schema.test.ts", "."],
+    root,
+  );
+  assert.equal(pathOnlyOwner.exitCode, 0);
+  assert.match(pathOnlyOwner.stdout, /^\[search-owner\] /u);
+  assert.match(pathOnlyOwner.stdout, /\brole=test\b/u);
+  assert.match(pathOnlyOwner.stdout, /\|owner test-fixtures\/semantic_search_schema\.test\.ts/u);
+  assert.match(pathOnlyOwner.stdout, /\bsource=path-only\b/u);
+  assert.match(pathOnlyOwner.stdout, /\bparserOwner=false\b/u);
+  assert.match(
+    pathOnlyOwner.stdout,
+    /\|next ingest:test-fixtures\/semantic_search_schema\.test\.ts/u,
+  );
+  assert.match(pathOnlyOwner.stdout, /path exists but is not a parser-visible owner/u);
+
+  const pathOnlyOwnerJson = runCliCapture(
+    ["search", "owner", "test-fixtures/semantic_search_schema.test.ts", "--json", "."],
+    root,
+  );
+  assert.equal(pathOnlyOwnerJson.exitCode, 0);
+  const pathOnlyOwnerPacket = JSON.parse(pathOnlyOwnerJson.stdout) as {
+    readonly owners: readonly {
+      readonly path: string;
+      readonly role: string;
+      readonly fields: { readonly source?: string; readonly parserOwner?: boolean };
+    }[];
+    readonly nextActions: readonly { readonly kind: string; readonly target: string }[];
+  };
+  assert.equal(pathOnlyOwnerPacket.owners[0]?.path, "test-fixtures/semantic_search_schema.test.ts");
+  assert.equal(pathOnlyOwnerPacket.owners[0]?.role, "test");
+  assert.equal(pathOnlyOwnerPacket.owners[0]?.fields.source, "path-only");
+  assert.equal(pathOnlyOwnerPacket.owners[0]?.fields.parserOwner, false);
+  assert.deepEqual(pathOnlyOwnerPacket.nextActions, [
+    { kind: "ingest", target: "test-fixtures/semantic_search_schema.test.ts" },
+  ]);
+
+  const textMiss = runCliCapture(["search", "text", "semantic-search-packet", "."], root);
+  assert.equal(textMiss.exitCode, 0);
+  assert.match(textMiss.stdout, /^\[search-text\] q=semantic-search-packet own=0 hit=0/u);
+  assert.match(textMiss.stdout, /pipe rg output to search ingest/u);
+  assert.match(textMiss.stdout, /\|next ingest:semantic-search-packet/u);
 
   const ingest = runCliCapture(["search", "ingest", "."], root, "src/index.ts:1:findOrderStatus\n");
   assert.equal(ingest.exitCode, 0);
