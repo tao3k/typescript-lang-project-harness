@@ -23,6 +23,7 @@ export type TypeScriptSemanticSearchView =
   | "owner"
   | "dependency"
   | "deps"
+  | "api"
   | "symbol"
   | "callsite"
   | "import"
@@ -70,6 +71,17 @@ export const TYPE_SCRIPT_SEARCH_VIEW_DESCRIPTORS = [
       semanticCapability("dependency-version-scope"),
       typeScriptCapability("dependency-api-token-usage-search"),
     ],
+  }),
+  searchView("api", {
+    requiresQuery: true,
+    acceptsStdin: false,
+    capabilities: [
+      typeScriptCapability("exported-api-shape-search"),
+      typeScriptCapability("public-function-api-shape-search"),
+      typeScriptCapability("public-data-api-shape-search"),
+      semanticCapability("dependency-version-scope"),
+    ],
+    ingestRequiredFor: [typeScriptIngestSurface("external-api-docs")],
   }),
   searchView("symbol", {
     requiresQuery: true,

@@ -20,6 +20,7 @@ SEARCH VIEWS
   search dependency <pkg>   NPM/external dependency usage
   search deps <pkg[/subpath][@ver][::api]>
                              Versioned dependency API usage
+  search api <query>         Parser-owned exported/public API facts
   search symbol <name>      Exported symbol definitions
   search callsite <name>    Owner-level import/reexport sites
   search import <query>     Import/reexport owner edges
@@ -48,6 +49,7 @@ EXAMPLES
   ts-harness search prime .
   ts-harness search dependency react .
   ts-harness search deps react/jsx-runtime@19.0.0::jsx .
+  ts-harness search api OrderStatus .
   ts-harness search symbol OrderStatus .
   ts-harness search callsite OrderStatus .
   ts-harness search import ./order .

@@ -86,7 +86,7 @@ test("CLI exposes semantic-search protocol commands", () => {
   );
   fs.writeFileSync(
     path.join(root, "src", "index.ts"),
-    "export function findOrderStatus() { return 'ok'; }\n",
+    "export function findOrderStatus(input: string, strict: boolean): string { return strict ? input : 'ok'; }\n",
   );
   fs.writeFileSync(
     path.join(root, "src", "consumer.ts"),
@@ -94,13 +94,27 @@ test("CLI exposes semantic-search protocol commands", () => {
       'import { findOrderStatus } from "./index.js";',
       'import type { Core } from "@example/core";',
       'const internalOrderToken = "ready";',
-      "export const status = findOrderStatus();",
+      'export const status = findOrderStatus("ready", true);',
       "export type CoreStatus = Core;",
     ].join("\n"),
   );
+  const olderSearchPath = path.join(root, "src", "a-old.ts");
+  const newerSearchPath = path.join(root, "src", "z-new.ts");
+  fs.writeFileSync(olderSearchPath, 'export {};\nconst sharedMtimeNeedle = "older";\n');
+  fs.writeFileSync(newerSearchPath, 'export {};\nconst sharedMtimeNeedle = "newer";\n');
+  fs.utimesSync(
+    olderSearchPath,
+    new Date("2025-01-01T00:00:00Z"),
+    new Date("2025-01-01T00:00:00Z"),
+  );
+  fs.utimesSync(
+    newerSearchPath,
+    new Date("2025-02-01T00:00:00Z"),
+    new Date("2025-02-01T00:00:00Z"),
+  );
   fs.writeFileSync(
     path.join(root, "tests", "index.test.ts"),
-    'import { findOrderStatus } from "../src/index.js";\nfindOrderStatus();\n',
+    'import { findOrderStatus } from "../src/index.js";\nfindOrderStatus("ready", true);\n',
   );
   fs.writeFileSync(
     path.join(root, "test-fixtures", "semantic_search_schema.test.ts"),
@@ -219,11 +233,37 @@ test("CLI exposes semantic-search protocol commands", () => {
   assert.match(sourceText.stdout, /\breason=source-text\b/u);
   assert.match(sourceText.stdout, /\bsource=parser-visible-source\b/u);
 
+  const recencyText = runCliCapture(["search", "text", "sharedMtimeNeedle", "."], root);
+  assert.equal(recencyText.exitCode, 0);
+  assert.match(recencyText.stdout, /^\[search-text\] /u);
+  assert.match(recencyText.stdout, /\|hit src\/z-new\.ts:2/u);
+  assert.match(recencyText.stdout, /\|hit src\/a-old\.ts:2/u);
+  assert.ok(
+    recencyText.stdout.indexOf("|hit src/z-new.ts:2") <
+      recencyText.stdout.indexOf("|hit src/a-old.ts:2"),
+    recencyText.stdout,
+  );
+
   const symbol = runCliCapture(["search", "symbol", "findOrderStatus", "."], root);
   assert.equal(symbol.exitCode, 0);
   assert.match(symbol.stdout, /^\[search-symbol\] /u);
   assert.match(symbol.stdout, /\|hit src\/index\.ts:1/u);
   assert.match(symbol.stdout, /kind=symbol/u);
+
+  const api = runCliCapture(["search", "api", "findOrderStatus", "."], root);
+  assert.equal(api.exitCode, 0);
+  assert.match(api.stdout, /^\[search-api\] /u);
+  assert.match(api.stdout, /\bsource=native-parser\b/u);
+  assert.match(api.stdout, /\|api src\/index\.ts:1/u);
+  assert.match(api.stdout, /\bkind=api\b/u);
+  assert.match(api.stdout, /\bapiKind=function\b/u);
+  assert.match(api.stdout, /\bparams=input:string,strict:boolean\b/u);
+
+  const externalApi = runCliCapture(["search", "api", "react@18.0.0::jsx", "."], root);
+  assert.equal(externalApi.exitCode, 0);
+  assert.match(externalApi.stdout, /^\[search-api\] /u);
+  assert.match(externalApi.stdout, /\bsource=external-provider-missing\b/u);
+  assert.match(externalApi.stdout, /external docs\/API provider/u);
 
   const callsite = runCliCapture(["search", "callsite", "findOrderStatus", "."], root);
   assert.equal(callsite.exitCode, 0);
@@ -309,6 +349,18 @@ test("CLI exposes semantic-search protocol commands", () => {
   assert.match(ingest.stdout, /^\[search-ingest\] src=rg-n/u);
   assert.match(ingest.stdout, /\|hit src\/index\.ts:1/u);
 
+  const recencyIngest = runCliCapture(
+    ["search", "ingest", "."],
+    root,
+    "src/a-old.ts:2:sharedMtimeNeedle\nsrc/z-new.ts:2:sharedMtimeNeedle\n",
+  );
+  assert.equal(recencyIngest.exitCode, 0);
+  assert.ok(
+    recencyIngest.stdout.indexOf("|hit src/z-new.ts:2") <
+      recencyIngest.stdout.indexOf("|hit src/a-old.ts:2"),
+    recencyIngest.stdout,
+  );
+
   const check = runCliCapture(["check", "--changed", "."], root);
   assert.equal(check.exitCode, 0);
   assert.match(check.stdout, /^\[ok\] typescript/u);
@@ -369,6 +421,7 @@ test("CLI exposes semantic-search protocol commands", () => {
     "search/owner",
     "search/dependency",
     "search/deps",
+    "search/api",
     "search/symbol",
     "search/callsite",
     "search/import",
@@ -398,6 +451,7 @@ test("CLI exposes semantic-search protocol commands", () => {
             "search/owner",
             "search/dependency",
             "search/deps",
+            "search/api",
             "search/symbol",
             "search/callsite",
             "search/import",
@@ -481,6 +535,13 @@ function expectedSearchCapabilities(
         semanticCapability("dependency-version-scope"),
         typeScriptCapability("dependency-api-token-usage-search"),
       ];
+    case "search/api":
+      return [
+        typeScriptCapability("exported-api-shape-search"),
+        typeScriptCapability("public-function-api-shape-search"),
+        typeScriptCapability("public-data-api-shape-search"),
+        semanticCapability("dependency-version-scope"),
+      ];
     case "search/symbol":
       return [typeScriptCapability("symbol-export-search")];
     case "search/callsite":
@@ -519,6 +580,8 @@ function expectedSearchIngestRequiredFor(
         typeScriptCapability("schema-json"),
         typeScriptCapability("generated-artifact"),
       ];
+    case "search/api":
+      return [typeScriptCapability("external-api-docs")];
     default:
       return [];
   }
@@ -613,7 +676,10 @@ test("CLI searches external dependency usage", () => {
   assert.match(deps.stdout, /\bapi=jsx\b/u);
   assert.match(deps.stdout, /\|hit src\/index\.ts:2/u);
   assert.match(deps.stdout, /moduleSpecifier=react\/jsx-runtime/u);
-  assert.match(deps.stdout, /\|next dependency:react,text:jsx,tests:jsx/u);
+  assert.match(
+    deps.stdout,
+    /\|next dependency:react,api:react\/jsx-runtime@19\.0\.0::jsx,text:jsx,tests:jsx/u,
+  );
 
   const depsJson = runCliCapture(
     ["search", "deps", "react/jsx-runtime@19.0.0::jsx", "--json", "."],
@@ -699,7 +765,10 @@ test("CLI searches external dependency usage", () => {
   assert.equal(mismatchPacket.header.fields.versionScope, "external");
   assert.equal(mismatchPacket.header.fields.usage, 0);
   assert.ok(mismatchPacket.hits.every((hit) => hit.fields?.moduleSpecifier === undefined));
-  assert.deepEqual(mismatchPacket.nextActions, [{ kind: "dependency", target: "react" }]);
+  assert.deepEqual(mismatchPacket.nextActions, [
+    { kind: "dependency", target: "react" },
+    { kind: "api", target: "react@18.0.0::jsx" },
+  ]);
 });
 
 test("CLI deps search handles scoped packages and range-only versions", () => {
@@ -733,7 +802,10 @@ test("CLI deps search handles scoped packages and range-only versions", () => {
   assert.match(scoped.stdout, /\bversionStatus=matched\b/u);
   assert.match(scoped.stdout, /\bversionScope=current\b/u);
   assert.match(scoped.stdout, /moduleSpecifier=@scope\/sdk\/client/u);
-  assert.match(scoped.stdout, /\|next dependency:@scope\/sdk,text:Client,tests:Client/u);
+  assert.match(
+    scoped.stdout,
+    /\|next dependency:@scope\/sdk,api:@scope\/sdk\/client@2\.0\.0::Client,text:Client,tests:Client/u,
+  );
 
   const scopedJson = runCliCapture(
     ["search", "deps", "@scope/range-sdk/client::RangeClient", "--json", "."],

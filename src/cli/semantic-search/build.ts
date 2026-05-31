@@ -27,6 +27,7 @@ import {
   MAX_WORKSPACE_PACKAGES,
 } from "./types.js";
 import { detectInput, ingestHits } from "./ingest.js";
+import { buildApiPacketPayload } from "./api.js";
 import { buildDependencyPacketPayload, buildDepsPacketPayload } from "./dependency.js";
 import {
   edgeFact,
@@ -77,6 +78,8 @@ export function buildSemanticSearchPacket(
       return basePacket(report, options, buildDependencyPacketPayload(report, options));
     case "deps":
       return basePacket(report, options, buildDepsPacketPayload(report, options));
+    case "api":
+      return basePacket(report, options, buildApiPacketPayload(report, options));
     case "symbol":
       return buildSymbolPacket(report, options);
     case "callsite":

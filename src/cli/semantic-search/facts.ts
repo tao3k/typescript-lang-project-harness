@@ -20,6 +20,7 @@ import type {
   SemanticSearchNode,
   SemanticSearchOwner,
 } from "./types.js";
+import { compareProjectPathsByRecency } from "./recency.js";
 import { locationFromSource, locationPath, ownerId, relPath, testId } from "./utils.js";
 
 export function rankedOwners(
@@ -39,7 +40,7 @@ export function rankedOwners(
       ownerRank(report, left, findingPaths, dependencyCounts);
     return scoreDiff !== 0
       ? scoreDiff
-      : relPath(report, left.path).localeCompare(relPath(report, right.path));
+      : compareProjectPathsByRecency(report.reasoningTree.projectRoot, left.path, right.path);
   });
 }
 

@@ -41,7 +41,8 @@ export function renderSemanticSearchPacket(packet: SemanticSearchPacket): string
       ...(hit.symbol ? { symbol: hit.symbol } : {}),
       ...(hit.fields ?? {}),
     };
-    lines.push(`|hit ${renderLocation(hit.location)} ${renderFields(fields)}`.trimEnd());
+    const lineKind = hit.kind === "api" ? "api" : "hit";
+    lines.push(`|${lineKind} ${renderLocation(hit.location)} ${renderFields(fields)}`.trimEnd());
   }
   for (const edge of packet.edges) {
     const fields = edge.fields ? ` ${renderFields(edge.fields)}` : "";

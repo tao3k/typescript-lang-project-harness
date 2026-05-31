@@ -9,6 +9,7 @@ import type {
   SemanticSearchInputSource,
 } from "./types.js";
 import { MAX_TEXT_HITS } from "./types.js";
+import { compareProjectPathsByRecency } from "./recency.js";
 import { isProjectPath, normalizeInputPath, resolveOwnerPath } from "./utils.js";
 
 export function detectInput(stdin: string, projectRoot: string): SemanticSearchInputDetection {
@@ -39,22 +40,27 @@ export function ingestHits(
   source: SemanticSearchInputSource,
 ): readonly SemanticSearchHit[] {
   const records = parseIngestRecords(report.reasoningTree.projectRoot, stdin, source);
-  return records.slice(0, MAX_TEXT_HITS).map((record) => {
-    const ownerPath = resolveOwnerPath(report, record.path);
-    return {
-      kind: record.kind,
-      ownerPath,
-      location: {
-        path: record.path,
-        ...(record.line !== undefined ? { line: record.line } : {}),
-        ...(record.column !== undefined ? { column: record.column } : {}),
-      },
-      score: record.line !== undefined ? 2 : 1,
-      reason: source,
-      ...(record.snippet ? { snippet: record.snippet } : {}),
-      fields: { source },
-    };
-  });
+  return [...records]
+    .sort((left, right) =>
+      compareProjectPathsByRecency(report.reasoningTree.projectRoot, left.path, right.path),
+    )
+    .slice(0, MAX_TEXT_HITS)
+    .map((record) => {
+      const ownerPath = resolveOwnerPath(report, record.path);
+      return {
+        kind: record.kind,
+        ownerPath,
+        location: {
+          path: record.path,
+          ...(record.line !== undefined ? { line: record.line } : {}),
+          ...(record.column !== undefined ? { column: record.column } : {}),
+        },
+        score: record.line !== undefined ? 2 : 1,
+        reason: source,
+        ...(record.snippet ? { snippet: record.snippet } : {}),
+        fields: { source },
+      };
+    });
 }
 
 interface IngestRecord {

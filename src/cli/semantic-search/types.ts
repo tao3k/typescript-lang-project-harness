@@ -11,6 +11,7 @@ export type SemanticSearchView =
   | "owner"
   | "dependency"
   | "deps"
+  | "api"
   | "symbol"
   | "callsite"
   | "import"
@@ -156,6 +157,7 @@ export type SemanticSearchHitKind =
   | "callsite"
   | "import"
   | "dependency"
+  | "api"
   | "test"
   | "text";
 
@@ -185,6 +187,7 @@ export type SemanticSearchNextActionKind =
   | "owner"
   | "dependency"
   | "deps"
+  | "api"
   | "symbol"
   | "callsite"
   | "import"

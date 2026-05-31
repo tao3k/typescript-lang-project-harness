@@ -173,6 +173,7 @@ export function buildDepsPacketPayload(
         ? []
         : [
             { kind: "dependency" as const, target: query.packageRoot },
+            ...(query.apiQuery === undefined ? [] : [{ kind: "api" as const, target: query.raw }]),
             ...(query.apiQuery === undefined || versionScope !== "current"
               ? []
               : [

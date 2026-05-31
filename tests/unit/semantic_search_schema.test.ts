@@ -15,6 +15,7 @@ const TYPE_SCRIPT_SEARCH_VIEWS = [
   "owner",
   "dependency",
   "deps",
+  "api",
   "symbol",
   "callsite",
   "import",
@@ -60,6 +61,7 @@ test("semantic-search JSON packets conform to the shared schema envelope", () =>
     jsonPacket(root, ["search", "owner", "src/index.ts", "--json", "."]),
     jsonPacket(root, ["search", "dependency", "react", "--json", "."]),
     jsonPacket(root, ["search", "deps", "react::jsx", "--json", "."]),
+    jsonPacket(root, ["search", "api", "findOrderStatus", "--json", "."]),
     jsonPacket(root, ["search", "symbol", "findOrderStatus", "--json", "."]),
     jsonPacket(root, ["search", "callsite", "findOrderStatus", "--json", "."]),
     jsonPacket(root, ["search", "import", "./index", "--json", "."]),
@@ -145,6 +147,7 @@ test("semantic language registry JSON documents the TypeScript provider identity
     "search/owner",
     "search/dependency",
     "search/deps",
+    "search/api",
     "search/symbol",
     "search/callsite",
     "search/import",
@@ -187,6 +190,7 @@ test("semantic language registry JSON documents the TypeScript provider identity
           "search/owner",
           "search/dependency",
           "search/deps",
+          "search/api",
           "search/symbol",
           "search/callsite",
           "search/import",
@@ -352,6 +356,13 @@ function expectedSearchCapabilities(
         semanticCapability("dependency-version-scope"),
         typeScriptCapability("dependency-api-token-usage-search"),
       ];
+    case "search/api":
+      return [
+        typeScriptCapability("exported-api-shape-search"),
+        typeScriptCapability("public-function-api-shape-search"),
+        typeScriptCapability("public-data-api-shape-search"),
+        semanticCapability("dependency-version-scope"),
+      ];
     case "search/symbol":
       return [typeScriptCapability("symbol-export-search")];
     case "search/callsite":
@@ -390,6 +401,8 @@ function expectedSearchIngestRequiredFor(
         typeScriptCapability("schema-json"),
         typeScriptCapability("generated-artifact"),
       ];
+    case "search/api":
+      return [typeScriptCapability("external-api-docs")];
     default:
       return [];
   }
@@ -476,9 +489,10 @@ function semanticSearchFixture(): string {
   );
   fs.writeFileSync(
     path.join(root, "src", "index.ts"),
-    ["export type OrderStatus = 'ok';", "export function findOrderStatus() { return 'ok'; }"].join(
-      "\n",
-    ),
+    [
+      "export type OrderStatus = 'ok';",
+      "export function findOrderStatus(input: string): string { return input; }",
+    ].join("\n"),
   );
   fs.writeFileSync(
     path.join(root, "src", "consumer.ts"),
@@ -486,14 +500,14 @@ function semanticSearchFixture(): string {
       'import { findOrderStatus } from "./index.js";',
       'import type { ReactNode } from "react";',
       'import type { Core } from "@example/core";',
-      "export const status = findOrderStatus();",
+      'export const status = findOrderStatus("ok");',
       "export type StatusNode = ReactNode;",
       "export type CoreStatus = Core;",
     ].join("\n"),
   );
   fs.writeFileSync(
     path.join(root, "tests", "index.test.ts"),
-    'import { findOrderStatus } from "../src/index.js";\nfindOrderStatus();\n',
+    'import { findOrderStatus } from "../src/index.js";\nfindOrderStatus("ok");\n',
   );
   return root;
 }
