@@ -89,7 +89,11 @@ ts-harness search prime --package <package-path> .
 #+end_src
 
 Read package routing, owner summaries, finding groups, and =next= actions
-before opening files.
+before opening files. =search= is a fast syntax/reasoning lane; high-fanout
+lookup views keep core owner/import/export facts, while =prime=, =owner=,
+=api=, and =public-external-types= keep full native parser facts. Use
+=ts-harness check --changed .= or =check --full= when semantic diagnostics are
+the evidence.
 
 ** Inspect A Dependency
 

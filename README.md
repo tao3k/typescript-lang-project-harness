@@ -37,6 +37,7 @@ ts-harness search workspace .
 ts-harness search prime --view seeds .
 ts-harness search owner src/index.ts --view seeds .
 ts-harness search text OrderStatus .
+ts-harness search text --query-set OrderStatus --query-set findOrderStatus owner tests .
 rg -n "OrderStatus" src tests | ts-harness search ingest .
 
 ts-harness check --changed .

@@ -9,6 +9,8 @@ export const SEMANTIC_LANGUAGE_PROTOCOL_ID = "agent.semantic-protocols.semantic-
 export const SEMANTIC_LANGUAGE_PROTOCOL_VERSION = "1" as const;
 export const SEMANTIC_SEARCH_PACKET_SCHEMA_ID =
   "agent.semantic-protocols.semantic-search-packet" as const;
+export const SEMANTIC_AGENT_HOOK_DECISION_SCHEMA_ID =
+  "agent.semantic-protocols.agent-hook-decision" as const;
 export const TYPE_SCRIPT_CAPABILITIES_SCHEMA_ID =
   "agent.semantic-protocols.languages.typescript.ts-harness.capabilities" as const;
 export const TYPE_SCRIPT_LANGUAGE_ID = "typescript" as const;
@@ -117,6 +119,9 @@ export const TYPE_SCRIPT_SEARCH_VIEW_DESCRIPTORS = [
     requiresQuery: true,
     acceptsStdin: false,
     acceptedPipes: ["owner", "tests"],
+    supportsQuerySet: true,
+    acceptedQuerySetSelectors: ["exact-set"],
+    querySetScopes: ["project", "owner"],
     capabilities: [
       semanticCapability("owner-path-text-search"),
       typeScriptCapability("export-text-search"),
@@ -144,7 +149,7 @@ export const TYPE_SCRIPT_SEARCH_METHODS = TYPE_SCRIPT_SEARCH_VIEW_DESCRIPTORS.ma
 );
 
 export const TYPE_SCRIPT_CHECK_METHODS = ["check/changed", "check/full"] as const;
-export const TYPE_SCRIPT_AGENT_METHODS = ["agent/doctor"] as const;
+export const TYPE_SCRIPT_AGENT_METHODS = ["agent/doctor", "agent/install", "agent/hook"] as const;
 
 export type TypeScriptSemanticLanguageMethod =
   | TypeScriptSemanticSearchMethod
@@ -193,9 +198,15 @@ export interface SemanticLanguageMethodDescriptor {
   readonly requiresQuery?: boolean;
   readonly acceptsStdin?: boolean;
   readonly supportsPackageScope?: boolean;
+  readonly supportsQuerySet?: boolean;
+  readonly acceptedQuerySetSelectors?: readonly ("exact-set" | "prefix-set" | "stdin-path-set")[];
+  readonly querySetScopes?: readonly ("project" | "package" | "owner")[];
   readonly acceptedPipes?: readonly TypeScriptSemanticSearchView[];
   readonly capabilities?: readonly SemanticLanguageCapabilityDescriptor[];
   readonly ingestRequiredFor?: readonly SemanticLanguageIngestSurfaceDescriptor[];
+  readonly clients?: readonly string[];
+  readonly requiredOptions?: readonly string[];
+  readonly input?: string;
   readonly supportsJson: boolean;
   readonly supportsCompact: boolean;
 }
@@ -207,6 +218,9 @@ export interface TypeScriptSemanticSearchViewDescriptor {
   readonly requiresQuery: boolean;
   readonly acceptsStdin: boolean;
   readonly supportsPackageScope: true;
+  readonly supportsQuerySet?: boolean;
+  readonly acceptedQuerySetSelectors?: readonly ("exact-set" | "prefix-set" | "stdin-path-set")[];
+  readonly querySetScopes?: readonly ("project" | "package" | "owner")[];
   readonly acceptedPipes?: readonly TypeScriptSemanticSearchView[];
   readonly capabilities: readonly SemanticLanguageCapabilityDescriptor[];
   readonly ingestRequiredFor?: readonly SemanticLanguageIngestSurfaceDescriptor[];
@@ -256,6 +270,11 @@ export function typeScriptSemanticLanguageRegistration(): SemanticLanguageRegist
         path: "schemas/semantic-language-registry.v1.schema.json",
       },
       {
+        schemaId: SEMANTIC_AGENT_HOOK_DECISION_SCHEMA_ID,
+        schemaVersion: "1",
+        path: "schemas/semantic-agent-hook-decision.v1.schema.json",
+      },
+      {
         schemaId: TYPE_SCRIPT_CAPABILITIES_SCHEMA_ID,
         schemaVersion: "1",
         path: "schemas/typescript-semantic-capabilities.v1.schema.json",
@@ -291,9 +310,22 @@ function typeScriptSemanticLanguageMethodDescriptors(): readonly SemanticLanguag
     ...TYPE_SCRIPT_AGENT_METHODS.map((method) => ({
       method,
       command: "agent" as const,
-      outputSchemaIds: [SEMANTIC_LANGUAGE_REGISTRY_ID],
+      ...(method === "agent/install"
+        ? { clients: ["codex"], requiredOptions: ["--client codex"] }
+        : {}),
+      ...(method === "agent/hook"
+        ? {
+            clients: ["codex"],
+            requiredOptions: ["--client codex"],
+            input: "hook event JSON on stdin",
+            outputSchemaIds: [SEMANTIC_AGENT_HOOK_DECISION_SCHEMA_ID],
+            supportsCompact: false,
+          }
+        : {
+            outputSchemaIds: [SEMANTIC_LANGUAGE_REGISTRY_ID],
+            supportsCompact: true,
+          }),
       supportsJson: true,
-      supportsCompact: true,
     })),
   ];
 }
@@ -304,6 +336,9 @@ function searchView<const View extends string>(
     readonly requiresQuery: boolean;
     readonly acceptsStdin: boolean;
     readonly acceptedPipes?: readonly TypeScriptSemanticSearchView[];
+    readonly supportsQuerySet?: boolean;
+    readonly acceptedQuerySetSelectors?: readonly ("exact-set" | "prefix-set" | "stdin-path-set")[];
+    readonly querySetScopes?: readonly ("project" | "package" | "owner")[];
     readonly capabilities: readonly SemanticLanguageCapabilityDescriptor[];
     readonly ingestRequiredFor?: readonly SemanticLanguageIngestSurfaceDescriptor[];
   },
@@ -314,6 +349,9 @@ function searchView<const View extends string>(
   readonly requiresQuery: boolean;
   readonly acceptsStdin: boolean;
   readonly supportsPackageScope: true;
+  readonly supportsQuerySet?: boolean;
+  readonly acceptedQuerySetSelectors?: readonly ("exact-set" | "prefix-set" | "stdin-path-set")[];
+  readonly querySetScopes?: readonly ("project" | "package" | "owner")[];
   readonly acceptedPipes?: readonly TypeScriptSemanticSearchView[];
   readonly capabilities: readonly SemanticLanguageCapabilityDescriptor[];
   readonly ingestRequiredFor?: readonly SemanticLanguageIngestSurfaceDescriptor[];

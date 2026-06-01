@@ -33,6 +33,8 @@ export interface SemanticSearchBuildOptions {
   readonly view: SemanticSearchView;
   readonly renderMode?: SemanticSearchRenderMode;
   readonly query?: string;
+  readonly querySet?: readonly string[];
+  readonly queryScope?: SemanticSearchQueryScope;
   readonly pipes?: readonly SemanticSearchView[];
   readonly stdin?: string;
 }
@@ -52,6 +54,8 @@ export interface SemanticSearchPacket {
   readonly view: SemanticSearchView;
   readonly renderMode: SemanticSearchRenderMode;
   readonly query?: string;
+  readonly querySet?: readonly SemanticSearchQueryTerm[];
+  readonly queryComposition?: SemanticSearchQueryComposition;
   readonly header: SemanticSearchHeader;
   readonly inputDetection?: SemanticSearchInputDetection;
   readonly packages?: readonly SemanticSearchFact[];
@@ -88,6 +92,48 @@ export interface SemanticSearchInputDetection {
   readonly lineCount: number;
   readonly byteCount: number;
   readonly sample?: string;
+}
+
+export interface SemanticSearchQueryTerm {
+  readonly value: string;
+  readonly kind:
+    | "dependency"
+    | "owner"
+    | "path"
+    | "symbol"
+    | "text"
+    | "feature"
+    | "cfg"
+    | "api"
+    | "custom";
+  readonly selector: "exact" | "prefix" | "stdin-path";
+  readonly fields?: SemanticSearchFields;
+}
+
+export interface SemanticSearchQueryComposition {
+  readonly mode: "single" | "query-set";
+  readonly view: string;
+  readonly selector: "single" | "exact-set" | "prefix-set" | "stdin-path-set";
+  readonly scope?: SemanticSearchQueryScope;
+  readonly merge: readonly (
+    | "packages"
+    | "nodes"
+    | "edges"
+    | "owners"
+    | "items"
+    | "hits"
+    | "findings"
+    | "nextActions"
+    | "notes"
+  )[];
+  readonly fields?: SemanticSearchFields;
+}
+
+export interface SemanticSearchQueryScope {
+  readonly projectRoot?: string;
+  readonly packageName?: string;
+  readonly ownerPath?: string;
+  readonly roots?: readonly string[];
 }
 
 export type SemanticSearchFieldValue =
@@ -237,11 +283,11 @@ export interface SemanticSearchLocation {
   readonly endColumn?: number;
 }
 
-export const MAX_PRIME_OWNERS = 12;
+export const MAX_PRIME_OWNERS = 8;
 export const MAX_PRIME_EDGES = 24;
 export const MAX_FINDINGS = 8;
 export const MAX_WORKSPACE_PACKAGES = 24;
-export const MAX_WORKSPACE_EDGES = 32;
-export const MAX_TEXT_HITS = 20;
+export const MAX_WORKSPACE_EDGES = 8;
+export const MAX_TEXT_HITS = 12;
 export const MAX_SYMBOL_HITS = 20;
 export const MAX_IMPORT_HITS = 30;

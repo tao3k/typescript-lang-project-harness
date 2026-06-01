@@ -109,11 +109,19 @@ export function projectFileNames(
 export function parseTypeScriptProjectFiles(
   scope: TypeScriptProjectHarnessScope,
   fileNames: readonly string[],
-  options: { readonly collectSemanticDiagnostics?: boolean } = {},
+  options: {
+    readonly collectSemanticDiagnostics?: boolean;
+    readonly collectNativeSyntaxFacts?: boolean;
+    readonly useCompilerProgram?: boolean;
+  } = {},
 ): TypeScriptModuleReport[] {
   const programInputs = readTypeScriptProgramInputs(scope);
   const collectSemanticDiagnostics = options.collectSemanticDiagnostics ?? true;
+  const useCompilerProgram = options.useCompilerProgram ?? collectSemanticDiagnostics;
   const rootNames = [...fileNames].map((fileName) => path.resolve(fileName)).sort();
+  if (!useCompilerProgram) {
+    return parseStandaloneProjectFiles(scope, rootNames, programInputs.options, options);
+  }
   const host = ts.createCompilerHost(programInputs.options, true);
   const createProgramOptions: ts.CreateProgramOptions = {
     rootNames,
@@ -128,25 +136,7 @@ export function parseTypeScriptProjectFiles(
         : { ...createProgramOptions, projectReferences: programInputs.projectReferences },
     );
   } catch {
-    const resolutionCache = ts.createModuleResolutionCache(
-      scope.projectRoot,
-      (fileName) => fileName,
-      programInputs.options,
-    );
-    return rootNames.map((fileName) => {
-      const standalone = parseTypeScriptSourceFile(fileName);
-      if (standalone.imports.length === 0) return standalone;
-      const resolutions = standalone.imports.map((importFact) =>
-        resolveNativeImportFact(
-          scope,
-          fileName,
-          importFact,
-          programInputs.options,
-          resolutionCache,
-        ),
-      );
-      return { ...standalone, importResolutions: resolutions };
-    });
+    return parseStandaloneProjectFiles(scope, rootNames, programInputs.options, options);
   }
   const resolutionCache = ts.createModuleResolutionCache(
     scope.projectRoot,
@@ -157,7 +147,7 @@ export function parseTypeScriptProjectFiles(
     const sourceFile = program.getSourceFile(fileName);
     if (sourceFile === undefined) {
       // Monorepo workspace file: not in the root program. Parse standalone + resolve imports per-file.
-      const standalone = parseTypeScriptSourceFile(fileName);
+      const standalone = parseTypeScriptSourceFile(fileName, options);
       if (standalone.imports.length === 0) return standalone;
       const resolutions = standalone.imports.map((importFact) =>
         resolveNativeImportFact(
@@ -177,6 +167,7 @@ export function parseTypeScriptProjectFiles(
             nativeDiagnosticFromTsDiagnostic(diagnostic, fileName, sourceFile.text),
           )
       : [];
+    const imports = collectImportFacts(sourceFile);
     return moduleReportFromSourceFile(
       sourceFile,
       program
@@ -185,7 +176,7 @@ export function parseTypeScriptProjectFiles(
           nativeDiagnosticFromTsDiagnostic(diagnostic, fileName, sourceFile.text),
         ),
       semanticDiagnostics,
-      collectImportFacts(sourceFile).map((importFact) =>
+      imports.map((importFact) =>
         resolveNativeImportFact(
           scope,
           sourceFile.fileName,
@@ -194,6 +185,39 @@ export function parseTypeScriptProjectFiles(
           resolutionCache,
         ),
       ),
+      imports,
+      options,
     );
   });
+}
+
+function parseStandaloneProjectFiles(
+  scope: TypeScriptProjectHarnessScope,
+  rootNames: readonly string[],
+  compilerOptions: ts.CompilerOptions,
+  options: { readonly collectNativeSyntaxFacts?: boolean },
+): TypeScriptModuleReport[] {
+  const resolutionCache = ts.createModuleResolutionCache(
+    scope.projectRoot,
+    (fileName) => fileName,
+    compilerOptions,
+  );
+  return rootNames.map((fileName) =>
+    parseStandaloneProjectFile(scope, fileName, compilerOptions, resolutionCache, options),
+  );
+}
+
+function parseStandaloneProjectFile(
+  scope: TypeScriptProjectHarnessScope,
+  fileName: string,
+  compilerOptions: ts.CompilerOptions,
+  resolutionCache: ts.ModuleResolutionCache,
+  options: { readonly collectNativeSyntaxFacts?: boolean },
+): TypeScriptModuleReport {
+  const standalone = parseTypeScriptSourceFile(fileName, options);
+  if (standalone.imports.length === 0) return standalone;
+  const resolutions = standalone.imports.map((importFact) =>
+    resolveNativeImportFact(scope, fileName, importFact, compilerOptions, resolutionCache),
+  );
+  return { ...standalone, importResolutions: resolutions };
 }

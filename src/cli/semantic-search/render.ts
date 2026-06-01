@@ -30,14 +30,13 @@ export function renderSemanticSearchPacket(packet: SemanticSearchPacket): string
     lines.push(`|${node.kind} ${node.path ?? node.id} ${renderFields(node.fields)}`.trimEnd());
   }
   for (const owner of packet.owners) {
+    const ownerNext = renderOwnerNextActions(owner.path, owner.nextActions ?? []);
     const fields: SemanticSearchFields = {
       role: owner.role,
       public: owner.public,
       exp: owner.exports?.slice(0, 8) ?? [],
       ...owner.fields,
-      ...(owner.nextActions && owner.nextActions.length > 0
-        ? { next: owner.nextActions.map(renderNextActionFragment) }
-        : {}),
+      ...(ownerNext.length > 0 ? { next: ownerNext } : {}),
     };
     lines.push(`|owner ${owner.path} ${renderFields(fields)}`.trimEnd());
   }
@@ -54,20 +53,26 @@ export function renderSemanticSearchPacket(packet: SemanticSearchPacket): string
     const lineKind = hit.kind === "api" ? "api" : "hit";
     lines.push(`|${lineKind} ${renderLocation(hit.location)} ${renderFields(fields)}`.trimEnd());
   }
-  for (const edge of packet.edges) {
-    const fields = edge.fields ? ` ${renderFields(edge.fields)}` : "";
-    lines.push(`|edge ${edge.from} -${edge.kind}-> ${edge.to}${fields}`.trimEnd());
+  if (packet.view !== "workspace" && packet.view !== "prime") {
+    for (const edge of packet.edges) {
+      const fields = edge.fields ? ` ${renderFields(edge.fields)}` : "";
+      lines.push(`|edge ${edge.from} -${edge.kind}-> ${edge.to}${fields}`.trimEnd());
+    }
   }
-  for (const finding of packet.findings) {
-    lines.push(
-      `|find ${finding.ruleId} x${finding.count} at=${ownerId(finding.location.path)} severity=${finding.severity}`,
-    );
+  if (packet.view !== "workspace" && packet.view !== "prime") {
+    for (const finding of packet.findings) {
+      lines.push(
+        `|find ${finding.ruleId} x${finding.count} at=${ownerId(finding.location.path)} severity=${finding.severity}`,
+      );
+    }
   }
   for (const note of packet.notes) {
     lines.push(`|note kind=${note.kind} message=${escapeFieldValue(note.message)}`);
   }
   if (packet.nextActions.length > 0) {
-    lines.push(`|next ${packet.nextActions.map(renderNextActionFragment).join(",")}`);
+    lines.push(
+      `|next ${packet.nextActions.map((action) => renderNextActionFragment(action)).join(",")}`,
+    );
   }
   return `${lines.join("\n")}\n`;
 }
@@ -188,9 +193,21 @@ function renderLocation(location: SemanticSearchLocation): string {
   return renderFields(fields);
 }
 
-function renderNextActionFragment(action: SemanticSearchNextAction): string {
+function renderOwnerNextActions(
+  ownerPath: string,
+  actions: readonly SemanticSearchNextAction[],
+): string[] {
+  return actions
+    .filter((action) => action.kind !== "owner" || action.target !== ownerPath)
+    .map((action) => renderNextActionFragment(action, ownerPath));
+}
+
+function renderNextActionFragment(
+  action: SemanticSearchNextAction,
+  contextOwnerPath?: string,
+): string {
   const suffix =
-    action.ownerPath !== undefined
+    action.ownerPath !== undefined && action.ownerPath !== contextOwnerPath
       ? `(owner=${action.ownerPath})`
       : action.scope !== undefined
         ? `(scope=${action.scope})`

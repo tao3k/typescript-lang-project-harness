@@ -33,6 +33,8 @@ SEARCH VIEWS
   search text <query>       Owner-grouped path/export/source-text search
   search text <query> owner tests
                              Minimal final-only text -> owner -> tests pipe
+  search text --query-set <q1> --query-set <q2> [owner tests] [--owner <path>]
+                             Homogeneous text query-set with optional owner scope
   search ingest             Detect stdin shape and group hits by owner
   --package <path>          Run the selected search in a workspace package scope
 
@@ -67,6 +69,7 @@ EXAMPLES
   ts-harness search import ./order .
   ts-harness search tests src/domain/order.ts .
   ts-harness search text OrderStatus .
+  ts-harness search text --query-set OrderStatus --query-set findOrderStatus owner tests .
   rg -n "OrderStatus" src tests | ts-harness search ingest .
   ts-harness check --changed .
   ts-harness agent install --client codex .

@@ -52,7 +52,9 @@ interface SearchArgs {
   readonly query: string | undefined;
   readonly projectRoot: string | undefined;
   readonly packagePath: string | undefined;
+  readonly ownerPath: string | undefined;
   readonly pipes: readonly TypeScriptSemanticSearchView[];
+  readonly querySet: readonly string[];
   readonly json: boolean;
   readonly renderMode: SemanticSearchRenderMode | undefined;
 }
@@ -130,22 +132,27 @@ export function runProtocolCli(
   }
   if (args.kind === "agent") {
     const projectRoot = path.resolve(cwd, args.projectRoot ?? ".");
-    if (args.action === "doctor") {
-      streams.stdout.write(
-        args.json ? renderAgentDoctorJson(projectRoot) : renderAgentDoctor(projectRoot),
-      );
+    try {
+      if (args.action === "doctor") {
+        streams.stdout.write(
+          args.json ? renderAgentDoctorJson(projectRoot) : renderAgentDoctor(projectRoot),
+        );
+        return 0;
+      }
+      if (args.action === "install") {
+        streams.stdout.write(installCodexAgentHooks(projectRoot));
+        return 0;
+      }
+      if (args.action === "guide") {
+        streams.stdout.write(renderCodexAgentGuide(projectRoot));
+        return 0;
+      }
+      streams.stdout.write(runCodexAgentHook(args.event, projectRoot, streams.stdin ?? ""));
       return 0;
+    } catch (error) {
+      streams.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+      return 3;
     }
-    if (args.action === "install") {
-      streams.stdout.write(installCodexAgentHooks(projectRoot));
-      return 0;
-    }
-    if (args.action === "guide") {
-      streams.stdout.write(renderCodexAgentGuide(projectRoot));
-      return 0;
-    }
-    streams.stdout.write(runCodexAgentHook(args.event, projectRoot, streams.stdin ?? ""));
-    return 0;
   }
 
   const projectRoot =
@@ -153,8 +160,8 @@ export function runProtocolCli(
       ? searchProjectRoot(cwd, args.projectRoot, args.packagePath)
       : path.resolve(cwd, args.projectRoot ?? ".");
   try {
-    const report = runTypeScriptProjectHarness(projectRoot);
     if (args.kind === "check") {
+      const report = runTypeScriptProjectHarness(projectRoot);
       if (args.json) {
         streams.stdout.write(renderTypeScriptProjectHarnessJson(report));
       } else {
@@ -164,9 +171,16 @@ export function runProtocolCli(
       return isTypeScriptHarnessClean(report) ? 0 : 1;
     }
 
+    const report = runTypeScriptProjectHarness(projectRoot, undefined, {
+      collectSemanticDiagnostics: false,
+      collectNativeSyntaxFacts: searchNeedsFullNativeSyntaxFacts(args.view),
+      evaluateRules: searchNeedsRuleEvaluation(args.view),
+    });
     const packet = buildSemanticSearchPacket(report, {
       view: args.view,
       ...(args.query !== undefined ? { query: args.query } : {}),
+      ...(args.querySet.length > 0 ? { querySet: args.querySet } : {}),
+      ...(args.ownerPath !== undefined ? { queryScope: { ownerPath: args.ownerPath } } : {}),
       ...(args.pipes.length > 0 ? { pipes: args.pipes } : {}),
       ...(args.renderMode !== undefined ? { renderMode: args.renderMode } : {}),
       ...(args.view === "ingest" ? { stdin: streams.stdin ?? "" } : {}),
@@ -178,6 +192,46 @@ export function runProtocolCli(
   } catch (error) {
     streams.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
     return 3;
+  }
+}
+
+function searchNeedsFullNativeSyntaxFacts(view: TypeScriptSemanticSearchView): boolean {
+  switch (view) {
+    case "workspace":
+    case "prime":
+    case "owner":
+    case "api":
+    case "public-external-types":
+      return true;
+    case "dependency":
+    case "deps":
+    case "symbol":
+    case "callsite":
+    case "import":
+    case "tests":
+    case "text":
+    case "ingest":
+      return false;
+  }
+}
+
+function searchNeedsRuleEvaluation(view: TypeScriptSemanticSearchView): boolean {
+  switch (view) {
+    case "workspace":
+    case "prime":
+    case "owner":
+      return true;
+    case "dependency":
+    case "deps":
+    case "api":
+    case "public-external-types":
+    case "symbol":
+    case "callsite":
+    case "import":
+    case "tests":
+    case "text":
+    case "ingest":
+      return false;
   }
 }
 
@@ -198,10 +252,14 @@ function parseSearchArgs(argv: readonly string[]): ProtocolArgs {
   let json = false;
   let renderMode: SemanticSearchRenderMode | undefined;
   let packagePath: string | undefined;
+  let ownerPath: string | undefined;
+  const querySet: string[] = [];
   const positionals: string[] = [];
   for (let index = 1; index < argv.length; index++) {
     const arg = argv[index]!;
-    if (arg === "--json") {
+    if (isFlagLikeLiteralSearchQuery(searchView.view, positionals, querySet, arg)) {
+      positionals.push(arg);
+    } else if (arg === "--json") {
       json = true;
     } else if (arg === "--view") {
       const value = argv[index + 1];
@@ -217,6 +275,20 @@ function parseSearchArgs(argv: readonly string[]): ProtocolArgs {
       }
       packagePath = value;
       index += 1;
+    } else if (arg === "--owner") {
+      const value = argv[index + 1];
+      if (value === undefined) {
+        return { kind: "error", message: "--owner requires an owner path" };
+      }
+      ownerPath = value;
+      index += 1;
+    } else if (arg === "--query-set") {
+      const value = argv[index + 1];
+      if (value === undefined) {
+        return { kind: "error", message: "--query-set requires a query term" };
+      }
+      querySet.push(value);
+      index += 1;
     } else if (arg.startsWith("-")) {
       return { kind: "error", message: `unknown search option: ${arg}` };
     } else {
@@ -224,19 +296,26 @@ function parseSearchArgs(argv: readonly string[]): ProtocolArgs {
     }
   }
 
+  if (querySet.length > 0 && !searchViewSupportsQuerySet(searchView.view)) {
+    return { kind: "error", message: `search ${viewValue} does not support --query-set` };
+  }
+  if (ownerPath !== undefined && !(searchView.view === "text" && querySet.length > 0)) {
+    return { kind: "error", message: "--owner is only supported by search text --query-set" };
+  }
+
   if (searchView.requiresQuery) {
-    const query = positionals[0];
+    const query = querySet.length > 0 ? querySet.join(",") : positionals[0];
     if (query === undefined) {
       return { kind: "error", message: `search ${viewValue} requires a query` };
     }
     const { pipes, projectRoot, error } = parseSearchPipePositionals(
-      positionals.slice(1),
+      querySet.length > 0 ? positionals : positionals.slice(1),
       searchView.acceptedPipes ?? [],
     );
     if (error !== undefined) {
       return { kind: "error", message: error };
     }
-    if (positionals.length > 2 && pipes.length === 0) {
+    if (querySet.length === 0 && positionals.length > 2 && pipes.length === 0) {
       return { kind: "error", message: "expected at most one PROJECT_ROOT argument" };
     }
     return {
@@ -245,7 +324,9 @@ function parseSearchArgs(argv: readonly string[]): ProtocolArgs {
       query,
       projectRoot,
       packagePath,
+      ownerPath,
       pipes,
+      querySet,
       json,
       renderMode,
     };
@@ -260,7 +341,9 @@ function parseSearchArgs(argv: readonly string[]): ProtocolArgs {
     query: undefined,
     projectRoot: positionals[0],
     packagePath,
+    ownerPath: undefined,
     pipes: [],
+    querySet: [],
     json,
     renderMode,
   };
@@ -432,6 +515,30 @@ function searchProjectRoot(
 
 function isSemanticSearchRenderMode(value: string | undefined): value is SemanticSearchRenderMode {
   return value === "graph" || value === "hits" || value === "both" || value === "seeds";
+}
+
+function isFlagLikeLiteralSearchQuery(
+  view: TypeScriptSemanticSearchView,
+  positionals: readonly string[],
+  querySet: readonly string[],
+  arg: string,
+): boolean {
+  return (
+    view === "text" &&
+    positionals.length === 0 &&
+    querySet.length === 0 &&
+    arg.startsWith("-") &&
+    arg !== "--view" &&
+    arg !== "--package" &&
+    arg !== "--owner" &&
+    arg !== "--query-set" &&
+    arg !== "--help" &&
+    arg !== "-h"
+  );
+}
+
+function searchViewSupportsQuerySet(view: TypeScriptSemanticSearchView): boolean {
+  return view === "text";
 }
 
 function renderAgentDoctor(projectRoot: string): string {
