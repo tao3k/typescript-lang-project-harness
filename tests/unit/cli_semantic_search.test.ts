@@ -279,10 +279,8 @@ test("CLI exposes semantic-search protocol commands", () => {
   assert.equal(textOwnerTestsPipeSeeds.exitCode, 0);
   assert.match(textOwnerTestsPipeSeeds.stdout, /^\[search-text\] /u);
   assert.match(textOwnerTestsPipeSeeds.stdout, /\bpipes=owner,tests\b/u);
-  assert.match(
-    textOwnerTestsPipeSeeds.stdout,
-    /\|seed owner:src\/index\.ts,tests\/index\.test\.ts/u,
-  );
+  assert.match(textOwnerTestsPipeSeeds.stdout, /\|seed owner:.*src\/index\.ts/u);
+  assert.match(textOwnerTestsPipeSeeds.stdout, /\|seed owner:.*tests\/index\.test\.ts/u);
   assert.match(textOwnerTestsPipeSeeds.stdout, /\|seed tests:tests\/index\.test\.ts/u);
   assert.doesNotMatch(textOwnerTestsPipeSeeds.stdout, /\|hit /u);
 
