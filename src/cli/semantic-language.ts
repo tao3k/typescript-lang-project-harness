@@ -23,6 +23,7 @@ export type TypeScriptSemanticSearchView =
   | "owner"
   | "dependency"
   | "deps"
+  | "docs"
   | "api"
   | "public-external-types"
   | "symbol"
@@ -31,6 +32,7 @@ export type TypeScriptSemanticSearchView =
   | "tests"
   | "text"
   | "ingest";
+export type TypeScriptSemanticSearchPipe = TypeScriptSemanticSearchView | "items";
 export type TypeScriptSemanticSearchMethod = `search/${TypeScriptSemanticSearchView}`;
 
 export const TYPE_SCRIPT_SEARCH_VIEW_DESCRIPTORS = [
@@ -47,6 +49,7 @@ export const TYPE_SCRIPT_SEARCH_VIEW_DESCRIPTORS = [
   searchView("owner", {
     requiresQuery: true,
     acceptsStdin: false,
+    acceptedPipes: ["items"],
     capabilities: [
       semanticCapability("reasoning-owner-search"),
       typeScriptCapability("parser-visible-module-owner-search"),
@@ -72,6 +75,16 @@ export const TYPE_SCRIPT_SEARCH_VIEW_DESCRIPTORS = [
       semanticCapability("dependency-version-scope"),
       typeScriptCapability("dependency-api-token-usage-search"),
     ],
+  }),
+  searchView("docs", {
+    requiresQuery: true,
+    acceptsStdin: false,
+    capabilities: [
+      semanticCapability("local-docs-search"),
+      semanticCapability("schema-contract-search"),
+      typeScriptCapability("local-semantic-schema-search"),
+    ],
+    ingestRequiredFor: [typeScriptIngestSurface("external-docs")],
   }),
   searchView("api", {
     requiresQuery: true,
@@ -147,7 +160,7 @@ export const TYPE_SCRIPT_SEARCH_METHODS = TYPE_SCRIPT_SEARCH_VIEW_DESCRIPTORS.ma
 );
 
 export const TYPE_SCRIPT_CHECK_METHODS = ["check/changed", "check/full"] as const;
-export const TYPE_SCRIPT_AGENT_METHODS = ["agent/doctor"] as const;
+export const TYPE_SCRIPT_AGENT_METHODS = ["agent/doctor", "agent/guide"] as const;
 
 export type TypeScriptSemanticLanguageMethod =
   | TypeScriptSemanticSearchMethod
@@ -199,7 +212,7 @@ export interface SemanticLanguageMethodDescriptor {
   readonly supportsQuerySet?: boolean;
   readonly acceptedQuerySetSelectors?: readonly ("exact-set" | "prefix-set" | "stdin-path-set")[];
   readonly querySetScopes?: readonly ("project" | "package" | "owner")[];
-  readonly acceptedPipes?: readonly TypeScriptSemanticSearchView[];
+  readonly acceptedPipes?: readonly TypeScriptSemanticSearchPipe[];
   readonly capabilities?: readonly SemanticLanguageCapabilityDescriptor[];
   readonly ingestRequiredFor?: readonly SemanticLanguageIngestSurfaceDescriptor[];
   readonly clients?: readonly string[];
@@ -219,7 +232,7 @@ export interface TypeScriptSemanticSearchViewDescriptor {
   readonly supportsQuerySet?: boolean;
   readonly acceptedQuerySetSelectors?: readonly ("exact-set" | "prefix-set" | "stdin-path-set")[];
   readonly querySetScopes?: readonly ("project" | "package" | "owner")[];
-  readonly acceptedPipes?: readonly TypeScriptSemanticSearchView[];
+  readonly acceptedPipes?: readonly TypeScriptSemanticSearchPipe[];
   readonly capabilities: readonly SemanticLanguageCapabilityDescriptor[];
   readonly ingestRequiredFor?: readonly SemanticLanguageIngestSurfaceDescriptor[];
 }
@@ -300,13 +313,19 @@ function typeScriptSemanticLanguageMethodDescriptors(): readonly SemanticLanguag
       supportsJson: true,
       supportsCompact: true,
     })),
-    ...TYPE_SCRIPT_AGENT_METHODS.map((method) => ({
-      method,
+    {
+      method: "agent/doctor" as const,
       command: "agent" as const,
       outputSchemaIds: [SEMANTIC_LANGUAGE_REGISTRY_ID],
       supportsCompact: true,
       supportsJson: true,
-    })),
+    },
+    {
+      method: "agent/guide" as const,
+      command: "agent" as const,
+      supportsCompact: true,
+      supportsJson: false,
+    },
   ];
 }
 
@@ -315,7 +334,7 @@ function searchView<const View extends string>(
   options: {
     readonly requiresQuery: boolean;
     readonly acceptsStdin: boolean;
-    readonly acceptedPipes?: readonly TypeScriptSemanticSearchView[];
+    readonly acceptedPipes?: readonly TypeScriptSemanticSearchPipe[];
     readonly supportsQuerySet?: boolean;
     readonly acceptedQuerySetSelectors?: readonly ("exact-set" | "prefix-set" | "stdin-path-set")[];
     readonly querySetScopes?: readonly ("project" | "package" | "owner")[];
@@ -332,7 +351,7 @@ function searchView<const View extends string>(
   readonly supportsQuerySet?: boolean;
   readonly acceptedQuerySetSelectors?: readonly ("exact-set" | "prefix-set" | "stdin-path-set")[];
   readonly querySetScopes?: readonly ("project" | "package" | "owner")[];
-  readonly acceptedPipes?: readonly TypeScriptSemanticSearchView[];
+  readonly acceptedPipes?: readonly TypeScriptSemanticSearchPipe[];
   readonly capabilities: readonly SemanticLanguageCapabilityDescriptor[];
   readonly ingestRequiredFor?: readonly SemanticLanguageIngestSurfaceDescriptor[];
 } {

@@ -109,6 +109,14 @@ test("semantic-search JSON packets conform to the shared schema envelope", () =>
     record(querySetPacket.queryComposition, "querySetPacket.queryComposition").mode,
     "query-set",
   );
+  assert.deepEqual(
+    array(querySetPacket.queryCoverage, "querySetPacket.queryCoverage").map(
+      (coverage, index) => record(coverage, `querySetPacket.queryCoverage[${index}]`).value,
+    ),
+    ["OrderStatus", "findOrderStatus"],
+  );
+  assert.ok(Object.hasOwn(querySetPacket, "ownerResolution"));
+  assert.ok(Object.hasOwn(querySetPacket, "searchSynthesis"));
 });
 
 test("semantic language registry JSON documents the TypeScript provider identity", () => {
@@ -171,6 +179,7 @@ test("semantic language registry JSON documents the TypeScript provider identity
     "search/owner",
     "search/dependency",
     "search/deps",
+    "search/docs",
     "search/api",
     "search/public-external-types",
     "search/symbol",
@@ -182,6 +191,7 @@ test("semantic language registry JSON documents the TypeScript provider identity
     "check/changed",
     "check/full",
     "agent/doctor",
+    "agent/guide",
   ]);
   const methodDescriptors = array(
     language.methodDescriptors,
@@ -200,7 +210,7 @@ test("semantic language registry JSON documents the TypeScript provider identity
   );
   for (const descriptor of methodDescriptors) {
     assertSchemaObject(descriptor, methodDescriptorSchema, String(descriptor.method));
-    assert.equal(descriptor.supportsJson, true);
+    assert.equal(descriptor.supportsJson, descriptor.method === "agent/guide" ? false : true);
     assert.equal(descriptor.supportsCompact, true);
     assert.ok(["search", "check", "agent"].includes(String(descriptor.command)));
     if (String(descriptor.method).startsWith("search/")) {
@@ -215,6 +225,7 @@ test("semantic language registry JSON documents the TypeScript provider identity
           "search/owner",
           "search/dependency",
           "search/deps",
+          "search/docs",
           "search/api",
           "search/public-external-types",
           "search/symbol",
@@ -230,7 +241,11 @@ test("semantic language registry JSON documents the TypeScript provider identity
         descriptor.acceptedPipes === undefined
           ? []
           : stringArray(descriptor.acceptedPipes, `${String(descriptor.method)} acceptedPipes`),
-        String(descriptor.method) === "search/text" ? ["owner", "tests"] : [],
+        String(descriptor.method) === "search/text"
+          ? ["owner", "tests"]
+          : String(descriptor.method) === "search/owner"
+            ? ["items"]
+            : [],
       );
       assert.equal(
         descriptor.supportsQuerySet,
@@ -304,9 +319,14 @@ test("semantic language registry JSON documents the TypeScript provider identity
     } else if (String(descriptor.method).startsWith("agent/")) {
       assert.equal(descriptor.command, "agent");
       assert.equal(Object.hasOwn(descriptor, "view"), false);
-      assert.deepEqual(descriptor.outputSchemaIds, [
-        "agent.semantic-protocols.semantic-language-registry",
-      ]);
+      assert.deepEqual(
+        descriptor.outputSchemaIds === undefined
+          ? []
+          : stringArray(descriptor.outputSchemaIds, `${String(descriptor.method)} outputSchemaIds`),
+        descriptor.method === "agent/doctor"
+          ? ["agent.semantic-protocols.semantic-language-registry"]
+          : [],
+      );
       assert.equal(Object.hasOwn(descriptor, "requiresQuery"), false);
       assert.equal(Object.hasOwn(descriptor, "acceptsStdin"), false);
       assert.equal(Object.hasOwn(descriptor, "supportsPackageScope"), false);
@@ -404,6 +424,12 @@ function expectedSearchCapabilities(
         semanticCapability("dependency-version-scope"),
         typeScriptCapability("dependency-api-token-usage-search"),
       ];
+    case "search/docs":
+      return [
+        semanticCapability("local-docs-search"),
+        semanticCapability("schema-contract-search"),
+        typeScriptCapability("local-semantic-schema-search"),
+      ];
     case "search/api":
       return [
         typeScriptCapability("exported-api-shape-search"),
@@ -455,6 +481,8 @@ function expectedSearchIngestRequiredFor(
         typeScriptCapability("schema-json"),
         typeScriptCapability("generated-artifact"),
       ];
+    case "search/docs":
+      return [typeScriptCapability("external-docs")];
     case "search/api":
       return [typeScriptCapability("external-api-docs")];
     default:
@@ -619,6 +647,9 @@ function assertSemanticSearchPacket(schema: JsonObject, packet: JsonObject): voi
   if (packet.inputDetection !== undefined) {
     assertInputDetection(record(packet.inputDetection), record(defs.inputDetection));
   }
+  if (packet.searchSynthesis !== undefined) {
+    assertSearchSynthesis(record(packet.searchSynthesis), record(defs.searchSynthesis));
+  }
   assertArray(packet.packages, "packet.packages", (fact, context) =>
     assertFact(fact, record(defs.fact), context),
   );
@@ -666,6 +697,47 @@ function assertInputDetection(inputDetection: JsonObject, schema: JsonObject): v
   assertNonNegativeInteger(inputDetection.byteCount, "inputDetection.byteCount");
   if (inputDetection.sample !== undefined)
     assertString(inputDetection.sample, "inputDetection.sample");
+}
+
+function assertSearchSynthesis(searchSynthesis: JsonObject, schema: JsonObject): void {
+  assertSchemaObject(searchSynthesis, schema, "searchSynthesis");
+  assertString(searchSynthesis.algorithm, "searchSynthesis.algorithm");
+  assertString(searchSynthesis.scope, "searchSynthesis.scope");
+  if (searchSynthesis.summary !== undefined) {
+    assertString(searchSynthesis.summary, "searchSynthesis.summary");
+  }
+  if (searchSynthesis.ownerPath !== undefined) {
+    assertString(searchSynthesis.ownerPath, "searchSynthesis.ownerPath");
+  }
+  if (searchSynthesis.selectedOwners !== undefined) {
+    assertNonNegativeInteger(searchSynthesis.selectedOwners, "searchSynthesis.selectedOwners");
+  }
+  if (searchSynthesis.selectedEdges !== undefined) {
+    assertNonNegativeInteger(searchSynthesis.selectedEdges, "searchSynthesis.selectedEdges");
+  }
+  if (searchSynthesis.incomingOwners !== undefined) {
+    assertNonNegativeInteger(searchSynthesis.incomingOwners, "searchSynthesis.incomingOwners");
+  }
+  if (searchSynthesis.outgoingOwners !== undefined) {
+    assertNonNegativeInteger(searchSynthesis.outgoingOwners, "searchSynthesis.outgoingOwners");
+  }
+  for (const key of ["highImpactOwners", "frontierOwners", "findingOwners"]) {
+    assertStringArray(searchSynthesis[key], `searchSynthesis.${key}`);
+  }
+  assertArray(searchSynthesis.seeds, "searchSynthesis.seeds", (nextAction, context) =>
+    assertNextAction(nextAction, context),
+  );
+  if (searchSynthesis.fields !== undefined) {
+    assertFields(searchSynthesis.fields, "searchSynthesis.fields");
+  }
+}
+
+function assertStringArray(value: unknown, context: string): void {
+  if (value === undefined) return;
+  assert.ok(Array.isArray(value), `${context} must be an array`);
+  for (const [index, item] of value.entries()) {
+    assertString(item, `${context}[${index}]`);
+  }
 }
 
 function assertFact(fact: JsonObject, schema: JsonObject, context: string): void {
@@ -767,7 +839,9 @@ function assertSchemaObject(value: JsonObject, schema: JsonObject, context: stri
     Object.keys(record(schema.properties, `${context} schema properties`)),
     context,
   );
-  assertRequiredKeys(value, stringArray(schema.required, `${context} schema required`), context);
+  if (schema.required !== undefined) {
+    assertRequiredKeys(value, stringArray(schema.required, `${context} schema required`), context);
+  }
 }
 
 function assertLocation(location: JsonObject, context: string): void {

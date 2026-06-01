@@ -10,11 +10,18 @@ import {
   testEdges,
   testHits,
   textHits,
-  textQuerySetHits,
+  textQueryHitsByTerm,
+  textQuerySetHitsFromHitsByTerm,
   uniqueOwners,
 } from "./hits.js";
 import { basePacket, normalizedQuerySet } from "./packet-base.js";
 import { isTestOwnerPath } from "./test-path.js";
+import {
+  textAvoidNextActions,
+  textOwnerResolution,
+  textQueryCoverage,
+  textSearchSynthesis,
+} from "./text-query-synthesis.js";
 import type {
   SemanticSearchBuildOptions,
   SemanticSearchEdge,
@@ -106,7 +113,8 @@ function buildTextQuerySetPacket(
     ...(ownerScope === undefined ? {} : { queryScope: { ownerPath: ownerScope } }),
   };
   const pipes = options.pipes ?? [];
-  const hits = textQuerySetHits(report, queryTerms, ownerScope);
+  const hitsByTerm = textQueryHitsByTerm(report, queryTerms, ownerScope);
+  const hits = textQuerySetHitsFromHitsByTerm(report, hitsByTerm);
   const textOwners = ownersForHits(report, hits);
   const testEdgesForText = pipes.includes("tests") ? testEdgesForOwners(report, textOwners) : [];
   const testHitsForText =
@@ -119,6 +127,15 @@ function buildTextQuerySetPacket(
     ),
     ...ownersForHits(report, testHitsForText),
   ]);
+  const ownerPaths = owners.map((owner) => owner.path);
+  const ownerResolution = textOwnerResolution(report, owners, hits);
+  const searchSynthesis = textSearchSynthesis(
+    report,
+    queryTerms,
+    hits,
+    ownerPaths,
+    ownerResolution,
+  );
   const notes =
     hits.length === 0
       ? [
@@ -152,6 +169,10 @@ function buildTextQuerySetPacket(
     edges: testEdgesForText,
     owners,
     hits: [...hits, ...testHitsForText],
+    queryCoverage: textQueryCoverage(queryTerms, hitsByTerm, hits),
+    ownerResolution,
+    ...(searchSynthesis === undefined ? {} : { searchSynthesis }),
+    avoidNextActions: textAvoidNextActions(queryTerms, ownerResolution),
     findings: [],
     nextActions:
       owners.length > 0

@@ -49,19 +49,38 @@ export function basePacket(
             view: options.view,
             selector: "exact-set" as const,
             ...(options.queryScope === undefined ? {} : { scope: options.queryScope }),
-            merge: ["nodes", "edges", "owners", "hits", "nextActions", "notes"] as const,
+            merge: ["nodes", "edges", "owners", "items", "hits", "nextActions", "notes"] as const,
           },
         }),
+    ...(packet.queryCoverage ? { queryCoverage: packet.queryCoverage } : {}),
+    ...(packet.ownerResolution ? { ownerResolution: packet.ownerResolution } : {}),
+    ...(packet.searchSynthesis ? { searchSynthesis: packet.searchSynthesis } : {}),
+    ...(packet.avoidNextActions ? { avoidNextActions: packet.avoidNextActions } : {}),
+    ...(options.runtimeCost ? { runtimeCost: options.runtimeCost } : {}),
+    ...(packet.runtimeCost ? { runtimeCost: packet.runtimeCost } : {}),
     header: packet.header,
     ...(packet.inputDetection ? { inputDetection: packet.inputDetection } : {}),
     ...(packet.packages ? { packages: packet.packages } : {}),
     nodes: packet.nodes,
     edges: packet.edges,
     owners: packet.owners,
+    ...(packet.items ? { items: packet.items } : {}),
     hits: packet.hits,
     findings: packet.findings,
     nextActions: packet.nextActions,
-    notes: packet.notes,
+    notes:
+      options.runtimeCost === undefined
+        ? packet.notes
+        : [
+            ...packet.notes,
+            {
+              kind: "runtime-prefilter" as const,
+              message: options.runtimeCost.reason ?? "search runtime cost recorded",
+              ...(options.runtimeCost.fields === undefined
+                ? {}
+                : { fields: options.runtimeCost.fields }),
+            },
+          ],
   };
 }
 

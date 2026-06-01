@@ -8,11 +8,13 @@ import type {
   TypeScriptEffectSchemaBoundarySignalFact,
   TypeScriptEffectServiceMethodFact,
   TypeScriptEffectConcurrencySignalFact,
+  TypeScriptModuleResponsibilityFact,
   TypeScriptPublicAsyncEffectSurfaceFact,
   TypeScriptPublicDiscriminatedUnionVariantFieldFact,
   TypeScriptPublicDataFieldFact,
   TypeScriptPublicFunctionControlFlowFact,
   TypeScriptPublicFunctionParamFact,
+  TypeScriptPublicReturnObjectShapeFact,
   TypeScriptReactHookCallSignalFact,
   TypeScriptReactRenderPuritySignalFact,
   TypeScriptReactStaticDefinitionSignalFact,
@@ -36,11 +38,13 @@ import { collectEffectConcurrencySignals } from "./effect_concurrency.js";
 import { collectEffectResourceScopeRisks } from "./effect_resources.js";
 import { collectEffectSchemaBoundarySignals } from "./effect_schema.js";
 import { collectEffectProductionBoundarySignals } from "./effect_production.js";
+import { collectModuleResponsibilities } from "./module_responsibilities.js";
 import {
   collectReactHookCallSignals,
   collectReactRenderPuritySignals,
   collectReactStaticDefinitionSignals,
 } from "./react.js";
+import { collectPublicReturnObjectShapes } from "./return_shape.js";
 
 export interface TypeScriptNativeSyntaxFacts {
   readonly publicFunctionParams: readonly TypeScriptPublicFunctionParamFact[];
@@ -49,6 +53,8 @@ export interface TypeScriptNativeSyntaxFacts {
   readonly publicTypeAliases: readonly TypeScriptPublicTypeAliasFact[];
   readonly publicDiscriminatedUnionVariantFields: readonly TypeScriptPublicDiscriminatedUnionVariantFieldFact[];
   readonly publicFunctionControlFlows: readonly TypeScriptPublicFunctionControlFlowFact[];
+  readonly publicReturnObjectShapes: readonly TypeScriptPublicReturnObjectShapeFact[];
+  readonly moduleResponsibilities: readonly TypeScriptModuleResponsibilityFact[];
   readonly publicAsyncEffectSurfaces: readonly TypeScriptPublicAsyncEffectSurfaceFact[];
   readonly effectRuntimeCalls: readonly TypeScriptEffectRuntimeCallFact[];
   readonly effectPromiseInteropRisks: readonly TypeScriptEffectPromiseInteropRiskFact[];
@@ -74,6 +80,8 @@ export function collectTypeScriptNativeSyntaxFacts(
       collectPublicDiscriminatedUnionVariantFields(sourceFile),
     ),
     publicFunctionControlFlows: collectSafely(() => collectPublicFunctionControlFlows(sourceFile)),
+    publicReturnObjectShapes: collectSafely(() => collectPublicReturnObjectShapes(sourceFile)),
+    moduleResponsibilities: collectSafely(() => collectModuleResponsibilities(sourceFile)),
     publicAsyncEffectSurfaces: collectSafely(() => collectPublicAsyncEffectSurfaces(sourceFile)),
     effectRuntimeCalls: collectSafely(() => collectEffectRuntimeCalls(sourceFile)),
     effectPromiseInteropRisks: collectSafely(() => collectEffectPromiseInteropRisks(sourceFile)),

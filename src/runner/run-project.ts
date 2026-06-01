@@ -28,6 +28,7 @@ interface TypeScriptProjectHarnessRunOptions {
   readonly collectSemanticDiagnostics?: boolean;
   readonly collectNativeSyntaxFacts?: boolean;
   readonly evaluateRules?: boolean;
+  readonly fileNames?: readonly string[];
 }
 
 export function runTypeScriptProjectHarness(
@@ -48,7 +49,11 @@ export function runTypeScriptProjectHarness(
       ? {}
       : { collectNativeSyntaxFacts: options.collectNativeSyntaxFacts }),
   };
-  const modules = parseTypeScriptProjectFiles(scope, projectFileNames(scope, config), parseOptions);
+  const modules = parseTypeScriptProjectFiles(
+    scope,
+    options.fileNames ?? projectFileNames(scope, config),
+    parseOptions,
+  );
   const reasoningTree = buildTypeScriptReasoningTree(scope, modules);
   const findings =
     options.evaluateRules === false ? [] : evaluateDefaultRulePacks(reasoningTree, config);

@@ -92,6 +92,8 @@ function reasoningModuleFromRole(
     publicTypeAliases: moduleReport.publicTypeAliases,
     publicDiscriminatedUnionVariantFields: moduleReport.publicDiscriminatedUnionVariantFields,
     publicFunctionControlFlows: moduleReport.publicFunctionControlFlows,
+    publicReturnObjectShapes: moduleReport.publicReturnObjectShapes,
+    moduleResponsibilities: moduleReport.moduleResponsibilities,
     publicAsyncEffectSurfaces: moduleReport.publicAsyncEffectSurfaces,
     effectRuntimeCalls: moduleReport.effectRuntimeCalls,
     effectPromiseInteropRisks: moduleReport.effectPromiseInteropRisks,

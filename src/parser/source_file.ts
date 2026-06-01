@@ -20,6 +20,7 @@ import {
   type TypeScriptNativeSyntaxFacts,
 } from "./native_syntax/index.js";
 import { forEachDescendant } from "./native_syntax/helpers.js";
+import { collectSourceTextFixtureFacts } from "./source_text_fixtures.js";
 
 export interface TypeScriptSourceFileParseOptions {
   readonly collectNativeSyntaxFacts?: boolean;
@@ -73,6 +74,7 @@ function invalidModuleReport(
       },
     ],
     semanticDiagnostics: [],
+    sourceTextFixtures: [],
     imports: [],
     importResolutions: [],
     exports: [],
@@ -82,6 +84,8 @@ function invalidModuleReport(
     publicTypeAliases: [],
     publicDiscriminatedUnionVariantFields: [],
     publicFunctionControlFlows: [],
+    publicReturnObjectShapes: [],
+    moduleResponsibilities: [],
     publicAsyncEffectSurfaces: [],
     effectRuntimeCalls: [],
     effectPromiseInteropRisks: [],
@@ -117,6 +121,7 @@ export function moduleReportFromSourceFile(
     lineCount: sourceFile.getLineStarts().length,
     diagnostics,
     semanticDiagnostics,
+    sourceTextFixtures: collectSourceTextFixtureFacts(sourceFile),
     imports,
     importResolutions,
     exports: collectExportFacts(sourceFile),
@@ -126,6 +131,8 @@ export function moduleReportFromSourceFile(
     publicTypeAliases: nativeSyntaxFacts.publicTypeAliases,
     publicDiscriminatedUnionVariantFields: nativeSyntaxFacts.publicDiscriminatedUnionVariantFields,
     publicFunctionControlFlows: nativeSyntaxFacts.publicFunctionControlFlows,
+    publicReturnObjectShapes: nativeSyntaxFacts.publicReturnObjectShapes,
+    moduleResponsibilities: nativeSyntaxFacts.moduleResponsibilities,
     publicAsyncEffectSurfaces: nativeSyntaxFacts.publicAsyncEffectSurfaces,
     effectRuntimeCalls: nativeSyntaxFacts.effectRuntimeCalls,
     effectPromiseInteropRisks: nativeSyntaxFacts.effectPromiseInteropRisks,
@@ -148,6 +155,8 @@ function emptyTypeScriptNativeSyntaxFacts(): TypeScriptNativeSyntaxFacts {
     publicTypeAliases: [],
     publicDiscriminatedUnionVariantFields: [],
     publicFunctionControlFlows: [],
+    publicReturnObjectShapes: [],
+    moduleResponsibilities: [],
     publicAsyncEffectSurfaces: [],
     effectRuntimeCalls: [],
     effectPromiseInteropRisks: [],

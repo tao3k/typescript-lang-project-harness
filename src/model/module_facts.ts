@@ -1,8 +1,10 @@
 import type {
   TypeScriptExportFact,
   TypeScriptImportFact,
+  TypeScriptModuleResponsibilityFact,
   TypeScriptNativeDiagnostic,
   TypeScriptNativeImportResolutionFact,
+  TypeScriptSourceTextFixtureFact,
 } from "../model.js";
 import type {
   TypeScriptEffectPromiseInteropRiskFact,
@@ -17,6 +19,7 @@ import type {
   TypeScriptPublicDiscriminatedUnionVariantFieldFact,
   TypeScriptPublicFunctionControlFlowFact,
   TypeScriptPublicFunctionParamFact,
+  TypeScriptPublicReturnObjectShapeFact,
   TypeScriptReactHookCallSignalFact,
   TypeScriptReactRenderPuritySignalFact,
   TypeScriptReactStaticDefinitionSignalFact,
@@ -53,6 +56,7 @@ export interface TypeScriptModuleReport {
   readonly lineCount: number;
   readonly diagnostics: readonly TypeScriptNativeDiagnostic[];
   readonly semanticDiagnostics: readonly TypeScriptNativeDiagnostic[];
+  readonly sourceTextFixtures?: readonly TypeScriptSourceTextFixtureFact[];
   readonly imports: readonly TypeScriptImportFact[];
   readonly importResolutions: readonly TypeScriptNativeImportResolutionFact[];
   readonly exports: readonly TypeScriptExportFact[];
@@ -62,6 +66,8 @@ export interface TypeScriptModuleReport {
   readonly publicTypeAliases: readonly TypeScriptPublicTypeAliasFact[];
   readonly publicDiscriminatedUnionVariantFields: readonly TypeScriptPublicDiscriminatedUnionVariantFieldFact[];
   readonly publicFunctionControlFlows: readonly TypeScriptPublicFunctionControlFlowFact[];
+  readonly publicReturnObjectShapes: readonly TypeScriptPublicReturnObjectShapeFact[];
+  readonly moduleResponsibilities: readonly TypeScriptModuleResponsibilityFact[];
   readonly publicAsyncEffectSurfaces: readonly TypeScriptPublicAsyncEffectSurfaceFact[];
   readonly effectRuntimeCalls: readonly TypeScriptEffectRuntimeCallFact[];
   readonly effectPromiseInteropRisks: readonly TypeScriptEffectPromiseInteropRiskFact[];
@@ -93,6 +99,8 @@ export interface TypeScriptReasoningModule {
   readonly publicTypeAliases: readonly TypeScriptPublicTypeAliasFact[];
   readonly publicDiscriminatedUnionVariantFields: readonly TypeScriptPublicDiscriminatedUnionVariantFieldFact[];
   readonly publicFunctionControlFlows: readonly TypeScriptPublicFunctionControlFlowFact[];
+  readonly publicReturnObjectShapes: readonly TypeScriptPublicReturnObjectShapeFact[];
+  readonly moduleResponsibilities: readonly TypeScriptModuleResponsibilityFact[];
   readonly publicAsyncEffectSurfaces: readonly TypeScriptPublicAsyncEffectSurfaceFact[];
   readonly effectRuntimeCalls: readonly TypeScriptEffectRuntimeCallFact[];
   readonly effectPromiseInteropRisks: readonly TypeScriptEffectPromiseInteropRiskFact[];

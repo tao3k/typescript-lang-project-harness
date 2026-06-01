@@ -69,6 +69,33 @@ export interface TypeScriptPublicFunctionControlFlowFact {
   readonly sourceLine?: string;
 }
 
+export interface TypeScriptPublicReturnObjectShapeFact {
+  readonly functionName: string;
+  readonly functionLine: number;
+  readonly fields: readonly string[];
+  readonly spreads: readonly string[];
+  readonly location: SourceLocation;
+  readonly sourceLine?: string;
+}
+
+export type TypeScriptModuleResponsibilityKind =
+  | "function"
+  | "class"
+  | "interface"
+  | "type"
+  | "enum"
+  | "value"
+  | "call"
+  | "export";
+
+export interface TypeScriptModuleResponsibilityFact {
+  readonly kind: TypeScriptModuleResponsibilityKind;
+  readonly name: string;
+  readonly lineSpan: number;
+  readonly location: SourceLocation;
+  readonly sourceLine?: string;
+}
+
 export type TypeScriptEffectErrorChannelKind = "none" | "weak" | "domain";
 
 export interface TypeScriptPublicAsyncEffectSurfaceFact {

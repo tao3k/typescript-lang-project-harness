@@ -28,6 +28,8 @@ export type {
   TypeScriptEffectRuntimeCallKind,
   TypeScriptEffectSchemaBoundarySignalFact,
   TypeScriptEffectSchemaBoundarySignalKind,
+  TypeScriptModuleResponsibilityFact,
+  TypeScriptModuleResponsibilityKind,
   TypeScriptEffectPromiseInteropRiskFact,
   TypeScriptEffectPromiseInteropRiskKind,
   TypeScriptEffectResourceScopeRiskFact,
@@ -38,6 +40,7 @@ export type {
   TypeScriptPublicDiscriminatedUnionVariantFieldFact,
   TypeScriptPublicFunctionControlFlowFact,
   TypeScriptPublicFunctionParamFact,
+  TypeScriptPublicReturnObjectShapeFact,
   TypeScriptReactHookCallSignalFact,
   TypeScriptReactHookCallViolationKind,
   TypeScriptReactRenderOwnerKind,
@@ -126,6 +129,12 @@ export interface TypeScriptNativeImportResolutionFact {
   readonly location: SourceLocation;
   readonly resolution: "relative" | "path-alias" | "package-import" | "external" | "unresolved";
   readonly resolvedPath?: string;
+}
+
+export interface TypeScriptSourceTextFixtureFact {
+  readonly fixturePath: string;
+  readonly location: SourceLocation;
+  readonly endLine: number;
 }
 
 export interface TypeScriptExportFact {

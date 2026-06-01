@@ -5,7 +5,12 @@
   "description": "TypeScript provider-specific capability vocabulary for semantic-language registry method descriptors.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schemaId", "schemaVersion", "languageId", "providerId"],
+  "required": [
+    "schemaId",
+    "schemaVersion",
+    "languageId",
+    "providerId"
+  ],
   "properties": {
     "schemaId": {
       "const": "agent.semantic-protocols.languages.typescript.ts-harness.capabilities"
@@ -28,12 +33,19 @@
   },
   "$defs": {
     "namespace": {
-      "enum": ["semantic", "typescript"]
+      "enum": [
+        "semantic",
+        "typescript"
+      ]
     },
     "capabilityDescriptor": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["languageId", "namespace", "name"],
+      "required": [
+        "languageId",
+        "namespace",
+        "name"
+      ],
       "properties": {
         "languageId": {
           "const": "typescript"
@@ -53,6 +65,9 @@
             "dependency-local-usage-search",
             "dependency-version-scope",
             "dependency-api-token-usage-search",
+            "local-docs-search",
+            "schema-contract-search",
+            "local-semantic-schema-search",
             "exported-api-shape-search",
             "public-function-api-shape-search",
             "public-data-api-shape-search",
@@ -74,7 +89,11 @@
     "ingestSurfaceDescriptor": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["languageId", "namespace", "name"],
+      "required": [
+        "languageId",
+        "namespace",
+        "name"
+      ],
       "properties": {
         "languageId": {
           "const": "typescript"
@@ -87,6 +106,7 @@
             "non-parser-path",
             "non-parser-text",
             "docs-text",
+            "external-docs",
             "external-api-docs",
             "schema-json",
             "generated-artifact"

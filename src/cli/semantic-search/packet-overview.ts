@@ -2,7 +2,7 @@
  * Semantic-search packet builders for workspace, prime, and owner views.
  */
 
-import type { TypeScriptHarnessReport } from "../../model.js";
+import type { TypeScriptExportFact, TypeScriptHarnessReport } from "../../model.js";
 import {
   edgeFact,
   findingGroups,
@@ -24,7 +24,9 @@ import { primeTypeScriptAxisNodes } from "./prime-axes.js";
 import type {
   SemanticSearchBuildOptions,
   SemanticSearchEdge,
+  SemanticSearchItem,
   SemanticSearchPacket,
+  SemanticSearchSynthesis,
 } from "./types.js";
 import {
   MAX_FINDINGS,
@@ -126,6 +128,7 @@ export function buildPrimePacket(
   const findings = findingGroups(report).slice(0, MAX_FINDINGS);
   const nextActions = primeNextActions(owners);
   const primeAxisNodes = primeTypeScriptAxisNodes(report);
+  const searchSynthesis = primeGraphSynthesis(report, owners, edges, findings);
   return basePacket(report, options, {
     header: {
       kind: "search-prime",
@@ -151,6 +154,7 @@ export function buildPrimePacket(
     ],
     edges,
     owners,
+    searchSynthesis,
     hits: [],
     findings,
     nextActions,
@@ -220,6 +224,10 @@ export function buildOwnerPacket(
     .map((dependency) => edgeFact(report, dependency))
     .slice(0, MAX_PRIME_EDGES);
   const findings = findingGroups(report).filter((finding) => finding.location.path === ownerPath);
+  const searchSynthesis = ownerGraphSynthesis(ownerPath, edges, findings);
+  const items = options.pipes?.includes("items") === true ? ownerItems(report, ownerPath) : [];
+  const nextActions =
+    items.length > 0 ? ownerItemNextActions(ownerPath, items) : (owner.nextActions ?? []);
   return basePacket(report, options, {
     header: {
       kind: "search-owner",
@@ -229,16 +237,159 @@ export function buildOwnerPacket(
         public: owner.public,
         edge: edges.length,
         find: findings.length,
+        ...(options.pipes?.length ? { pipes: options.pipes } : {}),
       },
     },
     nodes: [ownerNode(owner), ...findings.map((finding) => findingNode(finding))],
     edges,
     owners: [owner],
+    ...(items.length > 0 ? { items } : {}),
+    searchSynthesis,
     hits: [],
     findings,
-    nextActions: owner.nextActions ?? [],
+    nextActions,
     notes: [],
   });
+}
+
+function ownerItems(
+  report: TypeScriptHarnessReport,
+  ownerPath: string,
+): readonly SemanticSearchItem[] {
+  const moduleReport = report.modules.find((mod) => relPath(report, mod.path) === ownerPath);
+  if (moduleReport === undefined) return [];
+
+  return [...moduleReport.exports]
+    .filter((exportFact) => exportFact.name !== "")
+    .map((exportFact) => ownerItem(ownerPath, exportFact))
+    .sort(compareOwnerItems);
+}
+
+function ownerItem(ownerPath: string, exportFact: TypeScriptExportFact): SemanticSearchItem {
+  return {
+    name: exportFact.name,
+    kind: exportKindToItemKind(exportFact.kind),
+    ownerPath,
+    location: {
+      path: ownerPath,
+      line: exportFact.location.line,
+      column: exportFact.location.column,
+    },
+    fields: {
+      exported: true,
+      exportKind: exportFact.kind,
+      typeOnly: exportFact.isTypeOnly,
+    },
+  };
+}
+
+function ownerItemNextActions(
+  ownerPath: string,
+  items: readonly SemanticSearchItem[],
+): readonly import("./types.js").SemanticSearchNextAction[] {
+  const terms = selectedOwnerItemTerms(items);
+  if (terms.length === 0) return [];
+  const command = [
+    "ts-harness",
+    "search",
+    "text",
+    ...terms.flatMap((term) => ["--query-set", term]),
+    "--owner",
+    ownerPath,
+    "owner",
+    "--view",
+    "seeds",
+    ".",
+  ]
+    .map(commandArg)
+    .join(" ");
+  return [
+    {
+      kind: "text",
+      target: terms[0]!,
+      ownerPath,
+      fields: {
+        command,
+        composition: "query-set",
+        querySet: terms,
+        reason: "co-located-owner-items",
+      },
+    },
+  ];
+}
+
+function selectedOwnerItemTerms(items: readonly SemanticSearchItem[]): readonly string[] {
+  return [...items]
+    .sort(compareOwnerItemsForNextAction)
+    .slice(0, 4)
+    .map((item) => item.name);
+}
+
+function compareOwnerItemsForNextAction(
+  left: SemanticSearchItem,
+  right: SemanticSearchItem,
+): number {
+  const rankDiff = nextActionItemRank(left) - nextActionItemRank(right);
+  if (rankDiff !== 0) return rankDiff;
+  return compareOwnerItems(left, right);
+}
+
+function nextActionItemRank(item: SemanticSearchItem): number {
+  if (/^[A-Z].*Packet/u.test(item.name)) return 0;
+  if (/^[A-Z].*Owner$/u.test(item.name)) return 1;
+  if (/^[A-Z].*Owner/u.test(item.name)) return 2;
+  if (/^[A-Z].*NextAction/u.test(item.name)) return 3;
+  if (/^[A-Z].*Synthesis/u.test(item.name)) return 4;
+  return itemKindRank(item.kind) + 5;
+}
+
+function commandArg(value: string): string {
+  return /^[A-Za-z0-9_./:-]+$/u.test(value) ? value : JSON.stringify(value);
+}
+
+function compareOwnerItems(left: SemanticSearchItem, right: SemanticSearchItem): number {
+  const rankDiff = itemKindRank(left.kind) - itemKindRank(right.kind);
+  if (rankDiff !== 0) return rankDiff;
+  const lineDiff =
+    (left.location?.line ?? Number.MAX_SAFE_INTEGER) -
+    (right.location?.line ?? Number.MAX_SAFE_INTEGER);
+  return lineDiff !== 0 ? lineDiff : left.name.localeCompare(right.name);
+}
+
+function itemKindRank(kind: SemanticSearchItem["kind"]): number {
+  switch (kind) {
+    case "interface":
+      return 0;
+    case "type":
+      return 1;
+    case "class":
+      return 2;
+    case "function":
+      return 3;
+    case "enum":
+      return 4;
+    case "namespace":
+      return 5;
+    case "variable":
+      return 6;
+    default:
+      return 7;
+  }
+}
+
+function exportKindToItemKind(kind: TypeScriptExportFact["kind"]): SemanticSearchItem["kind"] {
+  switch (kind) {
+    case "function":
+    case "class":
+    case "interface":
+    case "type":
+    case "enum":
+    case "variable":
+    case "namespace":
+      return kind;
+    default:
+      return "export";
+  }
 }
 
 function uniqueWorkspaceEdges(edges: readonly SemanticSearchEdge[]): readonly SemanticSearchEdge[] {
@@ -253,4 +404,82 @@ function uniqueWorkspaceEdges(edges: readonly SemanticSearchEdge[]): readonly Se
     unique.push(edge);
   }
   return unique;
+}
+
+function primeGraphSynthesis(
+  report: TypeScriptHarnessReport,
+  owners: readonly ReturnType<typeof ownerFact>[],
+  edges: readonly SemanticSearchEdge[],
+  findings: readonly ReturnType<typeof findingGroups>[number][],
+): SemanticSearchSynthesis {
+  const selectedOwners = owners.map((owner) => owner.path);
+  const selectedOwnerSet = new Set(selectedOwners);
+  const frontierOwners = rankedOwnerFrontier(report, selectedOwnerSet).slice(0, 4);
+  const findingOwners = uniqueStrings(findings.map((finding) => finding.location.path)).slice(0, 4);
+  return {
+    algorithm: "owner-rank-frontier",
+    scope: "prime",
+    summary: "owner graph ranked and capped for agent planning",
+    seeds: frontierOwners.slice(0, 4).map((target) => ({ kind: "owner" as const, target })),
+    selectedOwners: owners.length,
+    selectedEdges: edges.length,
+    highImpactOwners: selectedOwners.slice(0, 4),
+    frontierOwners,
+    findingOwners,
+  };
+}
+
+function ownerGraphSynthesis(
+  ownerPath: string,
+  edges: readonly SemanticSearchEdge[],
+  findings: readonly ReturnType<typeof findingGroups>[number][],
+): SemanticSearchSynthesis {
+  const incomingOwners: string[] = [];
+  const outgoingOwners: string[] = [];
+  for (const edge of edges) {
+    const from = stripNodePrefix(edge.from);
+    const to = stripNodePrefix(edge.to);
+    if (to === ownerPath && from !== ownerPath) incomingOwners.push(from);
+    if (from === ownerPath && to !== ownerPath) outgoingOwners.push(to);
+  }
+  const frontierOwners = uniqueStrings([...incomingOwners, ...outgoingOwners]).slice(0, 4);
+  return {
+    algorithm: "bounded-reachability-depth1",
+    scope: "owner",
+    summary: "bounded owner frontier from incoming and outgoing graph edges",
+    seeds: frontierOwners.slice(0, 4).map((target) => ({ kind: "owner" as const, target })),
+    ownerPath,
+    incomingOwners: incomingOwners.length,
+    outgoingOwners: outgoingOwners.length,
+    frontierOwners,
+    findingOwners: uniqueStrings(findings.map((finding) => finding.location.path)).slice(0, 4),
+  };
+}
+
+function rankedOwnerFrontier(
+  report: TypeScriptHarnessReport,
+  selectedOwners: ReadonlySet<string>,
+): readonly string[] {
+  const counts = new Map<string, number>();
+  for (const dependency of report.reasoningTree.ownerDependencies) {
+    const from = relPath(report, dependency.fromPath);
+    const to = dependency.toPath === undefined ? undefined : relPath(report, dependency.toPath);
+    if (to === undefined) continue;
+    if (selectedOwners.has(from) && !selectedOwners.has(to)) addFrontierOwner(counts, to);
+    if (selectedOwners.has(to) && !selectedOwners.has(from)) addFrontierOwner(counts, from);
+  }
+  return [...counts.entries()]
+    .sort(([leftPath, leftCount], [rightPath, rightCount]) => {
+      if (leftCount !== rightCount) return rightCount - leftCount;
+      return leftPath.localeCompare(rightPath);
+    })
+    .map(([ownerPath]) => ownerPath);
+}
+
+function addFrontierOwner(counts: Map<string, number>, ownerPath: string): void {
+  counts.set(ownerPath, (counts.get(ownerPath) ?? 0) + 1);
+}
+
+function uniqueStrings(values: readonly string[]): readonly string[] {
+  return [...new Set(values)];
 }

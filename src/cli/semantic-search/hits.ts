@@ -26,6 +26,8 @@ export {
   symbolHit,
   symbolHits,
   textHits,
+  textQueryHitsByTerm,
+  textQuerySetHitsFromHitsByTerm,
   textQuerySetHits,
 } from "./hit-search.js";
 export { testEdges, testHits } from "./hit-tests.js";

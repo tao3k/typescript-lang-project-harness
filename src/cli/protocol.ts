@@ -2,12 +2,19 @@
  * Protocol command parsing and dispatch for the ts-harness CLI.
  */
 
+import fs from "node:fs";
 import path from "node:path";
 
 import { renderTypeScriptProjectHarness, renderTypeScriptProjectHarnessJson } from "../render.js";
 import { runTypeScriptProjectHarness } from "../runner.js";
 import { isTypeScriptHarnessClean } from "../model.js";
 import { renderCodexAgentGuide } from "./agent-guide.js";
+import {
+  prefilterTypeScriptSearchPaths,
+  runtimeCostForTypeScriptPrefilter,
+  typeScriptSearchScopeFileNames,
+  type TypeScriptSearchPrefilterResult,
+} from "./search-prefilter.js";
 import {
   SEMANTIC_LANGUAGE_PROTOCOL_ID,
   SEMANTIC_LANGUAGE_REGISTRY_VERSION,
@@ -18,6 +25,7 @@ import {
   semanticLanguageRegistryDocument,
   typeScriptSemanticSearchViewDescriptor,
   typeScriptSemanticLanguageRegistration,
+  type TypeScriptSemanticSearchPipe,
   type TypeScriptSemanticSearchView,
 } from "./semantic-language.js";
 import {
@@ -47,7 +55,7 @@ interface SearchArgs {
   readonly projectRoot: string | undefined;
   readonly packagePath: string | undefined;
   readonly ownerPath: string | undefined;
-  readonly pipes: readonly TypeScriptSemanticSearchView[];
+  readonly pipes: readonly TypeScriptSemanticSearchPipe[];
   readonly querySet: readonly string[];
   readonly json: boolean;
   readonly renderMode: SemanticSearchRenderMode | undefined;
@@ -120,12 +128,9 @@ export function runProtocolCli(
     return 0;
   }
 
-  const projectRoot =
-    args.kind === "search"
-      ? searchProjectRoot(cwd, args.projectRoot, args.packagePath)
-      : path.resolve(cwd, args.projectRoot ?? ".");
   try {
     if (args.kind === "check") {
+      const projectRoot = path.resolve(cwd, args.projectRoot ?? ".");
       const report = runTypeScriptProjectHarness(projectRoot);
       if (args.json) {
         streams.stdout.write(renderTypeScriptProjectHarnessJson(report));
@@ -136,11 +141,22 @@ export function runProtocolCli(
       return isTypeScriptHarnessClean(report) ? 0 : 1;
     }
 
-    const report = runTypeScriptProjectHarness(projectRoot, undefined, {
+    const started = Date.now();
+    const searchPlan = searchRunPlan(cwd, args);
+    const report = runTypeScriptProjectHarness(searchPlan.projectRoot, undefined, {
       collectSemanticDiagnostics: false,
       collectNativeSyntaxFacts: searchNeedsFullNativeSyntaxFacts(args.view),
       evaluateRules: searchNeedsRuleEvaluation(args.view),
+      ...(searchPlan.fileNames === undefined ? {} : { fileNames: searchPlan.fileNames }),
     });
+    const runtimeCost =
+      searchPlan.prefilter === undefined
+        ? undefined
+        : runtimeCostForTypeScriptPrefilter(
+            searchPlan.prefilter,
+            Date.now() - started,
+            report.modules.length,
+          );
     const packet = buildSemanticSearchPacket(report, {
       view: args.view,
       ...(args.query !== undefined ? { query: args.query } : {}),
@@ -148,6 +164,7 @@ export function runProtocolCli(
       ...(args.ownerPath !== undefined ? { queryScope: { ownerPath: args.ownerPath } } : {}),
       ...(args.pipes.length > 0 ? { pipes: args.pipes } : {}),
       ...(args.renderMode !== undefined ? { renderMode: args.renderMode } : {}),
+      ...(runtimeCost === undefined ? {} : { runtimeCost }),
       ...(args.view === "ingest" ? { stdin: streams.stdin ?? "" } : {}),
     });
     streams.stdout.write(
@@ -170,6 +187,7 @@ function searchNeedsFullNativeSyntaxFacts(view: TypeScriptSemanticSearchView): b
       return true;
     case "dependency":
     case "deps":
+    case "docs":
     case "symbol":
     case "callsite":
     case "import":
@@ -188,6 +206,7 @@ function searchNeedsRuleEvaluation(view: TypeScriptSemanticSearchView): boolean 
       return true;
     case "dependency":
     case "deps":
+    case "docs":
     case "api":
     case "public-external-types":
     case "symbol":
@@ -206,7 +225,7 @@ function parseSearchArgs(argv: readonly string[]): ProtocolArgs {
     return {
       kind: "error",
       message:
-        "usage: ts-harness search <workspace|prime|owner|dependency|deps|api|public-external-types|symbol|callsite|import|tests|text|ingest> ... [--json] [--package PATH] [PROJECT_ROOT]",
+        "usage: ts-harness search <workspace|prime|owner|dependency|deps|docs|api|public-external-types|symbol|callsite|import|tests|text|ingest> ... [--json] [--package PATH] [PROJECT_ROOT]",
     };
   }
   const searchView = typeScriptSemanticSearchViewDescriptor(viewValue);
@@ -316,16 +335,16 @@ function parseSearchArgs(argv: readonly string[]): ProtocolArgs {
 
 function parseSearchPipePositionals(
   positionals: readonly string[],
-  acceptedPipes: readonly TypeScriptSemanticSearchView[],
+  acceptedPipes: readonly TypeScriptSemanticSearchPipe[],
 ): {
-  readonly pipes: readonly TypeScriptSemanticSearchView[];
+  readonly pipes: readonly TypeScriptSemanticSearchPipe[];
   readonly projectRoot: string | undefined;
   readonly error?: string;
 } {
-  const pipes: TypeScriptSemanticSearchView[] = [];
+  const pipes: TypeScriptSemanticSearchPipe[] = [];
   let index = 0;
   while (index < positionals.length && positionals[index] === acceptedPipes[index]) {
-    pipes.push(positionals[index]! as TypeScriptSemanticSearchView);
+    pipes.push(positionals[index]! as TypeScriptSemanticSearchPipe);
     index += 1;
   }
   const remaining = positionals.slice(index);
@@ -436,13 +455,59 @@ function parseAgentGuidePositionals(argv: readonly string[]): {
   return { positionals };
 }
 
-function searchProjectRoot(
-  cwd: string,
-  projectRoot: string | undefined,
-  packagePath: string | undefined,
-): string {
-  const root = path.resolve(cwd, projectRoot ?? ".");
-  return packagePath === undefined ? root : path.resolve(root, packagePath);
+interface SearchRunPlan {
+  readonly projectRoot: string;
+  readonly fileNames?: readonly string[];
+  readonly prefilter?: TypeScriptSearchPrefilterResult;
+}
+
+function searchRunPlan(cwd: string, args: SearchArgs): SearchRunPlan {
+  const root = path.resolve(cwd, args.projectRoot ?? ".");
+  if (args.packagePath === undefined) {
+    return prefilteredSearchRunPlan(root, args, []);
+  }
+
+  const scopePath = path.resolve(root, args.packagePath);
+  if (!fs.existsSync(scopePath)) {
+    throw new Error(`package path does not exist: ${scopePath}`);
+  }
+  if (fs.existsSync(path.join(scopePath, "package.json"))) {
+    return prefilteredSearchRunPlan(scopePath, args, []);
+  }
+  return prefilteredSearchRunPlan(root, args, [scopePath]);
+}
+
+function prefilteredSearchRunPlan(
+  projectRoot: string,
+  args: SearchArgs,
+  scopePaths: readonly string[],
+): SearchRunPlan {
+  const queryTerms = prefilterQueryTerms(args);
+  const prefilter =
+    queryTerms.length === 0
+      ? undefined
+      : prefilterTypeScriptSearchPaths(projectRoot, queryTerms, {
+          scopePaths,
+          ...(args.ownerPath === undefined ? {} : { ownerPath: args.ownerPath }),
+        });
+  if (prefilter !== undefined) {
+    return { projectRoot, fileNames: prefilter.fileNames, prefilter };
+  }
+  if (scopePaths.length > 0) {
+    return { projectRoot, fileNames: typeScriptSearchScopeFileNames(scopePaths) };
+  }
+  return { projectRoot };
+}
+
+function prefilterQueryTerms(args: SearchArgs): readonly string[] {
+  if (args.view === "text") {
+    if (args.querySet.length > 0) return args.querySet;
+    return args.query === undefined ? [] : [args.query];
+  }
+  if (args.view === "api" && args.query !== undefined && !args.query.includes("::")) {
+    return [args.query];
+  }
+  return [];
 }
 
 function isSemanticSearchRenderMode(value: string | undefined): value is SemanticSearchRenderMode {
@@ -488,5 +553,5 @@ function renderAgentDoctor(projectRoot: string): string {
 }
 
 function renderAgentDoctorJson(projectRoot: string): string {
-  return `${JSON.stringify(semanticLanguageRegistryDocument(projectRoot), null, 2)}\n`;
+  return `${JSON.stringify(semanticLanguageRegistryDocument(projectRoot))}\n`;
 }

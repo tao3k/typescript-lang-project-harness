@@ -14,7 +14,8 @@ import type {
 import { edgeFact } from "./facts.js";
 import { compareHitsByRecency } from "./recency.js";
 import { sourceTextHits } from "./source-text.js";
-import type { SemanticSearchEdge, SemanticSearchHit } from "./types.js";
+import { isTestOwnerPath } from "./test-path.js";
+import type { SemanticSearchEdge, SemanticSearchHit, SemanticSearchSurfaceKind } from "./types.js";
 import { MAX_IMPORT_HITS, MAX_SYMBOL_HITS, MAX_TEXT_HITS } from "./types.js";
 import { locationFromSource, relPath } from "./utils.js";
 
@@ -37,6 +38,8 @@ export function textHits(
       location: { path: rel },
       score: exportMatches.length * 3 + (pathMatch ? 2 : 0),
       reason: exportMatches.length > 0 ? "export-name" : "path",
+      surface: ownerSurface(rel),
+      realOwner: true,
       fields: { matches: exportMatches.slice(0, 6) },
     });
   }
@@ -49,20 +52,42 @@ export function textQuerySetHits(
   queryTerms: readonly string[],
   ownerScope: string | undefined,
 ): readonly SemanticSearchHit[] {
+  return textQuerySetHitsFromHitsByTerm(
+    report,
+    textQueryHitsByTerm(report, queryTerms, ownerScope),
+  );
+}
+
+export function textQueryHitsByTerm(
+  report: TypeScriptHarnessReport,
+  queryTerms: readonly string[],
+  ownerScope: string | undefined,
+): ReadonlyMap<string, readonly SemanticSearchHit[]> {
+  return new Map(
+    queryTerms.map((queryTerm) => [
+      queryTerm,
+      textHits(report, queryTerm).filter(
+        (hit) => ownerScope === undefined || hit.ownerPath === ownerScope,
+      ),
+    ]),
+  );
+}
+
+export function textQuerySetHitsFromHitsByTerm(
+  report: TypeScriptHarnessReport,
+  hitsByTerm: ReadonlyMap<string, readonly SemanticSearchHit[]>,
+): readonly SemanticSearchHit[] {
   const byKey = new Map<
     string,
     { readonly hit: SemanticSearchHit; readonly queryTerms: Set<string> }
   >();
-  for (const queryTerm of queryTerms) {
-    for (const hit of textHits(report, queryTerm)) {
-      if (ownerScope !== undefined && hit.ownerPath !== ownerScope) continue;
-      const key = semanticHitKey(hit);
-      const current = byKey.get(key);
-      if (current === undefined) {
-        byKey.set(key, { hit, queryTerms: new Set([queryTerm]) });
-      } else {
-        current.queryTerms.add(queryTerm);
-      }
+  const orderedTerms = [...hitsByTerm.keys()].sort(compareQueryTermsBySpecificity);
+  const depth = Math.max(...[...hitsByTerm.values()].map((hits) => hits.length), 0);
+  for (let offset = 0; offset < depth; offset += 1) {
+    for (const queryTerm of orderedTerms) {
+      const hit = hitsByTerm.get(queryTerm)?.[offset];
+      if (hit === undefined) continue;
+      mergeTextQuerySetHit(byKey, queryTerm, hit);
     }
   }
   return [...byKey.values()]
@@ -78,6 +103,32 @@ export function textQuerySetHits(
     .slice(0, MAX_TEXT_HITS);
 }
 
+function mergeTextQuerySetHit(
+  byKey: Map<string, { readonly hit: SemanticSearchHit; readonly queryTerms: Set<string> }>,
+  queryTerm: string,
+  hit: SemanticSearchHit,
+): void {
+  const key = semanticHitKey(hit);
+  const current = byKey.get(key);
+  if (current === undefined) {
+    if (byKey.size >= MAX_TEXT_HITS) return;
+    byKey.set(key, { hit, queryTerms: new Set([queryTerm]) });
+    return;
+  }
+  current.queryTerms.add(queryTerm);
+}
+
+function compareQueryTermsBySpecificity(left: string, right: string): number {
+  return queryTermSpecificity(right) - queryTermSpecificity(left) || left.localeCompare(right);
+}
+
+function queryTermSpecificity(term: string): number {
+  const structural = [...term].filter((character) =>
+    new Set([".", "_", "/", '"', "'", "(", ")", "[", "]", ":"]).has(character),
+  ).length;
+  return new Set(term.toLowerCase()).size + term.length + structural * 8;
+}
+
 function semanticHitKey(hit: SemanticSearchHit): string {
   return [
     hit.kind,
@@ -88,6 +139,10 @@ function semanticHitKey(hit: SemanticSearchHit): string {
     hit.location.column ?? "",
     hit.reason,
   ].join("\0");
+}
+
+function ownerSurface(ownerPath: string): SemanticSearchSurfaceKind {
+  return isTestOwnerPath(ownerPath) ? "test-source" : "real-source";
 }
 
 function compareHits(

@@ -225,6 +225,9 @@ test("parser extracts native public API and control-flow facts", () => {
       "export const loadOwnerEffects = (programs: Effect.Effect<string>[]) => Effect.all(programs);",
       "export const loadOwnerEffectsWithBudget = (programs: Effect.Effect<string>[]) =>",
       "  Effect.all(programs, { concurrency: 2 });",
+      "export function viewOwner(id: string): { readonly id: string; readonly state: string } {",
+      "  return { id, state: 'ready', ...({ source: 'parser' }) };",
+      "}",
       "export function configure(",
       "  id: string,",
       "  dryRun: boolean,",
@@ -317,6 +320,28 @@ test("parser extracts native public API and control-flow facts", () => {
         statements: flow.statementCount,
       })),
     [{ fn: "configure", branches: 2, statements: 3 }],
+  );
+  assert.deepEqual(
+    report.moduleResponsibilities
+      .filter((responsibility) =>
+        ["ApiRecord", "Pair", "OwnerEvent", "viewOwner", "configure"].includes(responsibility.name),
+      )
+      .map((responsibility) => `${responsibility.kind}:${responsibility.name}`),
+    [
+      "interface:ApiRecord",
+      "type:Pair",
+      "type:OwnerEvent",
+      "function:viewOwner",
+      "function:configure",
+    ],
+  );
+  assert.deepEqual(
+    report.publicReturnObjectShapes.map((shape) => ({
+      fn: shape.functionName,
+      fields: shape.fields,
+      spreads: shape.spreads,
+    })),
+    [{ fn: "viewOwner", fields: ["id", "state", "source"], spreads: ["source"] }],
   );
   assert.deepEqual(
     report.publicAsyncEffectSurfaces

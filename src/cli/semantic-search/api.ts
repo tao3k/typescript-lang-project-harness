@@ -31,6 +31,8 @@ import { MAX_SYMBOL_HITS } from "./types.js";
 import { compareHitsByRecency } from "./recency.js";
 import { locationFromSource, relPath } from "./utils.js";
 
+const MAX_API_SHAPE_FIELDS = 32;
+
 export function buildApiPacketPayload(
   report: TypeScriptHarnessReport,
   options: SemanticSearchBuildOptions,
@@ -145,6 +147,7 @@ function apiHits(report: TypeScriptHarnessReport, query: string): readonly Seman
     .flatMap((moduleReport) => [
       ...exportApiHits(report, moduleReport, needle),
       ...functionApiHits(report, moduleReport, needle),
+      ...returnShapeApiHits(report, moduleReport, needle),
       ...dataApiHits(report, moduleReport, needle),
       ...tupleApiHits(report, moduleReport, needle),
     ])
@@ -271,6 +274,36 @@ function asyncSurfaceApiHit(
       },
     },
   ];
+}
+
+function returnShapeApiHits(
+  report: TypeScriptHarnessReport,
+  moduleReport: TypeScriptModuleReport,
+  needle: string,
+): readonly SemanticSearchHit[] {
+  return moduleReport.publicReturnObjectShapes
+    .filter((shape) =>
+      matchesNeedle(needle, [shape.functionName, ...shape.fields, ...shape.spreads]),
+    )
+    .map((shape) => ({
+      kind: "api" as const,
+      ownerPath: relPath(report, moduleReport.path),
+      symbol: shape.functionName,
+      location: locationFromSource(report, shape.location),
+      score: shape.functionName.toLowerCase() === needle ? 8 : 4,
+      reason: "api-return-shape",
+      fields: {
+        source: "native-parser",
+        apiKind: "function",
+        returns: "object",
+        fields: shape.fields.slice(0, MAX_API_SHAPE_FIELDS),
+        fieldCount: shape.fields.length,
+        ...(shape.spreads.length === 0
+          ? {}
+          : { spreads: shape.spreads.slice(0, MAX_API_SHAPE_FIELDS) }),
+        spreadCount: shape.spreads.length,
+      },
+    }));
 }
 
 function dataApiHits(
