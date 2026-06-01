@@ -72,7 +72,6 @@ interface AgentDoctorArgs {
 interface AgentGuideArgs {
   readonly kind: "agent";
   readonly action: "guide";
-  readonly client: "codex";
   readonly projectRoot: string | undefined;
 }
 
@@ -401,7 +400,7 @@ function parseAgentArgs(argv: readonly string[]): ProtocolArgs {
 }
 
 function parseAgentGuideArgs(argv: readonly string[]): ProtocolArgs {
-  const parsed = parseAgentClientPositionals(argv);
+  const parsed = parseAgentGuidePositionals(argv);
   if (parsed.error !== undefined) return { kind: "error", message: parsed.error };
   if (parsed.positionals.length > 1) {
     return { kind: "error", message: "expected at most one PROJECT_ROOT argument" };
@@ -409,25 +408,22 @@ function parseAgentGuideArgs(argv: readonly string[]): ProtocolArgs {
   return {
     kind: "agent",
     action: "guide",
-    client: "codex",
     projectRoot: parsed.positionals[0],
   };
 }
 
-function parseAgentClientPositionals(argv: readonly string[]): {
+function parseAgentGuidePositionals(argv: readonly string[]): {
   readonly positionals: readonly string[];
   readonly error?: string;
 } {
-  let client: string | undefined;
   const positionals: string[] = [];
   for (let index = 0; index < argv.length; index++) {
     const arg = argv[index]!;
     if (arg === "--client") {
       const value = argv[index + 1];
       if (value === undefined || value.startsWith("-")) {
-        return { positionals, error: "--client requires codex" };
+        return { positionals, error: "--client requires a client name" };
       }
-      client = value;
       index += 1;
     } else if (arg === "--help" || arg === "-h") {
       continue;
@@ -437,7 +433,6 @@ function parseAgentClientPositionals(argv: readonly string[]): {
       positionals.push(arg);
     }
   }
-  if (client !== "codex") return { positionals, error: "agent action requires --client codex" };
   return { positionals };
 }
 

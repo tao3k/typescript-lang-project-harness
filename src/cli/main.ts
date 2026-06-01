@@ -12,7 +12,7 @@ Usage:
   ts-harness search <view> ... [--json] [--package <path>] [project-root]
   ts-harness check [--changed | --full] [--json] [project-root]
   ts-harness agent doctor [--json] [project-root]
-  ts-harness agent guide --client codex [project-root]
+  ts-harness agent guide [project-root]
 
 SEARCH VIEWS
   search workspace          Workspace package/router index
@@ -44,7 +44,7 @@ CHECK
 AGENT
   agent doctor              Print semantic-language provider readiness
   agent doctor --json       Semantic language registry document
-  agent guide --client codex
+  agent guide
                             Print command-line search flow guide
   Hook install/runtime is owned by semantic-agent-hook in the root toolchain.
 
@@ -67,7 +67,7 @@ EXAMPLES
   ts-harness search text --query-set OrderStatus --query-set findOrderStatus owner tests .
   rg -n "OrderStatus" src tests | ts-harness search ingest .
   ts-harness check --changed .
-  ts-harness agent guide --client codex .
+  ts-harness agent guide .
 
 `;
 

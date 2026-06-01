@@ -851,11 +851,15 @@ test("CLI reports root semantic-agent-hook owner for hook install and runtime", 
   assert.match(hook.stderr, /ts-harness agent hook moved to semantic-agent-hook/u);
   assert.match(hook.stderr, /semantic-agent-hook hook --client codex/u);
 
-  const guide = runCliCapture(["agent", "guide", "--client", "codex", "."], root);
+  const guide = runCliCapture(["agent", "guide", "."], root);
   assert.equal(guide.exitCode, 0);
   assert.match(guide.stdout, /^\[ts-harness-guide\] project=/u);
   assert.match(guide.stdout, /agent hook install\/runtime is owned by semantic-agent-hook/u);
   assert.doesNotMatch(guide.stdout, /README|SKILL|docs\/|src\/cli\/agent-hooks/u);
+
+  const guideWithClient = runCliCapture(["agent", "guide", "--client", "claude", "."], root);
+  assert.equal(guideWithClient.exitCode, 0);
+  assert.match(guideWithClient.stdout, /^\[ts-harness-guide\] project=/u);
 });
 
 function expectedSearchCapabilities(
