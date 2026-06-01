@@ -101,7 +101,9 @@ projects keep a bounded first reading surface for agents.
   should not depend on parser-visible test owners.
 - `TS-MOD-R002`: package project modules should stay below their layer line
   budgets and split by concern. The rule scans the whole package reasoning
-  tree, not a single hard-coded file.
+  tree, not a single hard-coded file. Parser, reasoning, and model layers use
+  the strictest budget; policy, harness, and render layers have explicit
+  orchestration budgets instead of sharing one hard-coded threshold.
 - `TS-TEST-R001`: when configured test roots exist, parser-visible test modules
   should live under those roots.
 

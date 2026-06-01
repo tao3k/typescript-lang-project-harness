@@ -15,22 +15,89 @@ import {
   nativeDiagnosticFromTsDiagnostic,
   parseDiagnosticsForSourceFile,
 } from "./diagnostics.js";
-import { collectTypeScriptNativeSyntaxFacts } from "./native_syntax/index.js";
+import {
+  collectTypeScriptNativeSyntaxFacts,
+  type TypeScriptNativeSyntaxFacts,
+} from "./native_syntax/index.js";
+import { forEachDescendant } from "./native_syntax/helpers.js";
+import { collectSourceTextFixtureFacts } from "./source_text_fixtures.js";
 
-export function parseTypeScriptSourceFile(filePathInput: string): TypeScriptModuleReport {
+export interface TypeScriptSourceFileParseOptions {
+  readonly collectNativeSyntaxFacts?: boolean;
+}
+
+export function parseTypeScriptSourceFile(
+  filePathInput: string,
+  options: TypeScriptSourceFileParseOptions = {},
+): TypeScriptModuleReport {
   const filePath = path.resolve(filePathInput);
   const sourceText = fs.readFileSync(filePath, "utf8");
-  const sourceFile = ts.createSourceFile(
-    filePath,
-    sourceText,
-    ts.ScriptTarget.Latest,
-    true,
-    toCompilerScriptKind(scriptKindForPath(filePath)),
-  );
+  let sourceFile: ts.SourceFile;
+  try {
+    sourceFile = ts.createSourceFile(
+      filePath,
+      sourceText,
+      ts.ScriptTarget.Latest,
+      true,
+      toCompilerScriptKind(scriptKindForPath(filePath)),
+    );
+  } catch (error) {
+    return invalidModuleReport(filePath, sourceText, error);
+  }
   const diagnostics = parseDiagnosticsForSourceFile(sourceFile).map((diagnostic) =>
     nativeDiagnosticFromTsDiagnostic(diagnostic, filePath, sourceText),
   );
-  return moduleReportFromSourceFile(sourceFile, diagnostics, [], []);
+  return moduleReportFromSourceFile(sourceFile, diagnostics, [], [], undefined, options);
+}
+
+function invalidModuleReport(
+  filePath: string,
+  sourceText: string,
+  error: unknown,
+): TypeScriptModuleReport {
+  const message = error instanceof Error ? error.message : String(error);
+  return {
+    path: filePath,
+    isValid: false,
+    scriptKind: scriptKindForPath(filePath),
+    isDeclarationFile: filePath.endsWith(".d.ts") || filePath.endsWith(".d.mts"),
+    hasIntentDoc: false,
+    lineCount: sourceText.split(/\r\n|\r|\n/u).length,
+    diagnostics: [
+      {
+        code: 0,
+        message,
+        category: "error",
+        location: { path: filePath, line: 1, column: 0 },
+        sourceLine: sourceText.split(/\r\n|\r|\n/u)[0] ?? "",
+        relatedInformation: [],
+      },
+    ],
+    semanticDiagnostics: [],
+    sourceTextFixtures: [],
+    imports: [],
+    importResolutions: [],
+    exports: [],
+    publicFunctionParams: [],
+    publicTupleApiSurfaces: [],
+    publicDataFields: [],
+    publicTypeAliases: [],
+    publicDiscriminatedUnionVariantFields: [],
+    publicFunctionControlFlows: [],
+    publicReturnObjectShapes: [],
+    moduleResponsibilities: [],
+    publicAsyncEffectSurfaces: [],
+    effectRuntimeCalls: [],
+    effectPromiseInteropRisks: [],
+    effectResourceScopeRisks: [],
+    effectConcurrencySignals: [],
+    effectSchemaBoundarySignals: [],
+    effectProductionBoundarySignals: [],
+    effectServiceMethods: [],
+    reactRenderPuritySignals: [],
+    reactHookCallSignals: [],
+    reactStaticDefinitionSignals: [],
+  };
 }
 
 export function moduleReportFromSourceFile(
@@ -38,8 +105,13 @@ export function moduleReportFromSourceFile(
   diagnostics: readonly TypeScriptNativeDiagnostic[],
   semanticDiagnostics: readonly TypeScriptNativeDiagnostic[],
   importResolutions: readonly TypeScriptNativeImportResolutionFact[],
+  imports: readonly TypeScriptImportFact[] = collectImportFacts(sourceFile),
+  options: TypeScriptSourceFileParseOptions = {},
 ): TypeScriptModuleReport {
-  const nativeSyntaxFacts = collectTypeScriptNativeSyntaxFacts(sourceFile);
+  const nativeSyntaxFacts =
+    options.collectNativeSyntaxFacts === false
+      ? emptyTypeScriptNativeSyntaxFacts()
+      : collectTypeScriptNativeSyntaxFacts(sourceFile);
   return {
     path: path.resolve(sourceFile.fileName),
     isValid: diagnostics.length === 0,
@@ -49,7 +121,8 @@ export function moduleReportFromSourceFile(
     lineCount: sourceFile.getLineStarts().length,
     diagnostics,
     semanticDiagnostics,
-    imports: collectImportFacts(sourceFile),
+    sourceTextFixtures: collectSourceTextFixtureFacts(sourceFile),
+    imports,
     importResolutions,
     exports: collectExportFacts(sourceFile),
     publicFunctionParams: nativeSyntaxFacts.publicFunctionParams,
@@ -58,6 +131,8 @@ export function moduleReportFromSourceFile(
     publicTypeAliases: nativeSyntaxFacts.publicTypeAliases,
     publicDiscriminatedUnionVariantFields: nativeSyntaxFacts.publicDiscriminatedUnionVariantFields,
     publicFunctionControlFlows: nativeSyntaxFacts.publicFunctionControlFlows,
+    publicReturnObjectShapes: nativeSyntaxFacts.publicReturnObjectShapes,
+    moduleResponsibilities: nativeSyntaxFacts.moduleResponsibilities,
     publicAsyncEffectSurfaces: nativeSyntaxFacts.publicAsyncEffectSurfaces,
     effectRuntimeCalls: nativeSyntaxFacts.effectRuntimeCalls,
     effectPromiseInteropRisks: nativeSyntaxFacts.effectPromiseInteropRisks,
@@ -72,9 +147,33 @@ export function moduleReportFromSourceFile(
   };
 }
 
+function emptyTypeScriptNativeSyntaxFacts(): TypeScriptNativeSyntaxFacts {
+  return {
+    publicFunctionParams: [],
+    publicTupleApiSurfaces: [],
+    publicDataFields: [],
+    publicTypeAliases: [],
+    publicDiscriminatedUnionVariantFields: [],
+    publicFunctionControlFlows: [],
+    publicReturnObjectShapes: [],
+    moduleResponsibilities: [],
+    publicAsyncEffectSurfaces: [],
+    effectRuntimeCalls: [],
+    effectPromiseInteropRisks: [],
+    effectResourceScopeRisks: [],
+    effectConcurrencySignals: [],
+    effectSchemaBoundarySignals: [],
+    effectProductionBoundarySignals: [],
+    effectServiceMethods: [],
+    reactRenderPuritySignals: [],
+    reactHookCallSignals: [],
+    reactStaticDefinitionSignals: [],
+  };
+}
+
 export function collectImportFacts(sourceFile: ts.SourceFile): TypeScriptImportFact[] {
   const facts: TypeScriptImportFact[] = [];
-  const visit = (node: ts.Node): void => {
+  forEachDescendant(sourceFile, (node) => {
     if (ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier)) {
       facts.push({
         moduleSpecifier: node.moduleSpecifier.text,
@@ -130,9 +229,7 @@ export function collectImportFacts(sourceFile: ts.SourceFile): TypeScriptImportF
         });
       }
     }
-    ts.forEachChild(node, visit);
-  };
-  visit(sourceFile);
+  });
   return facts;
 }
 

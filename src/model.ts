@@ -5,6 +5,7 @@ import type {
   TypeScriptModuleRole,
   TypeScriptReasoningModule,
 } from "./model/module_facts.js";
+import type { TypeScriptPackageDependencySource } from "./model/package_dependencies.js";
 import type { TypeScriptVerificationPolicy } from "./verification/model.js";
 
 export type {
@@ -27,6 +28,8 @@ export type {
   TypeScriptEffectRuntimeCallKind,
   TypeScriptEffectSchemaBoundarySignalFact,
   TypeScriptEffectSchemaBoundarySignalKind,
+  TypeScriptModuleResponsibilityFact,
+  TypeScriptModuleResponsibilityKind,
   TypeScriptEffectPromiseInteropRiskFact,
   TypeScriptEffectPromiseInteropRiskKind,
   TypeScriptEffectResourceScopeRiskFact,
@@ -37,6 +40,7 @@ export type {
   TypeScriptPublicDiscriminatedUnionVariantFieldFact,
   TypeScriptPublicFunctionControlFlowFact,
   TypeScriptPublicFunctionParamFact,
+  TypeScriptPublicReturnObjectShapeFact,
   TypeScriptReactHookCallSignalFact,
   TypeScriptReactHookCallViolationKind,
   TypeScriptReactRenderOwnerKind,
@@ -55,6 +59,7 @@ export type {
   TypeScriptPackageExtensionFact,
   TypeScriptPackageExtensionName,
 } from "./model/extensions.js";
+export type { TypeScriptPackageDependencySource } from "./model/package_dependencies.js";
 export type {
   TypeScriptModuleLayer,
   TypeScriptModuleReport,
@@ -124,6 +129,12 @@ export interface TypeScriptNativeImportResolutionFact {
   readonly location: SourceLocation;
   readonly resolution: "relative" | "path-alias" | "package-import" | "external" | "unresolved";
   readonly resolvedPath?: string;
+}
+
+export interface TypeScriptSourceTextFixtureFact {
+  readonly fixturePath: string;
+  readonly location: SourceLocation;
+  readonly endLine: number;
 }
 
 export interface TypeScriptExportFact {
@@ -219,6 +230,13 @@ export interface PackageJsonWorkspaceFact {
   readonly location: SourceLocation;
 }
 
+export interface TypeScriptPackageDependencyFact {
+  readonly name: string;
+  readonly versionRange: string;
+  readonly source: TypeScriptPackageDependencySource;
+  readonly location: SourceLocation;
+}
+
 export interface TypeScriptWorkspacePackageFact {
   readonly path: string;
   readonly packageJsonPath: string;
@@ -250,6 +268,7 @@ export interface PackageJsonFacts {
   readonly exports: readonly PackageJsonEntryFact[];
   readonly imports: readonly PackageJsonEntryFact[];
   readonly bins: readonly PackageJsonEntryFact[];
+  readonly dependencies: readonly TypeScriptPackageDependencyFact[];
   readonly scripts: readonly PackageJsonScriptFact[];
   readonly workspaces: readonly PackageJsonWorkspaceFact[];
   readonly workspacePackages: readonly TypeScriptWorkspacePackageFact[];
@@ -391,6 +410,7 @@ export interface TypeScriptReasoningTree {
   readonly packageExports: readonly PackageJsonEntryFact[];
   readonly packageImports: readonly PackageJsonEntryFact[];
   readonly packageBins: readonly PackageJsonEntryFact[];
+  readonly packageDependencies: readonly TypeScriptPackageDependencyFact[];
   readonly packageScripts: readonly PackageJsonScriptFact[];
   readonly packageWorkspaces: readonly PackageJsonWorkspaceFact[];
   readonly packageExtensions: readonly TypeScriptPackageExtensionFact[];

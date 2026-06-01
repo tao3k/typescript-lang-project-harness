@@ -8,11 +8,13 @@ import type {
   TypeScriptEffectSchemaBoundarySignalFact,
   TypeScriptEffectServiceMethodFact,
   TypeScriptEffectConcurrencySignalFact,
+  TypeScriptModuleResponsibilityFact,
   TypeScriptPublicAsyncEffectSurfaceFact,
   TypeScriptPublicDiscriminatedUnionVariantFieldFact,
   TypeScriptPublicDataFieldFact,
   TypeScriptPublicFunctionControlFlowFact,
   TypeScriptPublicFunctionParamFact,
+  TypeScriptPublicReturnObjectShapeFact,
   TypeScriptReactHookCallSignalFact,
   TypeScriptReactRenderPuritySignalFact,
   TypeScriptReactStaticDefinitionSignalFact,
@@ -36,11 +38,13 @@ import { collectEffectConcurrencySignals } from "./effect_concurrency.js";
 import { collectEffectResourceScopeRisks } from "./effect_resources.js";
 import { collectEffectSchemaBoundarySignals } from "./effect_schema.js";
 import { collectEffectProductionBoundarySignals } from "./effect_production.js";
+import { collectModuleResponsibilities } from "./module_responsibilities.js";
 import {
   collectReactHookCallSignals,
   collectReactRenderPuritySignals,
   collectReactStaticDefinitionSignals,
 } from "./react.js";
+import { collectPublicReturnObjectShapes } from "./return_shape.js";
 
 export interface TypeScriptNativeSyntaxFacts {
   readonly publicFunctionParams: readonly TypeScriptPublicFunctionParamFact[];
@@ -49,6 +53,8 @@ export interface TypeScriptNativeSyntaxFacts {
   readonly publicTypeAliases: readonly TypeScriptPublicTypeAliasFact[];
   readonly publicDiscriminatedUnionVariantFields: readonly TypeScriptPublicDiscriminatedUnionVariantFieldFact[];
   readonly publicFunctionControlFlows: readonly TypeScriptPublicFunctionControlFlowFact[];
+  readonly publicReturnObjectShapes: readonly TypeScriptPublicReturnObjectShapeFact[];
+  readonly moduleResponsibilities: readonly TypeScriptModuleResponsibilityFact[];
   readonly publicAsyncEffectSurfaces: readonly TypeScriptPublicAsyncEffectSurfaceFact[];
   readonly effectRuntimeCalls: readonly TypeScriptEffectRuntimeCallFact[];
   readonly effectPromiseInteropRisks: readonly TypeScriptEffectPromiseInteropRiskFact[];
@@ -66,22 +72,40 @@ export function collectTypeScriptNativeSyntaxFacts(
   sourceFile: ts.SourceFile,
 ): TypeScriptNativeSyntaxFacts {
   return {
-    publicFunctionParams: collectPublicFunctionParams(sourceFile),
-    publicTupleApiSurfaces: collectPublicTupleApiSurfaces(sourceFile),
-    publicDataFields: collectPublicDataFields(sourceFile),
-    publicTypeAliases: collectPublicTypeAliases(sourceFile),
-    publicDiscriminatedUnionVariantFields: collectPublicDiscriminatedUnionVariantFields(sourceFile),
-    publicFunctionControlFlows: collectPublicFunctionControlFlows(sourceFile),
-    publicAsyncEffectSurfaces: collectPublicAsyncEffectSurfaces(sourceFile),
-    effectRuntimeCalls: collectEffectRuntimeCalls(sourceFile),
-    effectPromiseInteropRisks: collectEffectPromiseInteropRisks(sourceFile),
-    effectResourceScopeRisks: collectEffectResourceScopeRisks(sourceFile),
-    effectConcurrencySignals: collectEffectConcurrencySignals(sourceFile),
-    effectSchemaBoundarySignals: collectEffectSchemaBoundarySignals(sourceFile),
-    effectProductionBoundarySignals: collectEffectProductionBoundarySignals(sourceFile),
-    effectServiceMethods: collectEffectServiceMethods(sourceFile),
-    reactRenderPuritySignals: collectReactRenderPuritySignals(sourceFile),
-    reactHookCallSignals: collectReactHookCallSignals(sourceFile),
-    reactStaticDefinitionSignals: collectReactStaticDefinitionSignals(sourceFile),
+    publicFunctionParams: collectSafely(() => collectPublicFunctionParams(sourceFile)),
+    publicTupleApiSurfaces: collectSafely(() => collectPublicTupleApiSurfaces(sourceFile)),
+    publicDataFields: collectSafely(() => collectPublicDataFields(sourceFile)),
+    publicTypeAliases: collectSafely(() => collectPublicTypeAliases(sourceFile)),
+    publicDiscriminatedUnionVariantFields: collectSafely(() =>
+      collectPublicDiscriminatedUnionVariantFields(sourceFile),
+    ),
+    publicFunctionControlFlows: collectSafely(() => collectPublicFunctionControlFlows(sourceFile)),
+    publicReturnObjectShapes: collectSafely(() => collectPublicReturnObjectShapes(sourceFile)),
+    moduleResponsibilities: collectSafely(() => collectModuleResponsibilities(sourceFile)),
+    publicAsyncEffectSurfaces: collectSafely(() => collectPublicAsyncEffectSurfaces(sourceFile)),
+    effectRuntimeCalls: collectSafely(() => collectEffectRuntimeCalls(sourceFile)),
+    effectPromiseInteropRisks: collectSafely(() => collectEffectPromiseInteropRisks(sourceFile)),
+    effectResourceScopeRisks: collectSafely(() => collectEffectResourceScopeRisks(sourceFile)),
+    effectConcurrencySignals: collectSafely(() => collectEffectConcurrencySignals(sourceFile)),
+    effectSchemaBoundarySignals: collectSafely(() =>
+      collectEffectSchemaBoundarySignals(sourceFile),
+    ),
+    effectProductionBoundarySignals: collectSafely(() =>
+      collectEffectProductionBoundarySignals(sourceFile),
+    ),
+    effectServiceMethods: collectSafely(() => collectEffectServiceMethods(sourceFile)),
+    reactRenderPuritySignals: collectSafely(() => collectReactRenderPuritySignals(sourceFile)),
+    reactHookCallSignals: collectSafely(() => collectReactHookCallSignals(sourceFile)),
+    reactStaticDefinitionSignals: collectSafely(() =>
+      collectReactStaticDefinitionSignals(sourceFile),
+    ),
   };
+}
+
+function collectSafely<T>(collector: () => readonly T[]): readonly T[] {
+  try {
+    return collector();
+  } catch {
+    return [];
+  }
 }

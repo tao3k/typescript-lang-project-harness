@@ -1,7 +1,7 @@
 import type {
   SourceLocation,
+  TypeScriptPackageDependencySource,
   TypeScriptPackageExtensionConfigSource,
-  TypeScriptPackageExtensionDependencySource,
 } from "../model.js";
 
 export type TypeScriptPackageBuildToolName = "rspack" | "rsbuild";
@@ -12,7 +12,7 @@ export type TypeScriptPackageBuildToolSignalKind =
   | "config"
   | "harness-config";
 
-export type TypeScriptPackageBuildToolDependencySource = TypeScriptPackageExtensionDependencySource;
+export type TypeScriptPackageBuildToolDependencySource = TypeScriptPackageDependencySource;
 
 export type TypeScriptPackageBuildToolConfigSource = TypeScriptPackageExtensionConfigSource;
 

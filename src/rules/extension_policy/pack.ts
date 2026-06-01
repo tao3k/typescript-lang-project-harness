@@ -544,21 +544,19 @@ function evaluateEffectTestUtilityLeak(
 
   return reasoningTree.ownerBranches
     .filter(
-      (b) =>
-        b.roles.includes("source") &&
-        !b.path.includes("/test/") &&
-        !b.path.includes(".test."),
+      (b) => b.roles.includes("source") && !b.path.includes("/test/") && !b.path.includes(".test."),
     )
-    .filter((b) =>
-      b.exportNames.some((name) => TEST_UTILITY_NAMES.some((tu) => name.includes(tu))),
-    )
+    .filter((b) => b.exportNames.some((name) => TEST_UTILITY_NAMES.some((tu) => name.includes(tu))))
     .slice(0, 10)
     .map((b) => ({
       ruleId: TS_EXT_EFFECT_R011.ruleId,
       packId: TS_EXT_EFFECT_R011.packId,
       severity: TS_EXT_EFFECT_R011.severity,
       title: TS_EXT_EFFECT_R011.title,
-      summary: `Production module exports test utilities (${b.exportNames.filter((n) => TEST_UTILITY_NAMES.some((tu) => n.includes(tu))).slice(0, 3).join(", ")}) — should be in test files only.`,
+      summary: `Production module exports test utilities (${b.exportNames
+        .filter((n) => TEST_UTILITY_NAMES.some((tu) => n.includes(tu)))
+        .slice(0, 3)
+        .join(", ")}) — should be in test files only.`,
       location: { path: b.path, line: 1, column: 0 },
       requirement: TS_EXT_EFFECT_R011.requirement,
       label: "Effect production module leaks test utilities",

@@ -26,6 +26,9 @@ export interface TypeScriptProjectHarnessEmbeddedOptions {
 
 interface TypeScriptProjectHarnessRunOptions {
   readonly collectSemanticDiagnostics?: boolean;
+  readonly collectNativeSyntaxFacts?: boolean;
+  readonly evaluateRules?: boolean;
+  readonly fileNames?: readonly string[];
 }
 
 export function runTypeScriptProjectHarness(
@@ -38,13 +41,22 @@ export function runTypeScriptProjectHarness(
     throw new Error(`project root does not exist: ${projectRoot}`);
   }
   const scope = readProjectScope(projectRoot, config);
-  const parseOptions =
-    options.collectSemanticDiagnostics === undefined
+  const parseOptions = {
+    ...(options.collectSemanticDiagnostics === undefined
       ? {}
-      : { collectSemanticDiagnostics: options.collectSemanticDiagnostics };
-  const modules = parseTypeScriptProjectFiles(scope, projectFileNames(scope, config), parseOptions);
+      : { collectSemanticDiagnostics: options.collectSemanticDiagnostics }),
+    ...(options.collectNativeSyntaxFacts === undefined
+      ? {}
+      : { collectNativeSyntaxFacts: options.collectNativeSyntaxFacts }),
+  };
+  const modules = parseTypeScriptProjectFiles(
+    scope,
+    options.fileNames ?? projectFileNames(scope, config),
+    parseOptions,
+  );
   const reasoningTree = buildTypeScriptReasoningTree(scope, modules);
-  const findings = evaluateDefaultRulePacks(reasoningTree, config);
+  const findings =
+    options.evaluateRules === false ? [] : evaluateDefaultRulePacks(reasoningTree, config);
   return {
     runMode: reasoningTree.runMode,
     modules,

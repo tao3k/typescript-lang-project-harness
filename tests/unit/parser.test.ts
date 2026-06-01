@@ -99,6 +99,60 @@ test("parser extracts declaration-only export assignment facts", () => {
   );
 });
 
+test("parser reports parser Debug Failure as invalid module", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-parser-debug-failure-"));
+  const sourcePath = path.join(root, "decoratorOnAwait.ts");
+  fs.writeFileSync(
+    sourcePath,
+    ["declare function dec<T>(target: T): T;", "", "@dec", "await 1"].join("\n"),
+  );
+
+  const report = parseTypeScriptSourceFile(sourcePath);
+
+  assert.equal(report.isValid, false);
+  assert.equal(report.diagnostics[0]?.category, "error");
+  assert.match(report.diagnostics[0]?.message ?? "", /Debug Failure/u);
+});
+
+test("project parser falls back when compiler program hits parser Debug Failure", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-project-debug-failure-"));
+  fs.mkdirSync(path.join(root, "src"));
+  fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ name: "@example/debug" }));
+  fs.writeFileSync(path.join(root, "tsconfig.json"), JSON.stringify({ include: ["src/**/*.ts"] }));
+  const sourcePath = path.join(root, "src", "decoratorOnAwait.ts");
+  fs.writeFileSync(
+    sourcePath,
+    ["declare function dec<T>(target: T): T;", "", "@dec", "await 1"].join("\n"),
+  );
+  const okPath = path.join(root, "src", "ok.ts");
+  const consumerPath = path.join(root, "src", "consumer.ts");
+  fs.writeFileSync(okPath, "export const ok = 1;\n");
+  fs.writeFileSync(consumerPath, 'import { ok } from "./ok.js";\nexport const value = ok;\n');
+
+  const scope = readProjectScope(root, defaultTypeScriptHarnessConfig());
+  const reports = parseTypeScriptProjectFiles(scope, [sourcePath, okPath, consumerPath]);
+
+  assert.equal(reports.length, 3);
+  const invalidReport = reports.find((report) => report.path === sourcePath);
+  assert.equal(invalidReport?.isValid, false);
+  assert.match(invalidReport?.diagnostics[0]?.message ?? "", /Debug Failure/u);
+  const consumerReport = reports.find((report) => report.path === consumerPath);
+  assert.equal(consumerReport?.importResolutions[0]?.resolution, "relative");
+  assert.equal(consumerReport?.importResolutions[0]?.resolvedPath, okPath);
+});
+
+test("parser handles deeply nested binary expressions without recursive visitor overflow", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-parser-deep-binary-"));
+  const sourcePath = path.join(root, "deep.ts");
+  const expression = Array.from({ length: 5000 }, (_, index) => `value${index}`).join(" + ");
+  fs.writeFileSync(sourcePath, `export const value = ${expression};\n`);
+
+  const report = parseTypeScriptSourceFile(sourcePath);
+
+  assert.equal(report.path, sourcePath);
+  assert.equal(report.exports[0]?.name, "value");
+});
+
 test("parser extracts native public API and control-flow facts", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-parser-native-api-"));
   const sourcePath = path.join(root, "api.ts");
@@ -171,6 +225,9 @@ test("parser extracts native public API and control-flow facts", () => {
       "export const loadOwnerEffects = (programs: Effect.Effect<string>[]) => Effect.all(programs);",
       "export const loadOwnerEffectsWithBudget = (programs: Effect.Effect<string>[]) =>",
       "  Effect.all(programs, { concurrency: 2 });",
+      "export function viewOwner(id: string): { readonly id: string; readonly state: string } {",
+      "  return { id, state: 'ready', ...({ source: 'parser' }) };",
+      "}",
       "export function configure(",
       "  id: string,",
       "  dryRun: boolean,",
@@ -263,6 +320,28 @@ test("parser extracts native public API and control-flow facts", () => {
         statements: flow.statementCount,
       })),
     [{ fn: "configure", branches: 2, statements: 3 }],
+  );
+  assert.deepEqual(
+    report.moduleResponsibilities
+      .filter((responsibility) =>
+        ["ApiRecord", "Pair", "OwnerEvent", "viewOwner", "configure"].includes(responsibility.name),
+      )
+      .map((responsibility) => `${responsibility.kind}:${responsibility.name}`),
+    [
+      "interface:ApiRecord",
+      "type:Pair",
+      "type:OwnerEvent",
+      "function:viewOwner",
+      "function:configure",
+    ],
+  );
+  assert.deepEqual(
+    report.publicReturnObjectShapes.map((shape) => ({
+      fn: shape.functionName,
+      fields: shape.fields,
+      spreads: shape.spreads,
+    })),
+    [{ fn: "viewOwner", fields: ["id", "state", "source"], spreads: ["source"] }],
   );
   assert.deepEqual(
     report.publicAsyncEffectSurfaces

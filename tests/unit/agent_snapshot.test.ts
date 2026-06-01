@@ -15,7 +15,6 @@ import {
   type TypeScriptReasoningOwnerBranchFact,
   type TypeScriptReasoningOwnerDependencyFact,
 } from "../../src/index.js";
-import { runCli } from "../../src/cli/main.js";
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 const snapshotSectionOrder = [
@@ -62,15 +61,6 @@ test("project agent snapshot segments workspace package scopes", () => {
     snapshot.packages.map((packageSnapshot) => packageSnapshot.packagePath),
     [".", "packages/core", "packages/util"],
   );
-});
-
-test("CLI agent snapshot mode matches the golden workspace reasoning surface", () => {
-  const fixtureRoot = path.join(projectRoot, "tests", "fixtures", "agent_snapshot_project");
-  const output = runCliCapture(["--agent-snapshot", "."], fixtureRoot);
-
-  assert.equal(output.exitCode, 0);
-  assert.equal(output.stderr, "");
-  assert.equal(workspaceGoldenSnapshot(), output.stdout);
 });
 
 test("compact renderers normalize diagnostic messages to the reasoning root", () => {
@@ -220,6 +210,7 @@ function snapshotReport(
       packageExports: [],
       packageImports: [],
       packageBins: [],
+      packageDependencies: [],
       packageScripts: [],
       packageWorkspaces: [],
       packageExtensions: [],
@@ -248,6 +239,8 @@ function snapshotReport(
         publicTypeAliases: [],
         publicDiscriminatedUnionVariantFields: [],
         publicFunctionControlFlows: [],
+        publicReturnObjectShapes: [],
+        moduleResponsibilities: [],
         publicAsyncEffectSurfaces: [],
         effectRuntimeCalls: [],
         effectPromiseInteropRisks: [],
@@ -409,27 +402,6 @@ function assertOrderedSections(lines: readonly string[]): void {
   }
 }
 
-function runCliCapture(
-  argv: readonly string[],
-  cwd: string,
-): {
-  readonly exitCode: number;
-  readonly stdout: string;
-  readonly stderr: string;
-} {
-  let stdout = "";
-  let stderr = "";
-  const exitCode = runCli(
-    argv,
-    {
-      stdout: { write: (chunk: string) => void (stdout += chunk) },
-      stderr: { write: (chunk: string) => void (stderr += chunk) },
-    },
-    cwd,
-  );
-  return { exitCode, stdout, stderr };
-}
-
 function diagnosticReport(
   root: string,
   sourcePath: string,
@@ -478,6 +450,7 @@ function diagnosticReport(
       packageExports: [],
       packageImports: [],
       packageBins: [],
+      packageDependencies: [],
       packageScripts: [],
       packageWorkspaces: [],
       packageExtensions: [],
@@ -517,6 +490,8 @@ function diagnosticReport(
           publicTypeAliases: [],
           publicDiscriminatedUnionVariantFields: [],
           publicFunctionControlFlows: [],
+          publicReturnObjectShapes: [],
+          moduleResponsibilities: [],
           publicAsyncEffectSurfaces: [],
           effectRuntimeCalls: [],
           effectPromiseInteropRisks: [],

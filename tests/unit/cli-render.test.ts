@@ -1,24 +1,7 @@
-import fs from "node:fs";
-import path from "node:path";
-import os from "node:os";
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { runTypeScriptProjectHarness } from "../../src/runner.js";
-import { renderTree } from "../../src/cli/render-tree.js";
-import { renderStats } from "../../src/cli/render-stats.js";
-import { renderCache } from "../../src/cli/render-cache.js";
-import { runCli, HELP_TEXT } from "../../src/cli/main.js";
+import { describe, it } from "node:test";
 
-function tmpDir(): string {
-  return fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-cli-"));
-}
-
-function writeFile(dir: string, name: string, content: string): string {
-  const full = path.join(dir, name);
-  fs.mkdirSync(path.dirname(full), { recursive: true });
-  fs.writeFileSync(full, content, "utf8");
-  return full;
-}
+import { HELP_TEXT, runCli } from "../../src/cli/main.js";
 
 function captureStd() {
   const out: string[] = [];
@@ -39,109 +22,45 @@ function captureStd() {
   };
 }
 
-describe("CLI: --tree", () => {
-  it("renders reasoning tree with architecture and entrypoints", () => {
-    const dir = tmpDir();
-    writeFile(dir, "src/index.ts", "export { helper } from './helper.js';");
-    writeFile(dir, "src/helper.ts", "export function helper(x: string) { return x.trim(); }");
-    const report = runTypeScriptProjectHarness(dir);
-    const output = renderTree(report);
-    assert.ok(output.includes("[tree]"), "starts with [tree]");
-    assert.ok(output.includes("Architecture:"), "has Architecture");
-    assert.ok(output.includes("Entrypoints:"), "has Entrypoints");
-    fs.rmSync(dir, { recursive: true, force: true });
-  });
-
-  it("includes findings hint when findings exist", () => {
-    const dir = tmpDir();
-    writeFile(dir, "src/index.ts", "export { doThing } from './module.js';");
-    writeFile(dir, "src/module.ts", "export function doThing(a: {): void {}");
-    const report = runTypeScriptProjectHarness(dir);
-    const output = renderTree(report);
-    // When broken modules exist, tree should mention findings even if no branches
-    assert.ok(output.includes("--harness"), "mentions --harness");
-    fs.rmSync(dir, { recursive: true, force: true });
-  });
-});
-
-describe("CLI: --stats", () => {
-  it("renders one-line stats", () => {
-    const dir = tmpDir();
-    writeFile(dir, "src/a.ts", "export const a = 1;");
-    const report = runTypeScriptProjectHarness(dir);
-    const output = renderStats(report);
-    assert.ok(output.startsWith("[stats]"), "starts with [stats]");
-    assert.ok(output.includes("files="), "has files count");
-    assert.ok(output.includes("branches="), "has branches count");
-    fs.rmSync(dir, { recursive: true, force: true });
-  });
-});
-
-describe("CLI: --cache", () => {
-  it("shows empty cache when no cache dir exists", () => {
-    const dir = tmpDir();
-    const output = renderCache(dir);
-    assert.ok(output.includes("[cache]"), "has [cache] tag");
-    assert.ok(output.includes("empty"), "says empty");
-    fs.rmSync(dir, { recursive: true, force: true });
-  });
-
-  it("shows cached file when cache directory is created", () => {
-    const dir = tmpDir();
-    writeFile(dir, "src/a.ts", "export const a = 1;");
-    // Manually create cache to simulate a cached state
-    const cacheDir = path.join(dir, ".cache", "ts-harness");
-    fs.mkdirSync(cacheDir, { recursive: true });
-    fs.writeFileSync(
-      path.join(cacheDir, "file-hashes.json"),
-      JSON.stringify({ "src/a.ts": "abc" }),
-      "utf8",
-    );
-    const output = renderCache(dir);
-    assert.ok(output.includes("[cache]:"), "has [cache]:");
-    assert.ok(output.includes("file-hashes.json"), "shows file name");
-    fs.rmSync(dir, { recursive: true, force: true });
-  });
-});
-
-describe("CLI: --help", () => {
-  it("displays help text", () => {
-    assert.ok(HELP_TEXT.includes("Usage:"));
-    assert.ok(HELP_TEXT.includes("--tree"));
-    assert.ok(HELP_TEXT.includes("--stats"));
-    assert.ok(HELP_TEXT.includes("--deps"));
-    assert.ok(HELP_TEXT.includes("--harness"));
-    assert.ok(HELP_TEXT.includes("--help"));
+describe("CLI protocol help", () => {
+  it("documents only search, check, and agent entrypoints", () => {
+    assert.ok(HELP_TEXT.includes("ts-harness search <view>"));
+    assert.ok(HELP_TEXT.includes("ts-harness check"));
+    assert.ok(HELP_TEXT.includes("ts-harness agent doctor"));
+    assert.equal(HELP_TEXT.includes("--tree"), false);
+    assert.equal(HELP_TEXT.includes("--stats"), false);
+    assert.equal(HELP_TEXT.includes("--harness"), false);
+    assert.equal(HELP_TEXT.includes("--agent-compact"), false);
+    assert.equal(HELP_TEXT.includes("--agent-snapshot"), false);
   });
 
   it("runCli with --help prints help and exits 0", () => {
-    const { stdout, stderr } = captureStd();
+    const { stdout, stderr, out, err } = captureStd();
     const code = runCli(["--help"], { stdout, stderr }, "/");
     assert.equal(code, 0);
+    assert.match(out.join(""), /^ts-harness/u);
+    assert.equal(err.join(""), "");
   });
 });
 
-describe("CLI: --harness", () => {
-  it("executes without crash for clean project", () => {
-    const dir = tmpDir();
-    writeFile(dir, "src/a.ts", "export const a = 1;");
-    const { stdout, stderr } = captureStd();
-    const code = runCli(["--harness", dir], { stdout, stderr }, dir);
-    assert.ok(code === 0 || code === 1, "returns valid exit code");
-    fs.rmSync(dir, { recursive: true, force: true });
-  });
-});
-
-describe("CLI: error handling", () => {
-  it("unknown flag returns error and exit 2", () => {
-    const { stdout, stderr } = captureStd();
-    const code = runCli(["--bogus"], { stdout, stderr }, "/");
-    assert.equal(code, 2);
+describe("CLI removed compatibility flags", () => {
+  it("rejects old direct output flags", () => {
+    for (const argv of [
+      ["--tree", "."],
+      ["--stats", "."],
+      ["--harness", "."],
+      ["--agent-compact", "."],
+      ["--agent-snapshot", "."],
+    ]) {
+      const { stdout, stderr } = captureStd();
+      const code = runCli(argv, { stdout, stderr }, "/");
+      assert.equal(code, 2);
+    }
   });
 
-  it("output flags cannot be combined", () => {
+  it("rejects bare project-root invocation", () => {
     const { stdout, stderr } = captureStd();
-    const code = runCli(["--tree", "--stats", "."], { stdout, stderr }, "/");
+    const code = runCli(["."], { stdout, stderr }, "/");
     assert.equal(code, 2);
   });
 });

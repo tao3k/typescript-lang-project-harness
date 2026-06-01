@@ -81,3 +81,8 @@ entrypoint into a catch-all reference page.
 - [Verification Policy](03_features/205_verification_policy.md): profile hints,
   profile indexes, task contracts, receipts, waivers, skill bindings, and
   compact verification/report rendering.
+
+## 04_development: Package Operations
+
+- [CI](04_development/301_ci.md): local and GitHub Actions validation commands,
+  implementation/policy lane split, and package-owned toolchain assumptions.

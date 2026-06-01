@@ -98,13 +98,17 @@ test("runner, rule, and render layers stay downstream of the reasoning tree", ()
   assertNoAny(rules, ["reasoningTree.edges"], "src/rules");
 });
 
-test("source and snapshot model exclude manifest dependency policy gates", () => {
+test("source model keeps manifest dependency facts parser-owned", () => {
   const sourceText = readAll(sourceFiles(path.join(projectRoot, "src")));
   const goldenSnapshot = readProjectFile("tests/snapshots/agent_snapshot_project.snap");
 
   assertIncludes(sourceText, "packageImportOwners");
   assertIncludes(sourceText, "ownerBranches");
   assertIncludes(sourceText, "ownerDependencies");
+  assertIncludes(sourceText, "TypeScriptPackageDependencyFact");
+  assertIncludes(sourceText, "TypeScriptPackageDependencySource");
+  assertIncludes(sourceText, "packageDependencyFacts");
+  assertIncludes(sourceText, "packageDependencies");
   assertIncludes(goldenSnapshot, "OwnerDependencies:");
   assertIncludes(goldenSnapshot, "--package-name/type-import-->");
   assertIncludes(goldenSnapshot, "owner=workspace");
@@ -114,9 +118,7 @@ test("source and snapshot model exclude manifest dependency policy gates", () =>
       "PackageJsonDependency",
       "PackageManifestDependency",
       "packageManifestDependencies",
-      "packageDependencyFacts",
       "dependencyNames",
-      "packageDependencies",
     ],
     "src",
   );

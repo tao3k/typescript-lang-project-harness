@@ -69,6 +69,7 @@ test("policy config can disable several rules and a built-in rule pack", () => {
     "TS-EXT-EFFECT-R010",
     "TS-EXT-EFFECT-R011",
     "TS-EXT-EFFECT-R012",
+    "TS-EXT-EFFECT-R013",
     "TS-EXT-REACT-R001",
     "TS-EXT-REACT-R002",
     "TS-EXT-REACT-R003",
