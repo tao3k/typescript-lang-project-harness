@@ -9,8 +9,6 @@ export const SEMANTIC_LANGUAGE_PROTOCOL_ID = "agent.semantic-protocols.semantic-
 export const SEMANTIC_LANGUAGE_PROTOCOL_VERSION = "1" as const;
 export const SEMANTIC_SEARCH_PACKET_SCHEMA_ID =
   "agent.semantic-protocols.semantic-search-packet" as const;
-export const SEMANTIC_AGENT_HOOK_DECISION_SCHEMA_ID =
-  "agent.semantic-protocols.agent-hook-decision" as const;
 export const TYPE_SCRIPT_CAPABILITIES_SCHEMA_ID =
   "agent.semantic-protocols.languages.typescript.ts-harness.capabilities" as const;
 export const TYPE_SCRIPT_LANGUAGE_ID = "typescript" as const;
@@ -149,7 +147,7 @@ export const TYPE_SCRIPT_SEARCH_METHODS = TYPE_SCRIPT_SEARCH_VIEW_DESCRIPTORS.ma
 );
 
 export const TYPE_SCRIPT_CHECK_METHODS = ["check/changed", "check/full"] as const;
-export const TYPE_SCRIPT_AGENT_METHODS = ["agent/doctor", "agent/install", "agent/hook"] as const;
+export const TYPE_SCRIPT_AGENT_METHODS = ["agent/doctor"] as const;
 
 export type TypeScriptSemanticLanguageMethod =
   | TypeScriptSemanticSearchMethod
@@ -270,11 +268,6 @@ export function typeScriptSemanticLanguageRegistration(): SemanticLanguageRegist
         path: "schemas/semantic-language-registry.v1.schema.json",
       },
       {
-        schemaId: SEMANTIC_AGENT_HOOK_DECISION_SCHEMA_ID,
-        schemaVersion: "1",
-        path: "schemas/semantic-agent-hook-decision.v1.schema.json",
-      },
-      {
         schemaId: TYPE_SCRIPT_CAPABILITIES_SCHEMA_ID,
         schemaVersion: "1",
         path: "schemas/typescript-semantic-capabilities.v1.schema.json",
@@ -310,21 +303,8 @@ function typeScriptSemanticLanguageMethodDescriptors(): readonly SemanticLanguag
     ...TYPE_SCRIPT_AGENT_METHODS.map((method) => ({
       method,
       command: "agent" as const,
-      ...(method === "agent/install"
-        ? { clients: ["codex"], requiredOptions: ["--client codex"] }
-        : {}),
-      ...(method === "agent/hook"
-        ? {
-            clients: ["codex"],
-            requiredOptions: ["--client codex"],
-            input: "hook event JSON on stdin",
-            outputSchemaIds: [SEMANTIC_AGENT_HOOK_DECISION_SCHEMA_ID],
-            supportsCompact: false,
-          }
-        : {
-            outputSchemaIds: [SEMANTIC_LANGUAGE_REGISTRY_ID],
-            supportsCompact: true,
-          }),
+      outputSchemaIds: [SEMANTIC_LANGUAGE_REGISTRY_ID],
+      supportsCompact: true,
       supportsJson: true,
     })),
   ];

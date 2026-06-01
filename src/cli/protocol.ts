@@ -7,13 +7,7 @@ import path from "node:path";
 import { renderTypeScriptProjectHarness, renderTypeScriptProjectHarnessJson } from "../render.js";
 import { runTypeScriptProjectHarness } from "../runner.js";
 import { isTypeScriptHarnessClean } from "../model.js";
-import {
-  installCodexAgentHooks,
-  isAgentHookEvent,
-  renderCodexAgentGuide,
-  runCodexAgentHook,
-  type AgentHookEvent,
-} from "./agent-hooks.js";
+import { renderCodexAgentGuide } from "./agent-guide.js";
 import {
   SEMANTIC_LANGUAGE_PROTOCOL_ID,
   SEMANTIC_LANGUAGE_REGISTRY_VERSION,
@@ -66,28 +60,13 @@ interface CheckArgs {
   readonly json: boolean;
 }
 
-type AgentArgs = AgentDoctorArgs | AgentInstallArgs | AgentHookArgs | AgentGuideArgs;
+type AgentArgs = AgentDoctorArgs | AgentGuideArgs;
 
 interface AgentDoctorArgs {
   readonly kind: "agent";
   readonly action: "doctor";
   readonly projectRoot: string | undefined;
   readonly json: boolean;
-}
-
-interface AgentInstallArgs {
-  readonly kind: "agent";
-  readonly action: "install";
-  readonly client: "codex";
-  readonly projectRoot: string | undefined;
-}
-
-interface AgentHookArgs {
-  readonly kind: "agent";
-  readonly action: "hook";
-  readonly client: "codex";
-  readonly event: AgentHookEvent;
-  readonly projectRoot: string | undefined;
 }
 
 interface AgentGuideArgs {
@@ -132,27 +111,14 @@ export function runProtocolCli(
   }
   if (args.kind === "agent") {
     const projectRoot = path.resolve(cwd, args.projectRoot ?? ".");
-    try {
-      if (args.action === "doctor") {
-        streams.stdout.write(
-          args.json ? renderAgentDoctorJson(projectRoot) : renderAgentDoctor(projectRoot),
-        );
-        return 0;
-      }
-      if (args.action === "install") {
-        streams.stdout.write(installCodexAgentHooks(projectRoot));
-        return 0;
-      }
-      if (args.action === "guide") {
-        streams.stdout.write(renderCodexAgentGuide(projectRoot));
-        return 0;
-      }
-      streams.stdout.write(runCodexAgentHook(args.event, projectRoot, streams.stdin ?? ""));
+    if (args.action === "doctor") {
+      streams.stdout.write(
+        args.json ? renderAgentDoctorJson(projectRoot) : renderAgentDoctor(projectRoot),
+      );
       return 0;
-    } catch (error) {
-      streams.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
-      return 3;
     }
+    streams.stdout.write(renderCodexAgentGuide(projectRoot));
+    return 0;
   }
 
   const projectRoot =
@@ -407,8 +373,12 @@ function parseCheckArgs(argv: readonly string[]): ProtocolArgs {
 
 function parseAgentArgs(argv: readonly string[]): ProtocolArgs {
   const action = argv[0] ?? "doctor";
-  if (action === "install") return parseAgentInstallArgs(argv.slice(1));
-  if (action === "hook") return parseAgentHookArgs(argv.slice(1));
+  if (action === "install" || action === "hook") {
+    return {
+      kind: "error",
+      message: `ts-harness agent ${action} moved to semantic-agent-hook; use semantic-agent-hook ${action} --client codex`,
+    };
+  }
   if (action === "guide") return parseAgentGuideArgs(argv.slice(1));
   if (action !== "doctor") return { kind: "error", message: `unknown agent action: ${action}` };
   let json = false;
@@ -428,39 +398,6 @@ function parseAgentArgs(argv: readonly string[]): ProtocolArgs {
     return { kind: "error", message: "expected at most one PROJECT_ROOT argument" };
   }
   return { kind: "agent", action: "doctor", projectRoot: positionals[0], json };
-}
-
-function parseAgentInstallArgs(argv: readonly string[]): ProtocolArgs {
-  const parsed = parseAgentClientPositionals(argv);
-  if (parsed.error !== undefined) return { kind: "error", message: parsed.error };
-  if (parsed.positionals.length > 1) {
-    return { kind: "error", message: "expected at most one PROJECT_ROOT argument" };
-  }
-  return {
-    kind: "agent",
-    action: "install",
-    client: "codex",
-    projectRoot: parsed.positionals[0],
-  };
-}
-
-function parseAgentHookArgs(argv: readonly string[]): ProtocolArgs {
-  const parsed = parseAgentClientPositionals(argv);
-  if (parsed.error !== undefined) return { kind: "error", message: parsed.error };
-  const event = parsed.positionals[0];
-  if (!isAgentHookEvent(event)) {
-    return { kind: "error", message: "agent hook requires a Codex hook event" };
-  }
-  if (parsed.positionals.length > 2) {
-    return { kind: "error", message: "expected at most one PROJECT_ROOT argument" };
-  }
-  return {
-    kind: "agent",
-    action: "hook",
-    client: "codex",
-    event,
-    projectRoot: parsed.positionals[1],
-  };
 }
 
 function parseAgentGuideArgs(argv: readonly string[]): ProtocolArgs {

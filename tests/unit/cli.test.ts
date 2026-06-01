@@ -690,8 +690,6 @@ test("CLI exposes semantic-search protocol commands", () => {
     "check/changed",
     "check/full",
     "agent/doctor",
-    "agent/install",
-    "agent/hook",
   ];
   assert.deepEqual(registry.languages[0], {
     languageId: "typescript",
@@ -752,25 +750,6 @@ test("CLI exposes semantic-search protocol commands", () => {
         supportsJson: true,
         supportsCompact: true,
       },
-      {
-        method: "agent/install",
-        command: "agent",
-        clients: ["codex"],
-        requiredOptions: ["--client codex"],
-        outputSchemaIds: ["agent.semantic-protocols.semantic-language-registry"],
-        supportsJson: true,
-        supportsCompact: true,
-      },
-      {
-        method: "agent/hook",
-        command: "agent",
-        clients: ["codex"],
-        requiredOptions: ["--client codex"],
-        input: "hook event JSON on stdin",
-        outputSchemaIds: ["agent.semantic-protocols.agent-hook-decision"],
-        supportsJson: true,
-        supportsCompact: false,
-      },
     ],
     schemas: [
       {
@@ -782,11 +761,6 @@ test("CLI exposes semantic-search protocol commands", () => {
         schemaId: "agent.semantic-protocols.semantic-language-registry",
         schemaVersion: "1",
         path: "schemas/semantic-language-registry.v1.schema.json",
-      },
-      {
-        schemaId: "agent.semantic-protocols.agent-hook-decision",
-        schemaVersion: "1",
-        path: "schemas/semantic-agent-hook-decision.v1.schema.json",
       },
       {
         schemaId: "agent.semantic-protocols.languages.typescript.ts-harness.capabilities",
@@ -858,111 +832,30 @@ test("CLI ranks workspace packages before test fixtures", () => {
   );
 });
 
-test("CLI delegates Codex agent hooks to semantic-agent-hook", () => {
+test("CLI reports root semantic-agent-hook owner for hook install and runtime", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-agent-hooks-cli-"));
-  fs.mkdirSync(path.join(root, "src"));
-  fs.mkdirSync(path.join(root, "tests"));
-  fs.writeFileSync(path.join(root, "tsconfig.json"), JSON.stringify({ include: ["src/**/*.ts"] }));
-  fs.writeFileSync(path.join(root, "src", "index.ts"), "export const ok = 1;\n");
-  fs.writeFileSync(path.join(root, "README.md"), "# Example\n");
 
-  withSemanticAgentHookShim((logPath) => {
-    const install = runCliCapture(["agent", "install", "--client", "codex", "."], root);
-    assert.equal(install.exitCode, 0);
-    assert.match(install.stdout, /^\[agent-install\] client=codex profiles=/u);
+  const install = runCliCapture(["agent", "install", "--client", "codex", "."], root);
+  assert.equal(install.exitCode, 2);
+  assert.equal(install.stdout, "");
+  assert.match(install.stderr, /ts-harness agent install moved to semantic-agent-hook/u);
+  assert.match(install.stderr, /semantic-agent-hook install --client codex/u);
 
-    const profilePath = path.join(
-      root,
-      ".codex",
-      "semantic-agent-hook",
-      "profiles.ts-harness.json",
-    );
-    const profile = JSON.parse(fs.readFileSync(profilePath, "utf8")) as {
-      readonly protocolId: string;
-      readonly profiles: readonly {
-        readonly languageId: string;
-        readonly providerId: string;
-        readonly binary: string;
-        readonly namespace: string;
-        readonly sourceExtensions: readonly string[];
-        readonly commands: { readonly ingest: { readonly stdinMode: string } };
-      }[];
-    };
-    assert.equal(profile.protocolId, "agent.semantic-protocols.agent-hooks");
-    assert.equal(profile.profiles[0]?.languageId, "typescript");
-    assert.equal(profile.profiles[0]?.providerId, "ts-harness");
-    assert.equal(profile.profiles[0]?.binary, "ts-harness");
-    assert.equal(
-      profile.profiles[0]?.namespace,
-      "agent.semantic-protocols.languages.typescript.ts-harness",
-    );
-    assert.ok(profile.profiles[0]?.sourceExtensions.includes(".tsx"));
-    assert.equal(profile.profiles[0]?.commands.ingest.stdinMode, "pipe-candidates");
-
-    const config = fs.readFileSync(path.join(root, ".codex", "config.toml"), "utf8");
-    assert.match(config, /# BEGIN semantic-agent-hook agent hooks/u);
-    assert.doesNotMatch(config, /# BEGIN ts-harness agent hooks/u);
-
-    const hookInput = JSON.stringify({
-      tool_name: "Read",
-      tool_input: { file_path: "src/index.ts" },
-    });
-    const hook = runCliCapture(
-      ["agent", "hook", "--client", "codex", "pre-tool", "."],
-      root,
-      hookInput,
-    );
-    assert.equal(hook.exitCode, 0);
-    const hookPayload = JSON.parse(hook.stdout) as {
-      readonly agentHookDecision: { readonly protocolId: string; readonly event: string };
-    };
-    assert.equal(hookPayload.agentHookDecision.protocolId, "agent.semantic-protocols.agent-hooks");
-    assert.equal(hookPayload.agentHookDecision.event, "pre-tool");
-
-    const invocations = JSON.parse(fs.readFileSync(logPath, "utf8")) as readonly {
-      readonly argv: readonly string[];
-      readonly cwd: string;
-      readonly stdin: string;
-    }[];
-    assert.deepEqual(invocations[0]?.argv, [
-      "install",
-      "--client",
-      "codex",
-      "--profiles",
-      profilePath,
-      root,
-    ]);
-    assert.equal(fs.realpathSync(invocations[0]?.cwd ?? "."), fs.realpathSync(root));
-    assert.deepEqual(invocations[1]?.argv, [
-      "hook",
-      "--client",
-      "codex",
-      "pre-tool",
-      "--profiles",
-      profilePath,
-    ]);
-    assert.equal(invocations[1]?.stdin, hookInput);
-  });
+  const hook = runCliCapture(
+    ["agent", "hook", "--client", "codex", "pre-tool", "."],
+    root,
+    JSON.stringify({ tool_name: "Read", tool_input: { file_path: "src/index.ts" } }),
+  );
+  assert.equal(hook.exitCode, 2);
+  assert.equal(hook.stdout, "");
+  assert.match(hook.stderr, /ts-harness agent hook moved to semantic-agent-hook/u);
+  assert.match(hook.stderr, /semantic-agent-hook hook --client codex/u);
 
   const guide = runCliCapture(["agent", "guide", "--client", "codex", "."], root);
   assert.equal(guide.exitCode, 0);
   assert.match(guide.stdout, /^\[ts-harness-guide\] project=/u);
-  assert.match(guide.stdout, /agent hooks are dispatched by semantic-agent-hook/u);
+  assert.match(guide.stdout, /agent hook install\/runtime is owned by semantic-agent-hook/u);
   assert.doesNotMatch(guide.stdout, /README|SKILL|docs\/|src\/cli\/agent-hooks/u);
-});
-
-test("CLI reports missing semantic-agent-hook for Codex hook install", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-agent-hooks-missing-"));
-  const previousPath = process.env.PATH;
-  process.env.PATH = "";
-  try {
-    const install = runCliCapture(["agent", "install", "--client", "codex", "."], root);
-    assert.equal(install.exitCode, 3);
-    assert.equal(install.stdout, "");
-    assert.match(install.stderr, /semantic-agent-hook binary is required/u);
-  } finally {
-    process.env.PATH = previousPath;
-  }
 });
 
 function expectedSearchCapabilities(
@@ -1419,57 +1312,6 @@ test("CLI package bin and semantic registry use the same canonical binary", () =
     new RegExp(["typescript", "project", "harness"].join("-"), "u"),
   );
 });
-
-function withSemanticAgentHookShim(run: (logPath: string) => void): void {
-  const shimRoot = fs.mkdtempSync(path.join(os.tmpdir(), "semantic-agent-hook-shim-"));
-  const binPath = path.join(shimRoot, "semantic-agent-hook");
-  const logPath = path.join(shimRoot, "invocations.json");
-  fs.writeFileSync(
-    binPath,
-    [
-      "#!/usr/bin/env node",
-      'const fs = require("node:fs");',
-      'const path = require("node:path");',
-      "const logPath = process.env.SEMANTIC_AGENT_HOOK_LOG;",
-      "const input = fs.readFileSync(0, 'utf8');",
-      "const entries = fs.existsSync(logPath) ? JSON.parse(fs.readFileSync(logPath, 'utf8')) : [];",
-      "entries.push({ argv: process.argv.slice(2), cwd: process.cwd(), stdin: input });",
-      "fs.writeFileSync(logPath, JSON.stringify(entries, null, 2));",
-      "const argv = process.argv.slice(2);",
-      "if (argv[0] === 'install') {",
-      "  const profileIndex = argv.indexOf('--profiles') + 1;",
-      "  const profilePath = argv[profileIndex];",
-      "  const root = argv[argv.length - 1];",
-      "  JSON.parse(fs.readFileSync(profilePath, 'utf8'));",
-      "  fs.mkdirSync(path.join(root, '.codex'), { recursive: true });",
-      "  fs.writeFileSync(path.join(root, '.codex', 'config.toml'), '# BEGIN semantic-agent-hook agent hooks\\n');",
-      "  process.stdout.write('[agent-install] client=codex profiles=.codex/semantic-agent-hook/profiles.json config=.codex/config.toml binary=.codex/semantic-agent-hook/bin/semantic-agent-hook mode=updated\\n');",
-      "  process.exit(0);",
-      "}",
-      "if (argv[0] === 'hook') {",
-      "  process.stdout.write(JSON.stringify({ agentHookDecision: { protocolId: 'agent.semantic-protocols.agent-hooks', event: argv[3] } }) + '\\n');",
-      "  process.exit(0);",
-      "}",
-      "process.stderr.write('unexpected semantic-agent-hook argv: ' + argv.join(' ') + '\\n');",
-      "process.exit(2);",
-    ].join("\n"),
-  );
-  fs.chmodSync(binPath, 0o755);
-  const previousPath = process.env.PATH;
-  const previousLog = process.env.SEMANTIC_AGENT_HOOK_LOG;
-  process.env.PATH = `${shimRoot}${path.delimiter}${previousPath ?? ""}`;
-  process.env.SEMANTIC_AGENT_HOOK_LOG = logPath;
-  try {
-    run(logPath);
-  } finally {
-    process.env.PATH = previousPath;
-    if (previousLog === undefined) {
-      delete process.env.SEMANTIC_AGENT_HOOK_LOG;
-    } else {
-      process.env.SEMANTIC_AGENT_HOOK_LOG = previousLog;
-    }
-  }
-}
 
 function runCliCapture(
   argv: readonly string[],

@@ -182,8 +182,6 @@ test("semantic language registry JSON documents the TypeScript provider identity
     "check/changed",
     "check/full",
     "agent/doctor",
-    "agent/install",
-    "agent/hook",
   ]);
   const methodDescriptors = array(
     language.methodDescriptors,
@@ -203,7 +201,7 @@ test("semantic language registry JSON documents the TypeScript provider identity
   for (const descriptor of methodDescriptors) {
     assertSchemaObject(descriptor, methodDescriptorSchema, String(descriptor.method));
     assert.equal(descriptor.supportsJson, true);
-    assert.equal(descriptor.supportsCompact, descriptor.method === "agent/hook" ? false : true);
+    assert.equal(descriptor.supportsCompact, true);
     assert.ok(["search", "check", "agent"].includes(String(descriptor.command)));
     if (String(descriptor.method).startsWith("search/")) {
       assert.equal(descriptor.command, "search");
@@ -306,25 +304,18 @@ test("semantic language registry JSON documents the TypeScript provider identity
     } else if (String(descriptor.method).startsWith("agent/")) {
       assert.equal(descriptor.command, "agent");
       assert.equal(Object.hasOwn(descriptor, "view"), false);
-      assert.deepEqual(
-        descriptor.outputSchemaIds,
-        descriptor.method === "agent/hook"
-          ? ["agent.semantic-protocols.agent-hook-decision"]
-          : ["agent.semantic-protocols.semantic-language-registry"],
-      );
+      assert.deepEqual(descriptor.outputSchemaIds, [
+        "agent.semantic-protocols.semantic-language-registry",
+      ]);
       assert.equal(Object.hasOwn(descriptor, "requiresQuery"), false);
       assert.equal(Object.hasOwn(descriptor, "acceptsStdin"), false);
       assert.equal(Object.hasOwn(descriptor, "supportsPackageScope"), false);
       assert.equal(Object.hasOwn(descriptor, "acceptedPipes"), false);
       assert.equal(Object.hasOwn(descriptor, "capabilities"), false);
       assert.equal(Object.hasOwn(descriptor, "ingestRequiredFor"), false);
-      if (descriptor.method === "agent/install" || descriptor.method === "agent/hook") {
-        assert.deepEqual(descriptor.clients, ["codex"]);
-        assert.deepEqual(descriptor.requiredOptions, ["--client codex"]);
-      }
-      if (descriptor.method === "agent/hook") {
-        assert.equal(descriptor.input, "hook event JSON on stdin");
-      }
+      assert.equal(Object.hasOwn(descriptor, "clients"), false);
+      assert.equal(Object.hasOwn(descriptor, "requiredOptions"), false);
+      assert.equal(Object.hasOwn(descriptor, "input"), false);
     }
   }
   const schemas = array(language.schemas, "registry.languages[0].schemas");
@@ -336,11 +327,7 @@ test("semantic language registry JSON documents the TypeScript provider identity
   assert.equal(registrySchema.schemaId, "agent.semantic-protocols.semantic-language-registry");
   assert.equal(registrySchema.schemaVersion, "1");
   assert.equal(registrySchema.path, "schemas/semantic-language-registry.v1.schema.json");
-  const hookDecisionSchema = record(schemas[2], "registry.languages[0].schemas[2]");
-  assert.equal(hookDecisionSchema.schemaId, "agent.semantic-protocols.agent-hook-decision");
-  assert.equal(hookDecisionSchema.path, "schemas/semantic-agent-hook-decision.v1.schema.json");
-
-  const typeScriptCapabilitiesSchema = record(schemas[3], "registry.languages[0].schemas[3]");
+  const typeScriptCapabilitiesSchema = record(schemas[2], "registry.languages[0].schemas[2]");
   assert.equal(
     typeScriptCapabilitiesSchema.schemaId,
     "agent.semantic-protocols.languages.typescript.ts-harness.capabilities",
