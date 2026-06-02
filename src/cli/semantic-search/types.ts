@@ -14,10 +14,12 @@ export type SemanticSearchView =
   | "docs"
   | "api"
   | "public-external-types"
+  | "policy"
   | "symbol"
   | "callsite"
   | "import"
   | "tests"
+  | "fzf"
   | "text"
   | "ingest";
 export type SemanticSearchPipe = SemanticSearchView | "items";
@@ -71,6 +73,8 @@ export interface SemanticSearchPacket {
   readonly edges: readonly SemanticSearchEdge[];
   readonly owners: readonly SemanticSearchOwner[];
   readonly items?: readonly SemanticSearchItem[];
+  readonly typeSurfaces?: readonly SemanticSearchTypeSurface[];
+  readonly semanticHandles?: readonly SemanticSearchHandle[];
   readonly hits: readonly SemanticSearchHit[];
   readonly findings: readonly SemanticSearchFinding[];
   readonly nextActions: readonly SemanticSearchNextAction[];
@@ -90,6 +94,8 @@ export interface SemanticSearchPacketPayload {
   readonly edges: readonly SemanticSearchEdge[];
   readonly owners: readonly SemanticSearchOwner[];
   readonly items?: readonly SemanticSearchItem[];
+  readonly typeSurfaces?: readonly SemanticSearchTypeSurface[];
+  readonly semanticHandles?: readonly SemanticSearchHandle[];
   readonly hits: readonly SemanticSearchHit[];
   readonly findings: readonly SemanticSearchFinding[];
   readonly nextActions: readonly SemanticSearchNextAction[];
@@ -120,14 +126,14 @@ export interface SemanticSearchQueryTerm {
     | "cfg"
     | "api"
     | "custom";
-  readonly selector: "exact" | "prefix" | "stdin-path";
+  readonly selector: "exact" | "prefix" | "fuzzy" | "stdin-path";
   readonly fields?: SemanticSearchFields;
 }
 
 export interface SemanticSearchQueryComposition {
   readonly mode: "single" | "query-set";
   readonly view: string;
-  readonly selector: "single" | "exact-set" | "prefix-set" | "stdin-path-set";
+  readonly selector: "single" | "exact-set" | "prefix-set" | "fuzzy-set" | "stdin-path-set";
   readonly scope?: SemanticSearchQueryScope;
   readonly merge: readonly (
     | "packages"
@@ -194,6 +200,8 @@ export interface SemanticSearchSynthesis {
     | "prime"
     | "owner"
     | "dependency"
+    | "policy"
+    | "query"
     | "query-set"
     | "text"
     | "ingest"
@@ -206,8 +214,20 @@ export interface SemanticSearchSynthesis {
   readonly outgoingOwners?: number;
   readonly highImpactOwners?: readonly string[];
   readonly frontierOwners?: readonly string[];
+  readonly editFrontier?: readonly string[];
+  readonly testFrontier?: readonly string[];
+  readonly windowSet?: readonly SemanticSearchWindowTarget[];
   readonly findingOwners?: readonly string[];
   readonly seeds?: readonly SemanticSearchNextAction[];
+  readonly fields?: SemanticSearchFields;
+}
+
+export interface SemanticSearchWindowTarget {
+  readonly kind: "owner" | "tests" | "read";
+  readonly target: string;
+  readonly query?: string;
+  readonly reason?: string;
+  readonly ownerPath?: string;
   readonly fields?: SemanticSearchFields;
 }
 
@@ -307,6 +327,117 @@ export interface SemanticSearchItem {
   readonly ownerPath: string;
   readonly location?: SemanticSearchLocation;
   readonly fields: SemanticSearchFields;
+}
+
+export interface SemanticSearchTypeRef {
+  readonly name?: string;
+  readonly languageName?: string;
+  readonly qualifiedName?: string;
+  readonly carrier: string;
+  readonly package?: string;
+  readonly module?: string;
+  readonly symbol?: string;
+  readonly versionScope?: "current" | "external" | "unknown";
+  readonly external?: boolean;
+  readonly typeArguments?: readonly SemanticSearchTypeRef[];
+  readonly fields?: SemanticSearchFields;
+}
+
+export interface SemanticSearchTypeMember {
+  readonly name: string;
+  readonly role: string;
+  readonly type: SemanticSearchTypeRef;
+  readonly visibility?: "public" | "private" | "protected" | "internal" | "unknown";
+  readonly optional?: boolean;
+  readonly readonly?: boolean;
+  readonly mutable?: boolean;
+  readonly location?: SemanticSearchLocation;
+  readonly fields?: SemanticSearchFields;
+}
+
+export interface SemanticSearchTypeSurface {
+  readonly id: string;
+  readonly name: string;
+  readonly languageName?: string;
+  readonly qualifiedName?: string;
+  readonly kind: string;
+  readonly role: string;
+  readonly ownerPath: string;
+  readonly location?: SemanticSearchLocation;
+  readonly visibility: "public" | "private" | "protected" | "internal" | "unknown";
+  readonly external: boolean;
+  readonly source?: "native-parser" | "metadata" | "docs" | "ingest" | "unknown";
+  readonly package?: string;
+  readonly module?: string;
+  readonly symbol?: string;
+  readonly versionScope?: "current" | "external" | "unknown";
+  readonly carrier?: SemanticSearchTypeRef;
+  readonly members?: readonly SemanticSearchTypeMember[];
+  readonly relatedTypes?: readonly SemanticSearchTypeRef[];
+  readonly fields: SemanticSearchFields;
+}
+
+export type SemanticSearchHandleKind =
+  | "policy-rule"
+  | "schema-fixture"
+  | "test-case"
+  | "config-key"
+  | "command"
+  | "capability"
+  | "dependency-api"
+  | "public-api"
+  | "owner"
+  | "item"
+  | "build-target"
+  | "runtime-receipt"
+  | "custom";
+
+export type SemanticSearchHandleSource =
+  | "native-parser"
+  | "provider-policy"
+  | "schema"
+  | "manifest"
+  | "test-index"
+  | "runtime"
+  | "registry"
+  | "custom";
+
+declare const semanticSearchHandleIdBrand: unique symbol;
+
+declare const semanticSearchHandlePathBrand: unique symbol;
+
+export type SemanticSearchHandleId = string & {
+  readonly [semanticSearchHandleIdBrand]: "SemanticSearchHandleId";
+};
+
+export type SemanticSearchHandlePath = string & {
+  readonly [semanticSearchHandlePathBrand]: "SemanticSearchHandlePath";
+};
+
+export function semanticSearchHandleId(value: string): SemanticSearchHandleId {
+  return value as SemanticSearchHandleId;
+}
+
+export function semanticSearchHandlePath(value: string): SemanticSearchHandlePath {
+  return value as SemanticSearchHandlePath;
+}
+
+export interface SemanticSearchHandle {
+  readonly id: SemanticSearchHandleId;
+  readonly kind: SemanticSearchHandleKind;
+  readonly source: SemanticSearchHandleSource;
+  readonly title: string;
+  readonly languageName?: string;
+  readonly qualifiedName?: string;
+  readonly aliases?: readonly string[];
+  readonly labels?: readonly string[];
+  readonly status?: "active" | "advisory" | "deprecated" | "blocked" | "unknown";
+  readonly ownerPath?: SemanticSearchHandlePath;
+  readonly implementationOwnerPath?: SemanticSearchHandlePath;
+  readonly testPaths?: readonly SemanticSearchHandlePath[];
+  readonly locations?: readonly SemanticSearchLocation[];
+  readonly queryTerms?: readonly string[];
+  readonly fields?: SemanticSearchFields;
 }
 
 export type SemanticSearchHitKind =

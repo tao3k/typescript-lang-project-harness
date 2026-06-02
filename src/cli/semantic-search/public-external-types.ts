@@ -22,6 +22,7 @@ import type {
   SemanticSearchHit,
   SemanticSearchNode,
   SemanticSearchPacketPayload,
+  SemanticSearchTypeSurface,
 } from "./types.js";
 import { MAX_SYMBOL_HITS } from "./types.js";
 import { locationFromSource, relPath } from "./utils.js";
@@ -70,6 +71,7 @@ export function buildPublicExternalTypesPacketPayload(
   const packageRoot = packageRootFromSpecifier(query) ?? query.trim();
   const manifestMatches = packageRoot === "" ? [] : dependencyManifestMatches(report, packageRoot);
   const hits = packageRoot === "" ? [] : publicExternalTypeHits(report, packageRoot);
+  const typeSurfaces = publicExternalTypeSurfaces(hits, packageRoot);
   const owners = ownersForHits(report, hits);
   return {
     header: {
@@ -90,6 +92,7 @@ export function buildPublicExternalTypesPacketPayload(
     ],
     edges: [],
     owners,
+    typeSurfaces,
     hits,
     findings: [],
     nextActions: [
@@ -134,6 +137,53 @@ function publicExternalTypeHits(
     .flatMap((moduleReport) => publicExternalTypeModuleHits(report, moduleReport, packageRoot))
     .sort(comparePublicExternalTypeHits(report))
     .slice(0, MAX_SYMBOL_HITS);
+}
+
+function publicExternalTypeSurfaces(
+  hits: readonly SemanticSearchHit[],
+  packageRoot: string,
+): readonly SemanticSearchTypeSurface[] {
+  return hits.map((hit, index) => publicExternalTypeSurface(hit, packageRoot, index));
+}
+
+function publicExternalTypeSurface(
+  hit: SemanticSearchHit,
+  packageRoot: string,
+  index: number,
+): SemanticSearchTypeSurface {
+  const fields = hit.fields ?? {};
+  const typeText = stringField(fields.typeText);
+  const apiKind = stringField(fields.apiKind);
+  const surface = stringField(fields.surface);
+  const moduleSpecifier =
+    stringField(fields.moduleSpecifier) ?? stringField(fields.importSpecifier);
+  return {
+    id: `TS:${hit.ownerPath}:${hit.symbol ?? "unknown"}:${surface ?? index}`,
+    name: hit.symbol ?? surface ?? typeText ?? "unknown",
+    ...(typeText === undefined ? {} : { languageName: typeText, qualifiedName: typeText }),
+    kind: typeSurfaceKind(apiKind, surface),
+    role: typeSurfaceRole(apiKind, surface),
+    ownerPath: hit.ownerPath,
+    location: hit.location,
+    visibility: "public",
+    external: true,
+    source: "native-parser",
+    package: packageRoot,
+    ...(moduleSpecifier === undefined ? {} : { module: moduleSpecifier }),
+    ...(hit.symbol === undefined ? {} : { symbol: hit.symbol }),
+    versionScope: "current",
+    carrier: {
+      ...(typeText === undefined
+        ? {}
+        : { name: typeText, languageName: typeText, qualifiedName: typeText }),
+      carrier: carrierKind(typeText, apiKind),
+      package: packageRoot,
+      ...(moduleSpecifier === undefined ? {} : { module: moduleSpecifier }),
+      versionScope: "current",
+      external: true,
+    },
+    fields: { ...fields, dependency: packageRoot },
+  };
 }
 
 function publicExternalTypeModuleHits(
@@ -341,6 +391,44 @@ function escapeRegExp(value: string): string {
 function hasCustomTypeReference(typeText: string): boolean {
   const identifiers = typeText.match(/\b[A-Z][A-Za-z0-9_]*\b/gu) ?? [];
   return identifiers.some((identifier) => !BUILTIN_TYPE_NAMES.has(identifier));
+}
+
+function stringField(value: unknown): string | undefined {
+  return typeof value === "string" && value.length > 0 ? value : undefined;
+}
+
+function typeSurfaceKind(apiKind: string | undefined, surface: string | undefined): string {
+  if (apiKind === "tuple") return "tuple";
+  if (apiKind === "type") return "alias";
+  if (apiKind === "union") return "union";
+  if (apiKind === "interface" || apiKind === "class" || apiKind === "enum") return apiKind;
+  if (surface?.startsWith("field:") === true) return "object";
+  return apiKind === undefined ? "unknown" : "function";
+}
+
+function typeSurfaceRole(apiKind: string | undefined, surface: string | undefined): string {
+  if (surface?.startsWith("param:") === true) return "api-input";
+  if (surface === "return" || surface === "success") return "api-output";
+  if (surface === "error") return "api-error";
+  if (surface?.startsWith("field:") === true) return "api-field";
+  if (surface === "alias" || apiKind === "type") return "public-type-alias";
+  if (surface?.startsWith("variant:") === true) return "api-field";
+  return "external-dependency";
+}
+
+function carrierKind(typeText: string | undefined, apiKind: string | undefined): string {
+  if (typeText === undefined) return "unknown";
+  if (apiKind === "tuple" || /^\s*\[/u.test(typeText)) return "tuple";
+  if (apiKind === "type") return "alias";
+  if (
+    /\b(?:string|number|boolean|bigint|symbol|null|undefined|void|unknown|never)\b/u.test(typeText)
+  ) {
+    return "primitive";
+  }
+  if (/[|]/u.test(typeText)) return "union";
+  if (/^Array<|^\w+\[\]$/u.test(typeText)) return "array";
+  if (/\{.*\}/u.test(typeText)) return "object";
+  return "external";
 }
 
 function dependencyNode(

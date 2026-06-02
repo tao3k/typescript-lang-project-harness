@@ -34,6 +34,16 @@ import {
   renderSemanticSearchPacketJson,
   type SemanticSearchRenderMode,
 } from "./semantic-search.js";
+import {
+  buildOwnerItemQueryPacket,
+  buildOwnerItemSemanticReadPacket,
+  buildOwnerItemSemanticQueryPacket,
+  renderOwnerItemQuery,
+  renderOwnerItemQueryCode,
+  renderOwnerItemSemanticReadPacket,
+  renderOwnerItemSemanticReadPacketJson,
+  renderOwnerItemSemanticQueryPacketJson,
+} from "./semantic-search/item-query.js";
 
 export interface CliStreams {
   readonly stdout: { write(chunk: string): unknown };
@@ -43,6 +53,7 @@ export interface CliStreams {
 
 export type ProtocolArgs =
   | SearchArgs
+  | QueryArgs
   | CheckArgs
   | AgentArgs
   | ProtocolHelpArgs
@@ -52,13 +63,31 @@ interface SearchArgs {
   readonly kind: "search";
   readonly view: TypeScriptSemanticSearchView;
   readonly query: string | undefined;
+  readonly itemQuery?: string;
+  readonly fromHook?: string;
+  readonly selector?: string;
+  readonly intent?: string;
   readonly projectRoot: string | undefined;
   readonly packagePath: string | undefined;
   readonly ownerPath: string | undefined;
   readonly pipes: readonly TypeScriptSemanticSearchPipe[];
   readonly querySet: readonly string[];
   readonly json: boolean;
+  readonly codeOnly?: boolean;
   readonly renderMode: SemanticSearchRenderMode | undefined;
+}
+
+interface QueryArgs {
+  readonly kind: "query";
+  readonly ownerPath: string;
+  readonly selector: string | undefined;
+  readonly terms: readonly string[];
+  readonly projectRoot: string | undefined;
+  readonly packagePath: string | undefined;
+  readonly json: boolean;
+  readonly codeOnly: boolean;
+  readonly namesOnly: boolean;
+  readonly renderMode: "read-packet" | undefined;
 }
 
 interface CheckArgs {
@@ -97,6 +126,7 @@ export function parseProtocolArgs(argv: readonly string[]): ProtocolArgs | undef
   if (command === undefined) return undefined;
   if (command === "--help" || command === "-h") return { kind: "help" };
   if (command === "search") return parseSearchArgs(argv.slice(1));
+  if (command === "query") return parseQueryArgs(argv.slice(1));
   if (command === "check") return parseCheckArgs(argv.slice(1));
   if (command === "agent") return parseAgentArgs(argv.slice(1));
   return undefined;
@@ -129,6 +159,56 @@ export function runProtocolCli(
   }
 
   try {
+    if (args.kind === "query") {
+      let projectRoot = path.resolve(cwd, args.projectRoot ?? ".");
+      if (args.packagePath !== undefined) {
+        projectRoot = path.resolve(projectRoot, args.packagePath);
+      }
+      const itemQuery = args.terms.join("|");
+      if (args.json) {
+        streams.stdout.write(
+          args.renderMode === "read-packet"
+            ? renderOwnerItemSemanticReadPacketJson(
+                buildOwnerItemSemanticReadPacket(
+                  projectRoot,
+                  args.ownerPath,
+                  itemQuery,
+                  args.selector ?? args.ownerPath,
+                ),
+              )
+            : renderOwnerItemSemanticQueryPacketJson(
+                buildOwnerItemSemanticQueryPacket(
+                  projectRoot,
+                  args.ownerPath,
+                  itemQuery,
+                  args.namesOnly ? "names" : "code",
+                ),
+              ),
+        );
+      } else if (selectorHasLineRange(args.selector, args.ownerPath)) {
+        streams.stdout.write(
+          `${renderOwnerItemSemanticReadPacket(
+            buildOwnerItemSemanticReadPacket(
+              projectRoot,
+              args.ownerPath,
+              itemQuery,
+              args.selector ?? args.ownerPath,
+            ),
+          )}\n`,
+        );
+      } else {
+        streams.stdout.write(
+          `${
+            args.codeOnly
+              ? renderOwnerItemQueryCode(projectRoot, args.ownerPath, itemQuery)
+              : renderOwnerItemQuery(projectRoot, args.ownerPath, itemQuery, {
+                  namesOnly: args.namesOnly,
+                })
+          }\n`,
+        );
+      }
+      return 0;
+    }
     if (args.kind === "check") {
       const projectRoot = path.resolve(cwd, args.projectRoot ?? ".");
       const report = runTypeScriptProjectHarness(projectRoot);
@@ -157,11 +237,33 @@ export function runProtocolCli(
             Date.now() - started,
             report.modules.length,
           );
+    if (args.view === "owner" && args.itemQuery !== undefined && args.query !== undefined) {
+      streams.stdout.write(
+        args.json
+          ? renderSemanticSearchPacketJson(
+              buildOwnerItemQueryPacket(searchPlan.projectRoot, args.query, args.itemQuery),
+            )
+          : `${
+              args.codeOnly === true
+                ? renderOwnerItemQueryCode(searchPlan.projectRoot, args.query, args.itemQuery)
+                : renderOwnerItemQuery(searchPlan.projectRoot, args.query, args.itemQuery)
+            }\n`,
+      );
+      return 0;
+    }
+
     const packet = buildSemanticSearchPacket(report, {
       view: args.view,
       ...(args.query !== undefined ? { query: args.query } : {}),
       ...(args.querySet.length > 0 ? { querySet: args.querySet } : {}),
-      ...(args.ownerPath !== undefined ? { queryScope: { ownerPath: args.ownerPath } } : {}),
+      ...(args.ownerPath !== undefined || args.selector !== undefined
+        ? {
+            queryScope: {
+              ...(args.ownerPath !== undefined ? { ownerPath: args.ownerPath } : {}),
+              ...(args.selector !== undefined ? { roots: [args.selector] } : {}),
+            },
+          }
+        : {}),
       ...(args.pipes.length > 0 ? { pipes: args.pipes } : {}),
       ...(args.renderMode !== undefined ? { renderMode: args.renderMode } : {}),
       ...(runtimeCost === undefined ? {} : { runtimeCost }),
@@ -188,11 +290,12 @@ function searchNeedsFullNativeSyntaxFacts(view: TypeScriptSemanticSearchView): b
     case "dependency":
     case "deps":
     case "docs":
+    case "policy":
     case "symbol":
     case "callsite":
     case "import":
     case "tests":
-    case "text":
+    case "fzf":
     case "ingest":
       return false;
   }
@@ -203,6 +306,7 @@ function searchNeedsRuleEvaluation(view: TypeScriptSemanticSearchView): boolean 
     case "workspace":
     case "prime":
     case "owner":
+    case "policy":
       return true;
     case "dependency":
     case "deps":
@@ -213,21 +317,150 @@ function searchNeedsRuleEvaluation(view: TypeScriptSemanticSearchView): boolean 
     case "callsite":
     case "import":
     case "tests":
-    case "text":
+    case "fzf":
     case "ingest":
       return false;
   }
 }
 
+function parseQueryArgs(argv: readonly string[]): ProtocolArgs {
+  if (argv[0] === "--help" || argv[0] === "-h") return { kind: "help" };
+  let json = false;
+  let codeOnly = false;
+  let namesOnly = false;
+  let renderMode: "read-packet" | undefined;
+  let packagePath: string | undefined;
+  let fromHook: string | undefined;
+  let selector: string | undefined;
+  const terms: string[] = [];
+  const positionals: string[] = [];
+  for (let index = 0; index < argv.length; index++) {
+    const arg = argv[index]!;
+    if (arg === "--term" || arg === "--query") {
+      const value = argv[index + 1];
+      if (value === undefined) return { kind: "error", message: `${arg} requires a value` };
+      if (arg === "--query") {
+        terms.push(
+          ...value
+            .split("|")
+            .map((term) => term.trim())
+            .filter((term) => term.length > 0),
+        );
+      } else {
+        terms.push(value);
+      }
+      index += 1;
+    } else if (arg === "--names-only") {
+      namesOnly = true;
+    } else if (arg === "--code") {
+      codeOnly = true;
+    } else if (arg === "--json") {
+      json = true;
+    } else if (arg === "--view") {
+      const value = argv[index + 1];
+      if (value === undefined || value.startsWith("-")) {
+        return { kind: "error", message: "--view requires a query output mode" };
+      }
+      if (value !== "read-packet") {
+        return { kind: "error", message: `unknown query --view mode: ${value}` };
+      }
+      renderMode = value;
+      index += 1;
+    } else if (arg === "--from-hook") {
+      const value = argv[index + 1];
+      if (value === undefined || value.startsWith("-")) {
+        return { kind: "error", message: "--from-hook requires a hook reason" };
+      }
+      fromHook = value;
+      index += 1;
+    } else if (arg === "--selector") {
+      const value = argv[index + 1];
+      if (value === undefined || value.startsWith("-")) {
+        return { kind: "error", message: "--selector requires an owner path" };
+      }
+      selector = value;
+      index += 1;
+    } else if (arg === "--package") {
+      const value = argv[index + 1];
+      if (value === undefined || value.startsWith("-")) {
+        return { kind: "error", message: "--package requires a package path" };
+      }
+      packagePath = value;
+      index += 1;
+    } else if (arg === "--help" || arg === "-h") {
+      return { kind: "help" };
+    } else if (arg.startsWith("-")) {
+      return { kind: "error", message: `unknown query option: ${arg}` };
+    } else {
+      positionals.push(arg);
+    }
+  }
+  if (fromHook !== undefined && fromHook !== "direct-source-read") {
+    return { kind: "error", message: `unsupported query hook route: ${fromHook}` };
+  }
+  if (fromHook === "direct-source-read" && json && renderMode === undefined) {
+    renderMode = "read-packet";
+  }
+  if (renderMode === "read-packet" && fromHook !== "direct-source-read") {
+    return {
+      kind: "error",
+      message: "--view read-packet requires --from-hook direct-source-read",
+    };
+  }
+  if (renderMode === "read-packet" && !json) {
+    return { kind: "error", message: "--view read-packet requires --json" };
+  }
+  const ownerPath = selector === undefined ? positionals[0] : ownerPathFromQuerySelector(selector);
+  const projectRoot = selector === undefined ? positionals[1] : positionals[0];
+  if (ownerPath === undefined) {
+    return { kind: "error", message: "query requires an owner path" };
+  }
+  if (positionals.length > (selector === undefined ? 2 : 1)) {
+    return { kind: "error", message: "expected owner path and optional PROJECT_ROOT" };
+  }
+  if (terms.length === 0 && fromHook !== "direct-source-read") {
+    return { kind: "error", message: "query requires at least one --term" };
+  }
+  if (
+    terms.length === 0 &&
+    fromHook === "direct-source-read" &&
+    !codeOnly &&
+    !json &&
+    !selectorHasLineRange(selector, ownerPath)
+  ) {
+    namesOnly = true;
+  }
+  if (json && codeOnly) {
+    return { kind: "error", message: "--code cannot be combined with --json" };
+  }
+  if (namesOnly && codeOnly) {
+    return { kind: "error", message: "--code cannot be combined with --names-only" };
+  }
+  return {
+    kind: "query",
+    ownerPath,
+    selector,
+    terms,
+    projectRoot,
+    packagePath,
+    json,
+    codeOnly,
+    namesOnly,
+    renderMode,
+  };
+}
+
 function parseSearchArgs(argv: readonly string[]): ProtocolArgs {
   const viewValue = argv[0];
-  if (viewValue === undefined || viewValue === "--help" || viewValue === "-h") {
+  if (viewValue === "--help" || viewValue === "-h") return { kind: "help" };
+  if (viewValue === undefined) {
     return {
       kind: "error",
       message:
-        "usage: ts-harness search <workspace|prime|owner|dependency|deps|docs|api|public-external-types|symbol|callsite|import|tests|text|ingest> ... [--json] [--package PATH] [PROJECT_ROOT]",
+        "usage: ts-harness search <workspace|prime|owner|dependency|deps|docs|api|public-external-types|policy|symbol|callsite|import|tests|fzf|text|ingest|query> ... [--json] [--code] [--package PATH] [PROJECT_ROOT]",
     };
   }
+  if (viewValue === "query") return parseSearchQueryArgs(argv.slice(1));
   const searchView = typeScriptSemanticSearchViewDescriptor(viewValue);
   if (searchView === undefined) {
     return { kind: "error", message: `unknown search view: ${viewValue}` };
@@ -239,6 +472,8 @@ function parseSearchArgs(argv: readonly string[]): ProtocolArgs {
   let ownerPath: string | undefined;
   const querySet: string[] = [];
   const positionals: string[] = [];
+  let itemQuery: string | undefined;
+  let codeOnly = false;
   for (let index = 1; index < argv.length; index++) {
     const arg = argv[index]!;
     if (isFlagLikeLiteralSearchQuery(searchView.view, positionals, querySet, arg)) {
@@ -266,6 +501,13 @@ function parseSearchArgs(argv: readonly string[]): ProtocolArgs {
       }
       ownerPath = value;
       index += 1;
+    } else if (arg === "--query") {
+      const value = argv[index + 1];
+      if (value === undefined) return { kind: "error", message: "--query requires a value" };
+      itemQuery = value;
+      index++;
+    } else if (arg === "--code") {
+      codeOnly = true;
     } else if (arg === "--query-set") {
       const value = argv[index + 1];
       if (value === undefined) {
@@ -283,10 +525,16 @@ function parseSearchArgs(argv: readonly string[]): ProtocolArgs {
   if (querySet.length > 0 && !searchViewSupportsQuerySet(searchView.view)) {
     return { kind: "error", message: `search ${viewValue} does not support --query-set` };
   }
-  if (ownerPath !== undefined && !(searchView.view === "text" && querySet.length > 0)) {
-    return { kind: "error", message: "--owner is only supported by search text --query-set" };
+  if (ownerPath !== undefined && !(searchView.view === "fzf" && querySet.length > 0)) {
+    return { kind: "error", message: "--owner is only supported by search fzf --query-set" };
   }
 
+  if (codeOnly && json) {
+    return { kind: "error", message: "--code cannot be combined with --json" };
+  }
+  if (codeOnly && !(searchView.view === "owner" && itemQuery !== undefined)) {
+    return { kind: "error", message: "--code requires search owner <path> --query <symbol>" };
+  }
   if (searchView.requiresQuery) {
     const query = querySet.length > 0 ? querySet.join(",") : positionals[0];
     if (query === undefined) {
@@ -306,12 +554,14 @@ function parseSearchArgs(argv: readonly string[]): ProtocolArgs {
       kind: "search",
       view: searchView.view,
       query,
+      ...(itemQuery !== undefined ? { itemQuery } : {}),
       projectRoot,
       packagePath,
       ownerPath,
       pipes,
       querySet,
       json,
+      ...(codeOnly ? { codeOnly } : {}),
       renderMode,
     };
   }
@@ -329,8 +579,140 @@ function parseSearchArgs(argv: readonly string[]): ProtocolArgs {
     pipes: [],
     querySet: [],
     json,
+    ...(codeOnly ? { codeOnly } : {}),
     renderMode,
   };
+}
+
+function parseSearchQueryArgs(argv: readonly string[]): ProtocolArgs {
+  let fromHook: string | undefined;
+  let selector: string | undefined;
+  let intent: string | undefined;
+  let json = false;
+  let renderMode: SemanticSearchRenderMode | undefined;
+  let packagePath: string | undefined;
+  const terms: string[] = [];
+  let pipes: TypeScriptSemanticSearchPipe[] = [];
+  const positionals: string[] = [];
+  for (let index = 0; index < argv.length; index++) {
+    const arg = argv[index]!;
+    if (arg === "--from-hook") {
+      const value = argv[index + 1];
+      if (value === undefined || value.startsWith("-")) {
+        return { kind: "error", message: "--from-hook requires a hook kind" };
+      }
+      fromHook = value;
+      index += 1;
+    } else if (arg === "--selector") {
+      const value = argv[index + 1];
+      if (value === undefined || value.startsWith("-")) {
+        return { kind: "error", message: "--selector requires a selector" };
+      }
+      selector = value;
+      index += 1;
+    } else if (arg === "--intent") {
+      const value = argv[index + 1];
+      if (value === undefined || value.startsWith("-")) {
+        return { kind: "error", message: "--intent requires an intent" };
+      }
+      intent = value;
+      index += 1;
+    } else if (arg === "--term") {
+      const value = argv[index + 1];
+      if (value === undefined) return { kind: "error", message: "--term requires a value" };
+      terms.push(value);
+      index += 1;
+    } else if (arg === "--surface") {
+      const value = argv[index + 1];
+      if (value === undefined || value.startsWith("-")) {
+        return { kind: "error", message: "--surface requires owner,tests style surfaces" };
+      }
+      const parsed = parseSearchQuerySurfaces(value);
+      if (typeof parsed === "string") return { kind: "error", message: parsed };
+      pipes = parsed;
+      index += 1;
+    } else if (arg === "--json") {
+      json = true;
+    } else if (arg === "--view") {
+      const value = argv[index + 1];
+      if (!isSemanticSearchRenderMode(value)) {
+        return { kind: "error", message: "--view requires graph, hits, both, or seeds" };
+      }
+      renderMode = value;
+      index += 1;
+    } else if (arg === "--package") {
+      const value = argv[index + 1];
+      if (value === undefined || value.startsWith("-")) {
+        return { kind: "error", message: "--package requires a package path" };
+      }
+      packagePath = value;
+      index += 1;
+    } else if (arg.startsWith("-")) {
+      return { kind: "error", message: `unknown search query option: ${arg}` };
+    } else {
+      positionals.push(arg);
+    }
+  }
+  if (fromHook !== undefined && selector === undefined) {
+    return { kind: "error", message: "--from-hook requires --selector" };
+  }
+  if (terms.length === 0) {
+    return { kind: "error", message: "search query requires at least one --term" };
+  }
+  if (positionals.length > 1) {
+    return { kind: "error", message: "expected at most one PROJECT_ROOT argument" };
+  }
+  return {
+    kind: "search",
+    view: "fzf",
+    query: terms.join(","),
+    ...(fromHook !== undefined ? { fromHook } : {}),
+    ...(selector !== undefined ? { selector } : {}),
+    ...(intent !== undefined ? { intent } : {}),
+    projectRoot: positionals[0],
+    packagePath,
+    ownerPath: ownerPathFromQuerySelector(selector),
+    pipes,
+    querySet: terms,
+    json,
+    renderMode,
+  };
+}
+
+function parseSearchQuerySurfaces(value: string): TypeScriptSemanticSearchPipe[] | string {
+  const surfaces = value
+    .split(",")
+    .map((surface) => surface.trim())
+    .filter((surface) => surface.length > 0);
+  if (surfaces.length === 0) return "--surface requires at least one surface";
+  const pipes: TypeScriptSemanticSearchPipe[] = [];
+  for (const surface of surfaces) {
+    if (surface === "items" || typeScriptSemanticSearchViewDescriptor(surface) !== undefined) {
+      pipes.push(surface as TypeScriptSemanticSearchPipe);
+    } else {
+      return `unknown search query surface: ${surface}`;
+    }
+  }
+  return pipes;
+}
+
+function ownerPathFromQuerySelector(selector: string | undefined): string | undefined {
+  if (selector === undefined) return undefined;
+  if (selector.includes("*") || selector.includes("{") || selector.includes("}")) {
+    return undefined;
+  }
+  const normalized = selector.replace(/\\/gu, "/").replace(/^owner:/u, "");
+  return normalized.replace(/:\d+(?:-\d+)?$/u, "");
+}
+
+function selectorHasLineRange(
+  selector: string | undefined,
+  ownerPath: string | undefined,
+): boolean {
+  if (selector === undefined || ownerPath === undefined) return false;
+  const normalized = selector.replace(/\\/gu, "/").replace(/^owner:/u, "");
+  if (!normalized.startsWith(`${ownerPath}:`)) return false;
+  return /:\d+(?:-\d+)?$/u.test(normalized);
 }
 
 function parseSearchPipePositionals(
@@ -500,7 +882,7 @@ function prefilteredSearchRunPlan(
 }
 
 function prefilterQueryTerms(args: SearchArgs): readonly string[] {
-  if (args.view === "text") {
+  if (args.view === "fzf") {
     if (args.querySet.length > 0) return args.querySet;
     return args.query === undefined ? [] : [args.query];
   }
@@ -521,7 +903,7 @@ function isFlagLikeLiteralSearchQuery(
   arg: string,
 ): boolean {
   return (
-    view === "text" &&
+    view === "fzf" &&
     positionals.length === 0 &&
     querySet.length === 0 &&
     arg.startsWith("-") &&
@@ -535,7 +917,7 @@ function isFlagLikeLiteralSearchQuery(
 }
 
 function searchViewSupportsQuerySet(view: TypeScriptSemanticSearchView): boolean {
-  return view === "text";
+  return view === "fzf";
 }
 
 function renderAgentDoctor(projectRoot: string): string {

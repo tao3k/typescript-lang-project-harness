@@ -25,6 +25,7 @@ export function basePacket(
   packet: SemanticSearchPacketPayload,
 ): SemanticSearchPacket {
   const querySet = semanticSearchQueryTerms(options);
+  const querySetSelector = options.view === "fzf" ? "fuzzy-set" : "exact-set";
   return {
     schemaId: "agent.semantic-protocols.semantic-search-packet",
     schemaVersion: "1",
@@ -38,7 +39,8 @@ export function basePacket(
     projectRoot: report.reasoningTree.projectRoot,
     ...(report.reasoningTree.packageName ? { packageName: report.reasoningTree.packageName } : {}),
     view: options.view,
-    renderMode: options.renderMode ?? (options.view === "text" ? "hits" : "graph"),
+    renderMode:
+      options.renderMode ?? (options.view === "text" || options.view === "fzf" ? "hits" : "graph"),
     ...(options.query ? { query: options.query } : {}),
     ...(querySet.length === 0
       ? {}
@@ -47,7 +49,7 @@ export function basePacket(
           queryComposition: {
             mode: "query-set" as const,
             view: options.view,
-            selector: "exact-set" as const,
+            selector: querySetSelector,
             ...(options.queryScope === undefined ? {} : { scope: options.queryScope }),
             merge: ["nodes", "edges", "owners", "items", "hits", "nextActions", "notes"] as const,
           },
@@ -65,6 +67,8 @@ export function basePacket(
     edges: packet.edges,
     owners: packet.owners,
     ...(packet.items ? { items: packet.items } : {}),
+    ...(packet.typeSurfaces ? { typeSurfaces: packet.typeSurfaces } : {}),
+    ...(packet.semanticHandles ? { semanticHandles: packet.semanticHandles } : {}),
     hits: packet.hits,
     findings: packet.findings,
     nextActions: packet.nextActions,
@@ -100,6 +104,6 @@ function semanticSearchQueryTerms(
   return normalizedQuerySet(options.querySet).map((value) => ({
     value,
     kind: options.view === "tests" ? "path" : "text",
-    selector: "exact",
+    selector: options.view === "fzf" ? "fuzzy" : "exact",
   }));
 }

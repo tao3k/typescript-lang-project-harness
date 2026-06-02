@@ -292,7 +292,7 @@ function ownerItemNextActions(
   const command = [
     "ts-harness",
     "search",
-    "text",
+    "fzf",
     ...terms.flatMap((term) => ["--query-set", term]),
     "--owner",
     ownerPath,

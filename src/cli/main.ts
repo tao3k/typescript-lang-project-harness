@@ -9,7 +9,8 @@ import { parseProtocolArgs, runProtocolCli, type CliStreams } from "./protocol.j
 export const HELP_TEXT = `ts-harness — TypeScript semantic search and project harness
 
 Usage:
-  ts-harness search <view> ... [--json] [--package <path>] [project-root]
+  ts-harness search <view> ... [--json] [--code] [--package <path>] [project-root]
+  ts-harness query <owner-path> --term <symbol> [--term <symbol>] [--names-only | --code] [project-root]
   ts-harness check [--changed | --full] [--json] [project-root]
   ts-harness agent doctor [--json] [project-root]
   ts-harness agent guide [project-root]
@@ -18,23 +19,35 @@ SEARCH VIEWS
   search workspace          Workspace package/router index
   search prime              Project semantic-search map
   search owner <path>       Owner graph slice
+  search owner <path> items --query <symbol> [--names-only | --code]
+                             Parser-owned item query and compact code extraction
   search dependency <pkg>   NPM/external dependency usage
   search deps <pkg[/subpath][@ver][::api]>
                              Versioned dependency API usage
   search api <query>         Parser-owned exported/public API facts
   search public-external-types <pkg>
                              Public API types that expose a dependency
+  search policy <rule-id-or-alias>
+                             Provider-owned policy rule handles
   search symbol <name>      Exported symbol definitions
   search callsite <name>    Owner-level import/reexport sites
   search import <query>     Import/reexport owner edges
   search tests <owner>      Tests that import an owner
-  search text <query>       Owner-grouped path/export/source-text search
-  search text <query> owner tests
-                             Minimal final-only text -> owner -> tests pipe
-  search text --query-set <q1> --query-set <q2> [owner tests] [--owner <path>]
-                             Homogeneous text query-set with optional owner scope
+  search fzf <query>        Fuzzy lexical owner/source-text candidates
+  search fzf <query> owner tests
+                             Minimal final-only fuzzy -> owner -> tests pipe
+  search fzf --query-set <q1> --query-set <q2> [owner tests] [--owner <path>]
+                             Homogeneous fuzzy query-set with optional owner scope
   search ingest             Detect stdin shape and group hits by owner
   --package <path>          Run the selected search in a workspace package scope
+
+QUERY
+  query <owner-path> --term <symbol>
+                             Parser-owned owner item query
+  query <owner-path> --term <a> --term <b> --names-only
+                             Owner-local item discovery without code windows
+  query <owner-path> --term <symbol> --code
+                             Pure compact parser-owned code output
 
 CHECK
   check --changed           Fast lane alias; currently delegates to project check
@@ -59,12 +72,15 @@ EXAMPLES
   ts-harness search deps react/jsx-runtime@19.0.0::jsx .
   ts-harness search api OrderStatus .
   ts-harness search public-external-types react .
+  ts-harness search policy TS-AGENT-R001 owner tests .
   ts-harness search symbol OrderStatus .
   ts-harness search callsite OrderStatus .
   ts-harness search import ./order .
   ts-harness search tests src/domain/order.ts .
-  ts-harness search text OrderStatus .
-  ts-harness search text --query-set OrderStatus --query-set findOrderStatus owner tests .
+  ts-harness search fzf OrderStatus .
+  ts-harness search fzf --query-set OrderStatus --query-set findOrderStatus owner tests .
+  ts-harness query src/domain/order.ts --term findOrderStatus --names-only .
+  ts-harness query src/domain/order.ts --term findOrderStatus --code .
   rg -n "OrderStatus" src tests | ts-harness search ingest .
   ts-harness check --changed .
   ts-harness agent guide .

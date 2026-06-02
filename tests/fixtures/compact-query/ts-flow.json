@@ -1,0 +1,289 @@
+{
+  "matches": [
+    {
+      "name": "beta",
+      "kind": "function",
+      "read": "src/flow.ts:1-10",
+      "code": "export async function beta(values: string[], mapper: (value: string) => Promise<string>) { const output: string[] = []; for (const value of values) { if (value.trim() === \"\") { continue; } output.push(await mapper(value)); } return output; }",
+      "projection": {
+        "mode": "compact",
+        "syntax": "brace-block",
+        "sourceAuthority": "native-parser",
+        "sourceFingerprint": "src/flow.ts:1-10:241:d3a57dd1",
+        "losslessStructure": true,
+        "exactRead": "src/flow.ts:1-10",
+        "nodes": [
+          {
+            "id": "beta",
+            "kind": "function",
+            "role": "declaration",
+            "label": "export async function beta(values: string[], mapper: (value: string) => Promise<string>)",
+            "depth": 0,
+            "read": "src/flow.ts:1-10",
+            "flags": [
+              "mutation",
+              "loop",
+              "branch",
+              "call",
+              "continue",
+              "await",
+              "return"
+            ]
+          },
+          {
+            "id": "beta:1",
+            "parentId": "beta",
+            "kind": "const",
+            "role": "mutation",
+            "label": "output",
+            "depth": 1,
+            "read": "src/flow.ts:2-2",
+            "flags": [
+              "mutation"
+            ]
+          },
+          {
+            "id": "beta:2",
+            "parentId": "beta",
+            "kind": "for",
+            "role": "control-flow",
+            "label": "for",
+            "depth": 1,
+            "read": "src/flow.ts:3-8",
+            "flags": [
+              "loop"
+            ]
+          },
+          {
+            "id": "beta:3",
+            "parentId": "beta:2",
+            "kind": "if",
+            "role": "control-flow",
+            "label": "if",
+            "depth": 2,
+            "read": "src/flow.ts:4-6",
+            "flags": [
+              "branch"
+            ]
+          },
+          {
+            "id": "beta:4",
+            "parentId": "beta:3",
+            "kind": "call",
+            "role": "call",
+            "label": "trim",
+            "depth": 3,
+            "read": "src/flow.ts:4-4",
+            "flags": [
+              "call"
+            ]
+          },
+          {
+            "id": "beta:5",
+            "parentId": "beta:3",
+            "kind": "continue",
+            "role": "terminal",
+            "label": "continue",
+            "depth": 3,
+            "read": "src/flow.ts:5-5",
+            "flags": [
+              "continue"
+            ]
+          },
+          {
+            "id": "beta:6",
+            "parentId": "beta:2",
+            "kind": "call",
+            "role": "call",
+            "label": "push",
+            "depth": 2,
+            "read": "src/flow.ts:7-7",
+            "flags": [
+              "call"
+            ]
+          },
+          {
+            "id": "beta:7",
+            "parentId": "beta:6",
+            "kind": "await",
+            "role": "effect",
+            "label": "await",
+            "depth": 3,
+            "read": "src/flow.ts:7-7",
+            "flags": [
+              "await"
+            ]
+          },
+          {
+            "id": "beta:8",
+            "parentId": "beta:7",
+            "kind": "call",
+            "role": "call",
+            "label": "mapper",
+            "depth": 4,
+            "read": "src/flow.ts:7-7",
+            "flags": [
+              "call"
+            ]
+          },
+          {
+            "id": "beta:9",
+            "parentId": "beta",
+            "kind": "return",
+            "role": "terminal",
+            "label": "output",
+            "depth": 1,
+            "read": "src/flow.ts:9-9",
+            "flags": [
+              "return"
+            ]
+          }
+        ],
+        "omitted": [
+          {
+            "kind": "source-formatting",
+            "reason": "compact projection removes original whitespace and comments",
+            "count": 10,
+            "read": "src/flow.ts:1-10"
+          }
+        ],
+        "expandActions": [
+          {
+            "kind": "exact-read",
+            "target": "beta",
+            "read": "src/flow.ts:1-10",
+            "argv": [
+              "ts-harness",
+              "query",
+              "--from-hook",
+              "direct-source-read",
+              "--selector",
+              "src/flow.ts:1-10",
+              "."
+            ],
+            "reason": "read exact source before editing"
+          },
+          {
+            "kind": "exact-read",
+            "target": "beta:1",
+            "read": "src/flow.ts:2-2",
+            "argv": [
+              "ts-harness",
+              "query",
+              "--from-hook",
+              "direct-source-read",
+              "--selector",
+              "src/flow.ts:2-2",
+              "."
+            ],
+            "reason": "expand const node before editing"
+          },
+          {
+            "kind": "exact-read",
+            "target": "beta:2",
+            "read": "src/flow.ts:3-8",
+            "argv": [
+              "ts-harness",
+              "query",
+              "--from-hook",
+              "direct-source-read",
+              "--selector",
+              "src/flow.ts:3-8",
+              "."
+            ],
+            "reason": "expand for node before editing"
+          },
+          {
+            "kind": "exact-read",
+            "target": "beta:3",
+            "read": "src/flow.ts:4-6",
+            "argv": [
+              "ts-harness",
+              "query",
+              "--from-hook",
+              "direct-source-read",
+              "--selector",
+              "src/flow.ts:4-6",
+              "."
+            ],
+            "reason": "expand if node before editing"
+          },
+          {
+            "kind": "exact-read",
+            "target": "beta:4",
+            "read": "src/flow.ts:4-4",
+            "argv": [
+              "ts-harness",
+              "query",
+              "--from-hook",
+              "direct-source-read",
+              "--selector",
+              "src/flow.ts:4-4",
+              "."
+            ],
+            "reason": "expand call node before editing"
+          },
+          {
+            "kind": "exact-read",
+            "target": "beta:5",
+            "read": "src/flow.ts:5-5",
+            "argv": [
+              "ts-harness",
+              "query",
+              "--from-hook",
+              "direct-source-read",
+              "--selector",
+              "src/flow.ts:5-5",
+              "."
+            ],
+            "reason": "expand continue node before editing"
+          },
+          {
+            "kind": "exact-read",
+            "target": "beta:6",
+            "read": "src/flow.ts:7-7",
+            "argv": [
+              "ts-harness",
+              "query",
+              "--from-hook",
+              "direct-source-read",
+              "--selector",
+              "src/flow.ts:7-7",
+              "."
+            ],
+            "reason": "expand call node before editing"
+          },
+          {
+            "kind": "exact-read",
+            "target": "beta:9",
+            "read": "src/flow.ts:9-9",
+            "argv": [
+              "ts-harness",
+              "query",
+              "--from-hook",
+              "direct-source-read",
+              "--selector",
+              "src/flow.ts:9-9",
+              "."
+            ],
+            "reason": "expand return node before editing"
+          },
+          {
+            "kind": "owner-names",
+            "target": "src/flow.ts",
+            "argv": [
+              "ts-harness",
+              "query",
+              "--from-hook",
+              "direct-source-read",
+              "--selector",
+              "src/flow.ts",
+              "."
+            ],
+            "reason": "return owner-local item names without code windows"
+          }
+        ]
+      }
+    }
+  ]
+}

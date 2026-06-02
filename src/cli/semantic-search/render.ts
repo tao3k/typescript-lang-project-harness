@@ -50,9 +50,12 @@ export function renderSemanticSearchPacket(packet: SemanticSearchPacket): string
   for (const item of renderedItems(packet)) {
     lines.push(renderItemLine(item));
   }
+  for (const handle of packet.semanticHandles ?? []) {
+    lines.push(renderSemanticHandleLine(handle));
+  }
   for (const hit of packet.hits) {
     const fields: SemanticSearchFields = {
-      owner: hit.ownerPath,
+      ...(hit.ownerPath === hit.location.path ? {} : { owner: hit.ownerPath }),
       kind: hit.kind,
       score: hit.score,
       reason: hit.reason,
@@ -66,7 +69,8 @@ export function renderSemanticSearchPacket(packet: SemanticSearchPacket): string
   lines.push(...renderQueryCoverageLines(packet.queryCoverage ?? []));
   if (packet.view !== "workspace" && packet.view !== "prime") {
     for (const edge of packet.edges) {
-      const fields = edge.fields ? ` ${renderFields(edge.fields)}` : "";
+      const edgeFields = compactEdgeFields(edge.fields);
+      const fields = edgeFields ? ` ${renderFields(edgeFields)}` : "";
       lines.push(`|edge ${edge.from} -${edge.kind}-> ${edge.to}${fields}`.trimEnd());
     }
   }
@@ -79,7 +83,6 @@ export function renderSemanticSearchPacket(packet: SemanticSearchPacket): string
   }
   const runtimeLine = renderRuntimeCostLine(packet);
   if (runtimeLine !== undefined) lines.push(runtimeLine);
-  lines.push(...renderNextRunLines(packet.nextActions));
   for (const note of packet.notes) {
     lines.push(`|note kind=${note.kind} message=${escapeFieldValue(note.message)}`);
   }
@@ -102,6 +105,9 @@ function renderSemanticSearchSeedPacket(packet: SemanticSearchPacket): string {
   lines.push(...renderQueryCoverageLines(packet.queryCoverage ?? []));
   for (const item of renderedItems(packet)) {
     lines.push(renderItemLine(item));
+  }
+  for (const handle of packet.semanticHandles ?? []) {
+    lines.push(renderSemanticHandleLine(handle));
   }
   for (const [kind, targets] of seedGroups(packet)) {
     lines.push(`|seed ${kind}:${targets.join(",")}`);
@@ -187,7 +193,7 @@ function hitEvidenceFields(
         : "source");
   return {
     surface,
-    ...(hit.realOwner === undefined ? {} : { realOwner: hit.realOwner }),
+    ...(hit.realOwner === undefined || hit.realOwner === true ? {} : { realOwner: hit.realOwner }),
     ...(hit.fixturePath === undefined ? {} : { fixturePath: hit.fixturePath }),
     ...(hit.fixtureOwner === undefined ? {} : { fixtureOwner: hit.fixtureOwner }),
     ...(ownerRole ? { ownerRole } : {}),
@@ -211,13 +217,36 @@ function renderedItems(
 }
 
 function renderItemLine(item: NonNullable<SemanticSearchPacket["items"]>[number]): string {
+  const read = typeof item.fields.read === "string" ? item.fields.read : undefined;
+  const owner = read?.startsWith(`${item.ownerPath}:`) ? undefined : item.ownerPath;
   const fields: SemanticSearchFields = {
-    owner: item.ownerPath,
-    ...(item.location?.line === undefined ? {} : { line: item.location.line }),
+    ...(owner === undefined ? {} : { owner }),
+    ...(read !== undefined || item.location?.line === undefined
+      ? {}
+      : { line: item.location.line }),
     ...(item.location?.column === undefined ? {} : { column: item.location.column }),
     ...item.fields,
   };
   return `|item ${item.kind} ${escapeScalar(item.name)} ${renderFields(fields)}`.trimEnd();
+}
+
+function renderSemanticHandleLine(
+  handle: NonNullable<SemanticSearchPacket["semanticHandles"]>[number],
+): string {
+  const fields: SemanticSearchFields = {
+    kind: handle.kind,
+    source: handle.source,
+    title: handle.title,
+    ...(handle.ownerPath === undefined ? {} : { owner: handle.ownerPath }),
+    ...(handle.implementationOwnerPath === undefined
+      ? {}
+      : { implementationOwner: handle.implementationOwnerPath }),
+    ...(handle.testPaths === undefined ? {} : { tests: handle.testPaths }),
+    ...(handle.status === undefined ? {} : { status: handle.status }),
+    ...(handle.queryTerms === undefined ? {} : { query: handle.queryTerms }),
+    ...handle.fields,
+  };
+  return `|handle ${escapeScalar(handle.id)} ${renderFields(fields)}`.trimEnd();
 }
 
 function renderSearchSynthesis(
@@ -237,6 +266,11 @@ function renderSearchSynthesis(
       ? {}
       : { highImpactOwners: synthesis.highImpactOwners }),
     ...(synthesis.frontierOwners === undefined ? {} : { frontierOwners: synthesis.frontierOwners }),
+    ...(synthesis.editFrontier === undefined ? {} : { editFrontier: synthesis.editFrontier }),
+    ...(synthesis.testFrontier === undefined ? {} : { testFrontier: synthesis.testFrontier }),
+    ...(synthesis.windowSet === undefined
+      ? {}
+      : { windowSet: synthesis.windowSet.map((target) => renderNextActionFragment(target)) }),
     ...(synthesis.findingOwners === undefined ? {} : { findingOwners: synthesis.findingOwners }),
     ...synthesis.fields,
     ...(seedFragments.length === 0 ? {} : { seeds: seedFragments }),
@@ -299,6 +333,17 @@ function renderFields(fields: SemanticSearchFields): string {
     .join(" ");
 }
 
+function compactEdgeFields(
+  fields: SemanticSearchFields | undefined,
+): SemanticSearchFields | undefined {
+  if (fields === undefined) return undefined;
+  return Object.fromEntries(
+    Object.entries(fields).filter(
+      ([key, value]) => !((key === "typeOnly" || key === "test") && value === false),
+    ),
+  );
+}
+
 function isEmptyFieldValue(value: SemanticSearchFieldValue): boolean {
   return Array.isArray(value) && value.length === 0;
 }
@@ -343,7 +388,7 @@ function renderNextRunLines(actions: readonly SemanticSearchNextAction[]): reado
 }
 
 function renderNextActionFragment(
-  action: SemanticSearchNextAction,
+  action: RenderableActionFragment,
   contextOwnerPath?: string,
 ): string {
   const suffix =
@@ -353,4 +398,11 @@ function renderNextActionFragment(
         ? `(scope=${action.scope})`
         : "";
   return `${action.kind}:${escapeScalar(action.target)}${suffix}`;
+}
+
+interface RenderableActionFragment {
+  readonly kind: string;
+  readonly target: string;
+  readonly scope?: string;
+  readonly ownerPath?: string;
 }

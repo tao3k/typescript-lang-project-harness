@@ -107,7 +107,7 @@ test("text query-set explains fixture paths and synthesizes real owners", () => 
   const fixtureJson = runCliCapture(
     [
       "search",
-      "text",
+      "fzf",
       "--query-set",
       missingHookEvent,
       "--query-set",
@@ -133,6 +133,8 @@ test("text query-set explains fixture paths and synthesizes real owners", () => 
       readonly realOwner: boolean;
     }[];
     readonly searchSynthesis: {
+      readonly editFrontier?: readonly string[];
+      readonly testFrontier?: readonly string[];
       readonly seeds: readonly { readonly kind: string; readonly target: string }[];
     };
     readonly avoidNextActions: readonly {
@@ -187,11 +189,13 @@ test("text query-set explains fixture paths and synthesizes real owners", () => 
       (seed) => seed.kind === "owner" && seed.target === "src/cli/protocol.ts",
     ),
   );
+  assert.ok(packet.searchSynthesis.editFrontier?.includes("src/cli/protocol.ts"));
+  assert.ok(packet.searchSynthesis.testFrontier?.includes("tests/unit/cli.test.ts"));
 
   const fixtureSeeds = runCliCapture(
     [
       "search",
-      "text",
+      "fzf",
       "--query-set",
       missingHookEvent,
       "--query-set",
@@ -249,7 +253,7 @@ test("text search prefilter scopes parser input and keeps requested owner", () =
   const search = runCliCapture(
     [
       "search",
-      "text",
+      "fzf",
       "--query-set",
       "TargetNeedle",
       "--owner",
@@ -363,6 +367,8 @@ test("CLI reports root semantic-agent-hook owner for hook install and runtime", 
   const guide = runCliCapture(["agent", "guide", "."], root);
   assert.equal(guide.exitCode, 0);
   assert.match(guide.stdout, /^\[ts-harness-guide\] project=/u);
+  assert.match(guide.stdout, /ts-harness search fzf <query> owner tests --view seeds/u);
+  assert.match(guide.stdout, /ts-harness search fzf <query> owner tests --view seeds/u);
   assert.match(guide.stdout, /agent hook install\/runtime is owned by semantic-agent-hook/u);
   assert.doesNotMatch(guide.stdout, /README|SKILL|docs\/|src\/cli\/agent-hooks/u);
 

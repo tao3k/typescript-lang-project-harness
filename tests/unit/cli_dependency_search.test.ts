@@ -104,6 +104,12 @@ test("CLI searches external dependency usage", () => {
       readonly id: string;
       readonly fields: { readonly confirmed?: number; readonly possible?: number };
     }[];
+    readonly typeSurfaces: readonly {
+      readonly package?: string;
+      readonly role: string;
+      readonly carrier?: { readonly name?: string; readonly external?: boolean };
+      readonly fields: { readonly confidence?: string };
+    }[];
     readonly hits: readonly {
       readonly reason: string;
       readonly fields?: {
@@ -117,6 +123,7 @@ test("CLI searches external dependency usage", () => {
   assert.equal(publicExternalTypesPacket.view, "public-external-types");
   assert.equal(publicExternalTypesPacket.header.fields.package, "react");
   assert.ok((publicExternalTypesPacket.header.fields.hit ?? 0) >= 2);
+  assert.ok(Array.isArray(publicExternalTypesPacket.typeSurfaces));
   assert.ok(
     publicExternalTypesPacket.nodes.some(
       (node) =>
@@ -135,12 +142,30 @@ test("CLI searches external dependency usage", () => {
     ),
   );
   assert.ok(
+    publicExternalTypesPacket.typeSurfaces.some(
+      (surface) =>
+        surface.package === "react" &&
+        surface.role === "api-input" &&
+        surface.carrier?.name === 'import("react").ReactNode' &&
+        surface.carrier.external === true,
+    ),
+  );
+  assert.ok(
     publicExternalTypesPacket.hits.some(
       (hit) =>
         hit.reason === "possible-public-external-type" &&
         hit.fields?.dependency === "react" &&
         hit.fields.confidence === "possible" &&
         hit.fields.typeText === "ReactNode",
+    ),
+  );
+  assert.ok(
+    publicExternalTypesPacket.typeSurfaces.some(
+      (surface) =>
+        surface.package === "react" &&
+        surface.role === "api-input" &&
+        surface.carrier?.name === "ReactNode" &&
+        surface.fields.confidence === "possible",
     ),
   );
 

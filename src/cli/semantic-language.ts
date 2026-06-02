@@ -9,8 +9,29 @@ export const SEMANTIC_LANGUAGE_PROTOCOL_ID = "agent.semantic-protocols.semantic-
 export const SEMANTIC_LANGUAGE_PROTOCOL_VERSION = "1" as const;
 export const SEMANTIC_SEARCH_PACKET_SCHEMA_ID =
   "agent.semantic-protocols.semantic-search-packet" as const;
+export const SEMANTIC_QUERY_PACKET_SCHEMA_ID =
+  "agent.semantic-protocols.semantic-query-packet" as const;
+export const SEMANTIC_READ_PACKET_SCHEMA_ID =
+  "agent.semantic-protocols.semantic-read-packet" as const;
+export const SEMANTIC_GRAPH_SCHEMA_ID = "agent.semantic-protocols.semantic-graph" as const;
+export const SEMANTIC_VERIFICATION_RECEIPT_SCHEMA_ID =
+  "agent.semantic-protocols.semantic-verification-receipt" as const;
+export const SEMANTIC_BEHAVIOR_SNAPSHOT_SCHEMA_ID =
+  "agent.semantic-protocols.semantic-behavior-snapshot" as const;
+export const SEMANTIC_DETERMINISM_READINESS_SCHEMA_ID =
+  "agent.semantic-protocols.semantic-determinism-readiness" as const;
+export const SEMANTIC_FORMAL_PROOF_PILOT_SCHEMA_ID =
+  "agent.semantic-protocols.semantic-formal-proof-pilot" as const;
+export const SEMANTIC_REVIEW_PACKET_SCHEMA_ID =
+  "agent.semantic-protocols.semantic-review-packet" as const;
+export const SEMANTIC_EVIDENCE_GRAPH_SCHEMA_ID =
+  "agent.semantic-protocols.semantic-evidence-graph" as const;
+export const SEMANTIC_ASSURANCE_CASE_SCHEMA_ID =
+  "agent.semantic-protocols.semantic-assurance-case" as const;
 export const TYPE_SCRIPT_CAPABILITIES_SCHEMA_ID =
   "agent.semantic-protocols.languages.typescript.ts-harness.capabilities" as const;
+const SEMANTIC_TYPE_SURFACE_SCHEMA_ID = "agent.semantic-protocols.semantic-type-surface" as const;
+const SEMANTIC_HANDLE_SCHEMA_ID = "agent.semantic-protocols.semantic-handle" as const;
 export const TYPE_SCRIPT_LANGUAGE_ID = "typescript" as const;
 export const TYPE_SCRIPT_PROVIDER_ID = "ts-harness" as const;
 export const TYPE_SCRIPT_BINARY = "ts-harness" as const;
@@ -26,14 +47,16 @@ export type TypeScriptSemanticSearchView =
   | "docs"
   | "api"
   | "public-external-types"
+  | "policy"
   | "symbol"
   | "callsite"
   | "import"
   | "tests"
-  | "text"
+  | "fzf"
   | "ingest";
 export type TypeScriptSemanticSearchPipe = TypeScriptSemanticSearchView | "items";
 export type TypeScriptSemanticSearchMethod = `search/${TypeScriptSemanticSearchView}`;
+export type TypeScriptSemanticQueryMethod = "query/owner-items" | "query/direct-source-read";
 
 export const TYPE_SCRIPT_SEARCH_VIEW_DESCRIPTORS = [
   searchView("workspace", {
@@ -55,7 +78,20 @@ export const TYPE_SCRIPT_SEARCH_VIEW_DESCRIPTORS = [
       typeScriptCapability("parser-visible-module-owner-search"),
       typeScriptCapability("test-owner-search"),
       semanticCapability("path-owner-fallback"),
+      typeScriptCapability("owner-item-query"),
+      typeScriptCapability("owner-item-code-projection"),
+      typeScriptCapability("owner-top-items-fallback"),
     ],
+    fallbacks: [
+      {
+        name: "owner-top-items",
+        trigger: "item-query-miss",
+        appliesToPipes: ["items"],
+        maxItems: 4,
+      },
+    ],
+    outputModes: ["compact", "json", "code"],
+    input: "search owner <path> [items] [--query <symbol-or-a|b|c>] [--code]",
     ingestRequiredFor: [typeScriptIngestSurface("non-parser-path")],
   }),
   searchView("dependency", {
@@ -106,6 +142,18 @@ export const TYPE_SCRIPT_SEARCH_VIEW_DESCRIPTORS = [
       typeScriptCapability("public-api-type-text-search"),
     ],
   }),
+  searchView("policy", {
+    requiresQuery: true,
+    acceptsStdin: false,
+    acceptedPipes: ["owner", "tests"],
+    capabilities: [
+      semanticCapability("policy-rule-handle-search"),
+      typeScriptCapability("typescript-project-policy-rule-handle-search"),
+      typeScriptCapability("typescript-agent-policy-rule-handle-search"),
+      typeScriptCapability("typescript-extension-policy-rule-handle-search"),
+    ],
+    input: "search policy <rule-id-or-alias> [owner tests]",
+  }),
   searchView("symbol", {
     requiresQuery: true,
     acceptsStdin: false,
@@ -126,17 +174,18 @@ export const TYPE_SCRIPT_SEARCH_VIEW_DESCRIPTORS = [
     acceptsStdin: false,
     capabilities: [typeScriptCapability("test-owner-search")],
   }),
-  searchView("text", {
+  searchView("fzf", {
     requiresQuery: true,
     acceptsStdin: false,
     acceptedPipes: ["owner", "tests"],
     supportsQuerySet: true,
-    acceptedQuerySetSelectors: ["exact-set"],
+    acceptedQuerySetSelectors: ["fuzzy-set"],
     querySetScopes: ["project", "owner"],
+    clients: ["semantic-agent-hook"],
+    input: "search fzf <query> [owner|tests...] or --query-set TERM [--query-set TERM...]",
     capabilities: [
-      semanticCapability("owner-path-text-search"),
-      typeScriptCapability("export-text-search"),
-      typeScriptCapability("parser-visible-source-text-search"),
+      semanticCapability("finder-fuzzy-candidate-search"),
+      typeScriptCapability("parser-visible-source-fuzzy-search"),
     ],
     ingestRequiredFor: [
       typeScriptIngestSurface("non-parser-text"),
@@ -160,13 +209,16 @@ export const TYPE_SCRIPT_SEARCH_METHODS = TYPE_SCRIPT_SEARCH_VIEW_DESCRIPTORS.ma
 );
 
 export const TYPE_SCRIPT_CHECK_METHODS = ["check/changed", "check/full"] as const;
+export const TYPE_SCRIPT_QUERY_METHODS = ["query/owner-items", "query/direct-source-read"] as const;
 export const TYPE_SCRIPT_AGENT_METHODS = ["agent/doctor", "agent/guide"] as const;
 
 export type TypeScriptSemanticLanguageMethod =
   | TypeScriptSemanticSearchMethod
+  | TypeScriptSemanticQueryMethod
   | (typeof TYPE_SCRIPT_CHECK_METHODS)[number]
   | (typeof TYPE_SCRIPT_AGENT_METHODS)[number];
-export type SemanticLanguageCommand = "search" | "check" | "agent";
+export type SemanticLanguageCommand = "search" | "query" | "check" | "agent";
+export type SemanticLanguageOutputMode = "compact" | "json" | "code" | "names" | "read-packet";
 export type SemanticLanguageCapabilityNamespace = "semantic" | typeof TYPE_SCRIPT_LANGUAGE_ID;
 
 export interface SemanticLanguageCapabilityDescriptor {
@@ -210,16 +262,30 @@ export interface SemanticLanguageMethodDescriptor {
   readonly acceptsStdin?: boolean;
   readonly supportsPackageScope?: boolean;
   readonly supportsQuerySet?: boolean;
-  readonly acceptedQuerySetSelectors?: readonly ("exact-set" | "prefix-set" | "stdin-path-set")[];
+  readonly acceptedQuerySetSelectors?: readonly (
+    | "exact-set"
+    | "prefix-set"
+    | "fuzzy-set"
+    | "stdin-path-set"
+  )[];
   readonly querySetScopes?: readonly ("project" | "package" | "owner")[];
   readonly acceptedPipes?: readonly TypeScriptSemanticSearchPipe[];
   readonly capabilities?: readonly SemanticLanguageCapabilityDescriptor[];
   readonly ingestRequiredFor?: readonly SemanticLanguageIngestSurfaceDescriptor[];
+  readonly fallbacks?: readonly SemanticLanguageFallbackDescriptor[];
   readonly clients?: readonly string[];
   readonly requiredOptions?: readonly string[];
   readonly input?: string;
+  readonly outputModes?: readonly SemanticLanguageOutputMode[];
   readonly supportsJson: boolean;
   readonly supportsCompact: boolean;
+}
+
+export interface SemanticLanguageFallbackDescriptor {
+  readonly name: string;
+  readonly trigger: "query-miss" | "item-query-miss" | "path-only-owner";
+  readonly appliesToPipes?: readonly TypeScriptSemanticSearchPipe[];
+  readonly maxItems?: number;
 }
 
 export interface TypeScriptSemanticSearchViewDescriptor {
@@ -230,11 +296,21 @@ export interface TypeScriptSemanticSearchViewDescriptor {
   readonly acceptsStdin: boolean;
   readonly supportsPackageScope: true;
   readonly supportsQuerySet?: boolean;
-  readonly acceptedQuerySetSelectors?: readonly ("exact-set" | "prefix-set" | "stdin-path-set")[];
+  readonly acceptedQuerySetSelectors?: readonly (
+    | "exact-set"
+    | "prefix-set"
+    | "fuzzy-set"
+    | "stdin-path-set"
+  )[];
   readonly querySetScopes?: readonly ("project" | "package" | "owner")[];
   readonly acceptedPipes?: readonly TypeScriptSemanticSearchPipe[];
   readonly capabilities: readonly SemanticLanguageCapabilityDescriptor[];
   readonly ingestRequiredFor?: readonly SemanticLanguageIngestSurfaceDescriptor[];
+  readonly fallbacks?: readonly SemanticLanguageFallbackDescriptor[];
+  readonly clients?: readonly string[];
+  readonly requiredOptions?: readonly string[];
+  readonly input?: string;
+  readonly outputModes?: readonly SemanticLanguageOutputMode[];
 }
 
 export interface SemanticLanguageSchemaRegistration {
@@ -265,6 +341,7 @@ export function typeScriptSemanticLanguageRegistration(): SemanticLanguageRegist
     displayName: "TypeScript",
     methods: [
       ...TYPE_SCRIPT_SEARCH_METHODS,
+      ...TYPE_SCRIPT_QUERY_METHODS,
       ...TYPE_SCRIPT_CHECK_METHODS,
       ...TYPE_SCRIPT_AGENT_METHODS,
     ],
@@ -274,6 +351,61 @@ export function typeScriptSemanticLanguageRegistration(): SemanticLanguageRegist
         schemaId: SEMANTIC_SEARCH_PACKET_SCHEMA_ID,
         schemaVersion: "1",
         path: "schemas/semantic-search-packet.v1.schema.json",
+      },
+      {
+        schemaId: SEMANTIC_QUERY_PACKET_SCHEMA_ID,
+        schemaVersion: "1",
+        path: "schemas/semantic-query-packet.v1.schema.json",
+      },
+      {
+        schemaId: SEMANTIC_READ_PACKET_SCHEMA_ID,
+        schemaVersion: "1",
+        path: "schemas/semantic-read-packet.v1.schema.json",
+      },
+      {
+        schemaId: SEMANTIC_GRAPH_SCHEMA_ID,
+        schemaVersion: "1",
+        path: "schemas/semantic-graph.v1.schema.json",
+      },
+      {
+        schemaId: SEMANTIC_VERIFICATION_RECEIPT_SCHEMA_ID,
+        schemaVersion: "1",
+        path: "schemas/semantic-verification-receipt.v1.schema.json",
+      },
+      {
+        schemaId: SEMANTIC_BEHAVIOR_SNAPSHOT_SCHEMA_ID,
+        schemaVersion: "1",
+        path: "schemas/semantic-behavior-snapshot.v1.schema.json",
+      },
+      {
+        schemaId: SEMANTIC_DETERMINISM_READINESS_SCHEMA_ID,
+        schemaVersion: "1",
+        path: "schemas/semantic-determinism-readiness.v1.schema.json",
+      },
+      {
+        schemaId: SEMANTIC_FORMAL_PROOF_PILOT_SCHEMA_ID,
+        schemaVersion: "1",
+        path: "schemas/semantic-formal-proof-pilot.v1.schema.json",
+      },
+      {
+        schemaId: SEMANTIC_REVIEW_PACKET_SCHEMA_ID,
+        schemaVersion: "1",
+        path: "schemas/semantic-review-packet.v1.schema.json",
+      },
+      {
+        schemaId: SEMANTIC_EVIDENCE_GRAPH_SCHEMA_ID,
+        schemaVersion: "1",
+        path: "schemas/semantic-evidence-graph.v1.schema.json",
+      },
+      {
+        schemaId: SEMANTIC_ASSURANCE_CASE_SCHEMA_ID,
+        schemaVersion: "1",
+        path: "schemas/semantic-assurance-case.v1.schema.json",
+      },
+      {
+        schemaId: SEMANTIC_TYPE_SURFACE_SCHEMA_ID,
+        schemaVersion: "1",
+        path: "schemas/semantic-type-surface.v1.schema.json",
       },
       {
         schemaId: SEMANTIC_LANGUAGE_REGISTRY_ID,
@@ -303,10 +435,33 @@ function typeScriptSemanticLanguageMethodDescriptors(): readonly SemanticLanguag
   return [
     ...TYPE_SCRIPT_SEARCH_VIEW_DESCRIPTORS.map((descriptor) => ({
       ...descriptor,
-      outputSchemaIds: [SEMANTIC_SEARCH_PACKET_SCHEMA_ID],
+      outputSchemaIds: searchOutputSchemaIds(descriptor.view),
       supportsJson: true,
       supportsCompact: true,
     })),
+    {
+      method: "query/owner-items" as const,
+      command: "query" as const,
+      input: "owner-path",
+      requiredOptions: ["--term"],
+      outputSchemaIds: [SEMANTIC_QUERY_PACKET_SCHEMA_ID],
+      supportsCompact: true,
+      supportsJson: true,
+      supportsQuerySet: true,
+      acceptedQuerySetSelectors: ["exact-set"],
+      querySetScopes: ["owner"],
+      outputModes: ["compact", "json", "code", "names"],
+    },
+    {
+      method: "query/direct-source-read" as const,
+      command: "query" as const,
+      input: "owner-path",
+      requiredOptions: ["--from-hook", "--selector"],
+      outputSchemaIds: [SEMANTIC_QUERY_PACKET_SCHEMA_ID, SEMANTIC_READ_PACKET_SCHEMA_ID],
+      supportsCompact: true,
+      supportsJson: true,
+      outputModes: ["compact", "json", "names", "read-packet"],
+    },
     ...TYPE_SCRIPT_CHECK_METHODS.map((method) => ({
       method,
       command: "check" as const,
@@ -329,6 +484,14 @@ function typeScriptSemanticLanguageMethodDescriptors(): readonly SemanticLanguag
   ];
 }
 
+function searchOutputSchemaIds(view: TypeScriptSemanticSearchView): readonly string[] {
+  return view === "public-external-types"
+    ? [SEMANTIC_SEARCH_PACKET_SCHEMA_ID, SEMANTIC_TYPE_SURFACE_SCHEMA_ID]
+    : view === "policy"
+      ? [SEMANTIC_SEARCH_PACKET_SCHEMA_ID, SEMANTIC_HANDLE_SCHEMA_ID]
+      : [SEMANTIC_SEARCH_PACKET_SCHEMA_ID];
+}
+
 function searchView<const View extends string>(
   view: View,
   options: {
@@ -336,10 +499,20 @@ function searchView<const View extends string>(
     readonly acceptsStdin: boolean;
     readonly acceptedPipes?: readonly TypeScriptSemanticSearchPipe[];
     readonly supportsQuerySet?: boolean;
-    readonly acceptedQuerySetSelectors?: readonly ("exact-set" | "prefix-set" | "stdin-path-set")[];
+    readonly acceptedQuerySetSelectors?: readonly (
+      | "exact-set"
+      | "prefix-set"
+      | "fuzzy-set"
+      | "stdin-path-set"
+    )[];
     readonly querySetScopes?: readonly ("project" | "package" | "owner")[];
     readonly capabilities: readonly SemanticLanguageCapabilityDescriptor[];
     readonly ingestRequiredFor?: readonly SemanticLanguageIngestSurfaceDescriptor[];
+    readonly fallbacks?: readonly SemanticLanguageFallbackDescriptor[];
+    readonly clients?: readonly string[];
+    readonly requiredOptions?: readonly string[];
+    readonly input?: string;
+    readonly outputModes?: readonly SemanticLanguageOutputMode[];
   },
 ): {
   readonly method: `search/${View}`;
@@ -349,11 +522,21 @@ function searchView<const View extends string>(
   readonly acceptsStdin: boolean;
   readonly supportsPackageScope: true;
   readonly supportsQuerySet?: boolean;
-  readonly acceptedQuerySetSelectors?: readonly ("exact-set" | "prefix-set" | "stdin-path-set")[];
+  readonly acceptedQuerySetSelectors?: readonly (
+    | "exact-set"
+    | "prefix-set"
+    | "fuzzy-set"
+    | "stdin-path-set"
+  )[];
   readonly querySetScopes?: readonly ("project" | "package" | "owner")[];
   readonly acceptedPipes?: readonly TypeScriptSemanticSearchPipe[];
   readonly capabilities: readonly SemanticLanguageCapabilityDescriptor[];
   readonly ingestRequiredFor?: readonly SemanticLanguageIngestSurfaceDescriptor[];
+  readonly fallbacks?: readonly SemanticLanguageFallbackDescriptor[];
+  readonly clients?: readonly string[];
+  readonly requiredOptions?: readonly string[];
+  readonly input?: string;
+  readonly outputModes?: readonly SemanticLanguageOutputMode[];
 } {
   return {
     method: semanticSearchMethod(view),

@@ -13,7 +13,7 @@ import type {
 } from "../../model.js";
 import { edgeFact } from "./facts.js";
 import { compareHitsByRecency } from "./recency.js";
-import { sourceTextHits } from "./source-text.js";
+import { fuzzySourceTextHits, fuzzyTextMatch, sourceTextHits } from "./source-text.js";
 import { isTestOwnerPath } from "./test-path.js";
 import type { SemanticSearchEdge, SemanticSearchHit, SemanticSearchSurfaceKind } from "./types.js";
 import { MAX_IMPORT_HITS, MAX_SYMBOL_HITS, MAX_TEXT_HITS } from "./types.js";
@@ -47,6 +47,44 @@ export function textHits(
   return hits.sort((left, right) => compareHits(report, left, right)).slice(0, MAX_TEXT_HITS);
 }
 
+export function fuzzyTextHits(
+  report: TypeScriptHarnessReport,
+  query: string,
+): readonly SemanticSearchHit[] {
+  const needle = query.trim().toLowerCase();
+  if (needle === "") return [];
+  const hits: SemanticSearchHit[] = [];
+  for (const branch of report.reasoningTree.ownerBranches) {
+    const rel = relPath(report, branch.path);
+    const pathMatch = fuzzyTextMatch(rel, needle);
+    const exportMatches = branch.exportNames
+      .map((name) => ({ name, match: fuzzyTextMatch(name, needle) }))
+      .filter(
+        (
+          entry,
+        ): entry is {
+          readonly name: string;
+          readonly match: { readonly score: number; readonly column: number };
+        } => entry.match !== undefined,
+      )
+      .sort((left, right) => right.match.score - left.match.score);
+    if (pathMatch === undefined && exportMatches.length === 0) continue;
+    hits.push({
+      kind: exportMatches.length > 0 ? "export" : "path",
+      ownerPath: rel,
+      ...(exportMatches[0] ? { symbol: exportMatches[0].name } : {}),
+      location: { path: rel },
+      score: Math.max(exportMatches[0]?.match.score ?? 0, pathMatch?.score ?? 0),
+      reason: exportMatches.length > 0 ? "export-name-fuzzy" : "path-fuzzy",
+      surface: ownerSurface(rel),
+      realOwner: true,
+      fields: { matches: exportMatches.slice(0, 6).map((entry) => entry.name), matchMode: "fuzzy" },
+    });
+  }
+  hits.push(...fuzzySourceTextHits(report, query));
+  return hits.sort((left, right) => compareHits(report, left, right)).slice(0, MAX_TEXT_HITS);
+}
+
 export function textQuerySetHits(
   report: TypeScriptHarnessReport,
   queryTerms: readonly string[],
@@ -67,6 +105,21 @@ export function textQueryHitsByTerm(
     queryTerms.map((queryTerm) => [
       queryTerm,
       textHits(report, queryTerm).filter(
+        (hit) => ownerScope === undefined || hit.ownerPath === ownerScope,
+      ),
+    ]),
+  );
+}
+
+export function fuzzyTextQueryHitsByTerm(
+  report: TypeScriptHarnessReport,
+  queryTerms: readonly string[],
+  ownerScope: string | undefined,
+): ReadonlyMap<string, readonly SemanticSearchHit[]> {
+  return new Map(
+    queryTerms.map((queryTerm) => [
+      queryTerm,
+      fuzzyTextHits(report, queryTerm).filter(
         (hit) => ownerScope === undefined || hit.ownerPath === ownerScope,
       ),
     ]),

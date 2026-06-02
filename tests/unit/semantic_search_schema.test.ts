@@ -5,7 +5,12 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
-import { runCli } from "../../src/cli/main.js";
+import { runCliCapture } from "./cli_helpers.js";
+import {
+  expectedSearchCapabilities,
+  expectedSearchIngestRequiredFor,
+} from "./semantic_search_registry_expectations.js";
+import { assertSemanticHandles, assertTypeSurfaces } from "./semantic_search_schema_assertions.js";
 
 type JsonObject = Record<string, unknown>;
 
@@ -17,11 +22,12 @@ const TYPE_SCRIPT_SEARCH_VIEWS = [
   "deps",
   "api",
   "public-external-types",
+  "policy",
   "symbol",
   "callsite",
   "import",
   "tests",
-  "text",
+  "fzf",
   "ingest",
 ] as const;
 
@@ -64,11 +70,12 @@ test("semantic-search JSON packets conform to the shared schema envelope", () =>
     jsonPacket(root, ["search", "deps", "react::jsx", "--json", "."]),
     jsonPacket(root, ["search", "api", "findOrderStatus", "--json", "."]),
     jsonPacket(root, ["search", "public-external-types", "react", "--json", "."]),
+    jsonPacket(root, ["search", "policy", "TS-AGENT-R001", "--json", "."]),
     jsonPacket(root, ["search", "symbol", "findOrderStatus", "--json", "."]),
     jsonPacket(root, ["search", "callsite", "findOrderStatus", "--json", "."]),
     jsonPacket(root, ["search", "import", "./index", "--json", "."]),
     jsonPacket(root, ["search", "tests", "src/index.ts", "--json", "."]),
-    jsonPacket(root, ["search", "text", "OrderStatus", "--json", "."]),
+    jsonPacket(root, ["search", "fzf", "OrderStatus", "--json", "."]),
     jsonPacket(root, ["search", "ingest", "--json", "."], "src/index.ts:1:findOrderStatus\n"),
   ];
 
@@ -90,7 +97,7 @@ test("semantic-search JSON packets conform to the shared schema envelope", () =>
 
   const querySetPacket = jsonPacket(root, [
     "search",
-    "text",
+    "fzf",
     "--query-set",
     "OrderStatus",
     "--query-set",
@@ -182,12 +189,15 @@ test("semantic language registry JSON documents the TypeScript provider identity
     "search/docs",
     "search/api",
     "search/public-external-types",
+    "search/policy",
     "search/symbol",
     "search/callsite",
     "search/import",
     "search/tests",
-    "search/text",
+    "search/fzf",
     "search/ingest",
+    "query/owner-items",
+    "query/direct-source-read",
     "check/changed",
     "check/full",
     "agent/doctor",
@@ -212,13 +222,24 @@ test("semantic language registry JSON documents the TypeScript provider identity
     assertSchemaObject(descriptor, methodDescriptorSchema, String(descriptor.method));
     assert.equal(descriptor.supportsJson, descriptor.method === "agent/guide" ? false : true);
     assert.equal(descriptor.supportsCompact, true);
-    assert.ok(["search", "check", "agent"].includes(String(descriptor.command)));
+    assert.ok(["search", "query", "check", "agent"].includes(String(descriptor.command)));
     if (String(descriptor.method).startsWith("search/")) {
       assert.equal(descriptor.command, "search");
       assert.equal(descriptor.view, String(descriptor.method).slice("search/".length));
-      assert.deepEqual(descriptor.outputSchemaIds, [
-        "agent.semantic-protocols.semantic-search-packet",
-      ]);
+      assert.deepEqual(
+        descriptor.outputSchemaIds,
+        String(descriptor.method) === "search/public-external-types"
+          ? [
+              "agent.semantic-protocols.semantic-search-packet",
+              "agent.semantic-protocols.semantic-type-surface",
+            ]
+          : String(descriptor.method) === "search/policy"
+            ? [
+                "agent.semantic-protocols.semantic-search-packet",
+                "agent.semantic-protocols.semantic-handle",
+              ]
+            : ["agent.semantic-protocols.semantic-search-packet"],
+      );
       assert.equal(
         descriptor.requiresQuery,
         [
@@ -228,11 +249,12 @@ test("semantic language registry JSON documents the TypeScript provider identity
           "search/docs",
           "search/api",
           "search/public-external-types",
+          "search/policy",
           "search/symbol",
           "search/callsite",
           "search/import",
           "search/tests",
-          "search/text",
+          "search/fzf",
         ].includes(String(descriptor.method)),
       );
       assert.equal(descriptor.acceptsStdin, descriptor.method === "search/ingest");
@@ -241,7 +263,7 @@ test("semantic language registry JSON documents the TypeScript provider identity
         descriptor.acceptedPipes === undefined
           ? []
           : stringArray(descriptor.acceptedPipes, `${String(descriptor.method)} acceptedPipes`),
-        String(descriptor.method) === "search/text"
+        String(descriptor.method) === "search/fzf" || String(descriptor.method) === "search/policy"
           ? ["owner", "tests"]
           : String(descriptor.method) === "search/owner"
             ? ["items"]
@@ -249,7 +271,10 @@ test("semantic language registry JSON documents the TypeScript provider identity
       );
       assert.equal(
         descriptor.supportsQuerySet,
-        String(descriptor.method) === "search/text" ? true : undefined,
+        String(descriptor.method) === "search/fzf" ||
+          String(descriptor.method) === "query/owner-items"
+          ? true
+          : undefined,
       );
       assert.deepEqual(
         descriptor.acceptedQuerySetSelectors === undefined
@@ -258,13 +283,21 @@ test("semantic language registry JSON documents the TypeScript provider identity
               descriptor.acceptedQuerySetSelectors,
               `${String(descriptor.method)} acceptedQuerySetSelectors`,
             ),
-        String(descriptor.method) === "search/text" ? ["exact-set"] : [],
+        String(descriptor.method) === "search/fzf"
+          ? ["fuzzy-set"]
+          : String(descriptor.method) === "query/owner-items"
+            ? ["exact-set"]
+            : [],
       );
       assert.deepEqual(
         descriptor.querySetScopes === undefined
           ? []
           : stringArray(descriptor.querySetScopes, `${String(descriptor.method)} querySetScopes`),
-        String(descriptor.method) === "search/text" ? ["project", "owner"] : [],
+        String(descriptor.method) === "search/fzf"
+          ? ["project", "owner"]
+          : String(descriptor.method) === "query/owner-items"
+            ? ["owner"]
+            : [],
       );
       const capabilities = array(
         descriptor.capabilities,
@@ -306,6 +339,41 @@ test("semantic language registry JSON documents the TypeScript provider identity
         );
       }
       assert.deepEqual(surfaces, expectedSearchIngestRequiredFor(String(descriptor.method)));
+    } else if (String(descriptor.method).startsWith("query/")) {
+      const method = String(descriptor.method);
+      assert.equal(descriptor.command, "query");
+      assert.equal(Object.hasOwn(descriptor, "view"), false);
+      assert.deepEqual(
+        descriptor.outputSchemaIds,
+        method === "query/direct-source-read"
+          ? [
+              "agent.semantic-protocols.semantic-query-packet",
+              "agent.semantic-protocols.semantic-read-packet",
+            ]
+          : ["agent.semantic-protocols.semantic-query-packet"],
+      );
+      assert.equal(descriptor.input, "owner-path");
+      assert.deepEqual(
+        descriptor.requiredOptions,
+        method === "query/direct-source-read" ? ["--from-hook", "--selector"] : ["--term"],
+      );
+      assert.deepEqual(
+        descriptor.outputModes,
+        method === "query/direct-source-read"
+          ? ["compact", "json", "names", "read-packet"]
+          : ["compact", "json", "code", "names"],
+      );
+      assert.equal(descriptor.supportsQuerySet, method === "query/owner-items" ? true : undefined);
+      assert.deepEqual(
+        descriptor.acceptedQuerySetSelectors === undefined
+          ? []
+          : descriptor.acceptedQuerySetSelectors,
+        method === "query/owner-items" ? ["exact-set"] : [],
+      );
+      assert.deepEqual(
+        descriptor.querySetScopes === undefined ? [] : descriptor.querySetScopes,
+        method === "query/owner-items" ? ["owner"] : [],
+      );
     } else if (String(descriptor.method).startsWith("check/")) {
       assert.equal(descriptor.command, "check");
       assert.equal(Object.hasOwn(descriptor, "view"), false);
@@ -338,23 +406,71 @@ test("semantic language registry JSON documents the TypeScript provider identity
       assert.equal(Object.hasOwn(descriptor, "input"), false);
     }
   }
-  const schemas = array(language.schemas, "registry.languages[0].schemas");
-  const semanticSearchSchema = record(schemas[0], "registry.languages[0].schemas[0]");
-  assert.equal(semanticSearchSchema.schemaId, "agent.semantic-protocols.semantic-search-packet");
-  assert.equal(semanticSearchSchema.schemaVersion, "1");
-  assert.equal(semanticSearchSchema.path, "schemas/semantic-search-packet.v1.schema.json");
-  const registrySchema = record(schemas[1], "registry.languages[0].schemas[1]");
-  assert.equal(registrySchema.schemaId, "agent.semantic-protocols.semantic-language-registry");
-  assert.equal(registrySchema.schemaVersion, "1");
-  assert.equal(registrySchema.path, "schemas/semantic-language-registry.v1.schema.json");
-  const typeScriptCapabilitiesSchema = record(schemas[2], "registry.languages[0].schemas[2]");
-  assert.equal(
-    typeScriptCapabilitiesSchema.schemaId,
-    "agent.semantic-protocols.languages.typescript.ts-harness.capabilities",
+  const schemas = array(language.schemas, "registry.languages[0].schemas").map((schema, index) =>
+    record(schema, `registry.languages[0].schemas[${index}]`),
   );
-  assert.equal(typeScriptCapabilitiesSchema.schemaVersion, "1");
-  assert.equal(
-    typeScriptCapabilitiesSchema.path,
+  const schemasById = new Map(schemas.map((schema) => [String(schema.schemaId), schema]));
+  assert.equal(schemasById.size, schemas.length, "registry schemas must not duplicate schemaId");
+  const assertRegisteredSchema = (schemaId: string, schemaPath: string): void => {
+    const schemaRecord = record(schemasById.get(schemaId), `registry schema ${schemaId}`);
+    assert.equal(schemaRecord.schemaId, schemaId);
+    assert.equal(schemaRecord.schemaVersion, "1");
+    assert.equal(schemaRecord.path, schemaPath);
+  };
+  assertRegisteredSchema(
+    "agent.semantic-protocols.semantic-search-packet",
+    "schemas/semantic-search-packet.v1.schema.json",
+  );
+  assertRegisteredSchema(
+    "agent.semantic-protocols.semantic-query-packet",
+    "schemas/semantic-query-packet.v1.schema.json",
+  );
+  assertRegisteredSchema(
+    "agent.semantic-protocols.semantic-read-packet",
+    "schemas/semantic-read-packet.v1.schema.json",
+  );
+  assertRegisteredSchema(
+    "agent.semantic-protocols.semantic-graph",
+    "schemas/semantic-graph.v1.schema.json",
+  );
+  assertRegisteredSchema(
+    "agent.semantic-protocols.semantic-verification-receipt",
+    "schemas/semantic-verification-receipt.v1.schema.json",
+  );
+  assertRegisteredSchema(
+    "agent.semantic-protocols.semantic-behavior-snapshot",
+    "schemas/semantic-behavior-snapshot.v1.schema.json",
+  );
+  assertRegisteredSchema(
+    "agent.semantic-protocols.semantic-determinism-readiness",
+    "schemas/semantic-determinism-readiness.v1.schema.json",
+  );
+  assertRegisteredSchema(
+    "agent.semantic-protocols.semantic-formal-proof-pilot",
+    "schemas/semantic-formal-proof-pilot.v1.schema.json",
+  );
+  assertRegisteredSchema(
+    "agent.semantic-protocols.semantic-review-packet",
+    "schemas/semantic-review-packet.v1.schema.json",
+  );
+  assertRegisteredSchema(
+    "agent.semantic-protocols.semantic-evidence-graph",
+    "schemas/semantic-evidence-graph.v1.schema.json",
+  );
+  assertRegisteredSchema(
+    "agent.semantic-protocols.semantic-assurance-case",
+    "schemas/semantic-assurance-case.v1.schema.json",
+  );
+  assertRegisteredSchema(
+    "agent.semantic-protocols.semantic-type-surface",
+    "schemas/semantic-type-surface.v1.schema.json",
+  );
+  assertRegisteredSchema(
+    "agent.semantic-protocols.semantic-language-registry",
+    "schemas/semantic-language-registry.v1.schema.json",
+  );
+  assertRegisteredSchema(
+    "agent.semantic-protocols.languages.typescript.ts-harness.capabilities",
     "schemas/typescript-semantic-capabilities.v1.schema.json",
   );
 });
@@ -362,6 +478,13 @@ test("semantic language registry JSON documents the TypeScript provider identity
 test("package-local semantic schemas stay synchronized with the protocol repository", () => {
   for (const schemaFileName of [
     "semantic-search-packet.v1.schema.json",
+    "semantic-query-packet.v1.schema.json",
+    "semantic-read-packet.v1.schema.json",
+    "semantic-graph.v1.schema.json",
+    "semantic-type-surface.v1.schema.json",
+    "semantic-review-packet.v1.schema.json",
+    "semantic-evidence-graph.v1.schema.json",
+    "semantic-assurance-case.v1.schema.json",
     "semantic-language-registry.v1.schema.json",
   ]) {
     const repoSchemaPath = protocolRepositorySchemaPath(schemaFileName);
@@ -393,117 +516,16 @@ function sharedSemanticSearchSchema(): JsonObject {
   return readJson(packageSchemaPath("semantic-search-packet.v1.schema.json"));
 }
 
+function sharedSemanticTypeSurfaceSchema(): JsonObject {
+  return readJson(packageSchemaPath("semantic-type-surface.v1.schema.json"));
+}
+
+function sharedSemanticHandleSchema(): JsonObject {
+  return readJson(packageSchemaPath("semantic-handle.v1.schema.json"));
+}
+
 function sharedTypeScriptCapabilitiesSchema(): JsonObject {
   return readJson(packageSchemaPath("typescript-semantic-capabilities.v1.schema.json"));
-}
-
-function expectedSearchCapabilities(
-  method: string,
-): readonly { readonly languageId: string; readonly namespace: string; readonly name: string }[] {
-  switch (method) {
-    case "search/workspace":
-      return [semanticCapability("workspace-router")];
-    case "search/prime":
-      return [semanticCapability("package-prime-map")];
-    case "search/owner":
-      return [
-        semanticCapability("reasoning-owner-search"),
-        typeScriptCapability("parser-visible-module-owner-search"),
-        typeScriptCapability("test-owner-search"),
-        semanticCapability("path-owner-fallback"),
-      ];
-    case "search/dependency":
-      return [
-        semanticCapability("dependency-manifest-search"),
-        typeScriptCapability("dependency-local-usage-search"),
-      ];
-    case "search/deps":
-      return [
-        semanticCapability("dependency-manifest-search"),
-        typeScriptCapability("dependency-local-usage-search"),
-        semanticCapability("dependency-version-scope"),
-        typeScriptCapability("dependency-api-token-usage-search"),
-      ];
-    case "search/docs":
-      return [
-        semanticCapability("local-docs-search"),
-        semanticCapability("schema-contract-search"),
-        typeScriptCapability("local-semantic-schema-search"),
-      ];
-    case "search/api":
-      return [
-        typeScriptCapability("exported-api-shape-search"),
-        typeScriptCapability("public-function-api-shape-search"),
-        typeScriptCapability("public-data-api-shape-search"),
-        semanticCapability("dependency-version-scope"),
-      ];
-    case "search/public-external-types":
-      return [
-        semanticCapability("dependency-manifest-search"),
-        typeScriptCapability("public-external-type-search"),
-        typeScriptCapability("public-api-type-text-search"),
-      ];
-    case "search/symbol":
-      return [typeScriptCapability("symbol-export-search")];
-    case "search/callsite":
-      return [typeScriptCapability("owner-callsite-search")];
-    case "search/import":
-      return [typeScriptCapability("import-edge-search")];
-    case "search/tests":
-      return [typeScriptCapability("test-owner-search")];
-    case "search/text":
-      return [
-        semanticCapability("owner-path-text-search"),
-        typeScriptCapability("export-text-search"),
-        typeScriptCapability("parser-visible-source-text-search"),
-      ];
-    case "search/ingest":
-      return [
-        semanticCapability("external-candidate-ingest"),
-        semanticCapability("stdin-shape-detection"),
-        semanticCapability("owner-grouped-ingest"),
-      ];
-    default:
-      return [];
-  }
-}
-
-function expectedSearchIngestRequiredFor(
-  method: string,
-): readonly { readonly languageId: string; readonly namespace: string; readonly name: string }[] {
-  switch (method) {
-    case "search/owner":
-      return [typeScriptCapability("non-parser-path")];
-    case "search/text":
-      return [
-        typeScriptCapability("non-parser-text"),
-        typeScriptCapability("docs-text"),
-        typeScriptCapability("schema-json"),
-        typeScriptCapability("generated-artifact"),
-      ];
-    case "search/docs":
-      return [typeScriptCapability("external-docs")];
-    case "search/api":
-      return [typeScriptCapability("external-api-docs")];
-    default:
-      return [];
-  }
-}
-
-function semanticCapability(name: string): {
-  readonly languageId: string;
-  readonly namespace: string;
-  readonly name: string;
-} {
-  return { languageId: "typescript", namespace: "semantic", name };
-}
-
-function typeScriptCapability(name: string): {
-  readonly languageId: string;
-  readonly namespace: string;
-  readonly name: string;
-} {
-  return { languageId: "typescript", namespace: "typescript", name };
 }
 
 function sharedSemanticLanguageRegistrySchema(): JsonObject {
@@ -665,6 +687,20 @@ function assertSemanticSearchPacket(schema: JsonObject, packet: JsonObject): voi
   assertArray(packet.items, "packet.items", (item, context) =>
     assertItem(item, record(defs.item), context),
   );
+  const typeSurfaceDefs = record(sharedSemanticTypeSurfaceSchema().$defs, "type surface $defs");
+  assertTypeSurfaces(
+    packet.typeSurfaces,
+    record(typeSurfaceDefs.typeSurface, "type surface schema"),
+    record(typeSurfaceDefs.typeRef, "type ref schema"),
+    record(typeSurfaceDefs.typeMember, "type member schema"),
+    "packet.typeSurfaces",
+  );
+  const handleDefs = record(sharedSemanticHandleSchema().$defs, "semantic handle $defs");
+  assertSemanticHandles(
+    packet.semanticHandles,
+    record(handleDefs.semanticHandle, "semantic handle schema"),
+    "packet.semanticHandles",
+  );
   assertArray(packet.hits, "packet.hits", (hit, context) =>
     assertHit(hit, record(defs.hit), context),
   );
@@ -721,9 +757,18 @@ function assertSearchSynthesis(searchSynthesis: JsonObject, schema: JsonObject):
   if (searchSynthesis.outgoingOwners !== undefined) {
     assertNonNegativeInteger(searchSynthesis.outgoingOwners, "searchSynthesis.outgoingOwners");
   }
-  for (const key of ["highImpactOwners", "frontierOwners", "findingOwners"]) {
+  for (const key of [
+    "highImpactOwners",
+    "frontierOwners",
+    "editFrontier",
+    "testFrontier",
+    "findingOwners",
+  ]) {
     assertStringArray(searchSynthesis[key], `searchSynthesis.${key}`);
   }
+  assertArray(searchSynthesis.windowSet, "searchSynthesis.windowSet", (target, context) =>
+    assertWindowSetTarget(target, context),
+  );
   assertArray(searchSynthesis.seeds, "searchSynthesis.seeds", (nextAction, context) =>
     assertNextAction(nextAction, context),
   );
@@ -824,6 +869,16 @@ function assertNextAction(nextAction: JsonObject, context: string): void {
   if (nextAction.ownerPath !== undefined)
     assertString(nextAction.ownerPath, `${context}.ownerPath`);
   if (nextAction.fields !== undefined) assertFields(nextAction.fields, `${context}.fields`);
+}
+
+function assertWindowSetTarget(target: JsonObject, context: string): void {
+  assertAllowedKeys(target, ["kind", "target", "query", "reason", "ownerPath", "fields"], context);
+  assert.ok(["owner", "tests", "read"].includes(String(target.kind)), `${context}.kind`);
+  assertString(target.target, `${context}.target`);
+  if (target.query !== undefined) assertString(target.query, `${context}.query`);
+  if (target.reason !== undefined) assertString(target.reason, `${context}.reason`);
+  if (target.ownerPath !== undefined) assertString(target.ownerPath, `${context}.ownerPath`);
+  if (target.fields !== undefined) assertFields(target.fields, `${context}.fields`);
 }
 
 function assertNote(note: JsonObject, schema: JsonObject, context: string): void {
@@ -959,27 +1014,4 @@ function stringArray(value: unknown, context: string): string[] {
 function array(value: unknown, context: string): unknown[] {
   assert.ok(Array.isArray(value), `${context} must be an array`);
   return value;
-}
-
-function runCliCapture(
-  argv: readonly string[],
-  cwd: string,
-  stdin = "",
-): {
-  readonly exitCode: number;
-  readonly stdout: string;
-  readonly stderr: string;
-} {
-  let stdout = "";
-  let stderr = "";
-  const exitCode = runCli(
-    argv,
-    {
-      stdout: { write: (chunk: string) => void (stdout += chunk) },
-      stderr: { write: (chunk: string) => void (stderr += chunk) },
-      stdin,
-    },
-    cwd,
-  );
-  return { exitCode, stdout, stderr };
 }

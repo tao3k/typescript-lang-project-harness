@@ -250,20 +250,20 @@ test("CLI exposes semantic-search protocol commands", () => {
   assert.ok(packet.searchSynthesis?.highImpactOwners?.includes("src/index.ts"));
   assert.equal(packet.owners.length, 2);
 
-  const text = runCliCapture(["search", "text", "OrderStatus", "."], root);
+  const text = runCliCapture(["search", "fzf", "OrderStatus", "."], root);
   assert.equal(text.exitCode, 0);
-  assert.match(text.stdout, /^\[search-text\] /u);
+  assert.match(text.stdout, /^\[search-fzf\] /u);
   assert.match(text.stdout, /\|hit path=src\/index\.ts\b/u);
-  assert.match(text.stdout, /\bsurface=real-source\b/u);
-  assert.match(text.stdout, /\bownerRole=source\b/u);
-  assert.match(text.stdout, /\btext=.*findOrderStatus/u);
+  assert.match(text.stdout, /\bsource=parser-visible-source\b/u);
+  assert.match(text.stdout, /\brole=source\b/u);
+  assert.match(text.stdout, /\bsymbol=findOrderStatus\b/u);
 
   const textOwnerTestsPipe = runCliCapture(
-    ["search", "text", "findOrderStatus", "owner", "tests", "."],
+    ["search", "fzf", "findOrderStatus", "owner", "tests", "."],
     root,
   );
   assert.equal(textOwnerTestsPipe.exitCode, 0);
-  assert.match(textOwnerTestsPipe.stdout, /^\[search-text\] /u);
+  assert.match(textOwnerTestsPipe.stdout, /^\[search-fzf\] /u);
   assert.match(textOwnerTestsPipe.stdout, /\bpipes=owner,tests\b/u);
   assert.match(textOwnerTestsPipe.stdout, /\|owner src\/index\.ts/u);
   assert.match(textOwnerTestsPipe.stdout, /\|hit path=tests\/index\.test\.ts line=1\b/u);
@@ -273,11 +273,11 @@ test("CLI exposes semantic-search protocol commands", () => {
   );
 
   const textOwnerTestsPipeSeeds = runCliCapture(
-    ["search", "text", "findOrderStatus", "owner", "tests", "--view", "seeds", "."],
+    ["search", "fzf", "findOrderStatus", "owner", "tests", "--view", "seeds", "."],
     root,
   );
   assert.equal(textOwnerTestsPipeSeeds.exitCode, 0);
-  assert.match(textOwnerTestsPipeSeeds.stdout, /^\[search-text\] /u);
+  assert.match(textOwnerTestsPipeSeeds.stdout, /^\[search-fzf\] /u);
   assert.match(textOwnerTestsPipeSeeds.stdout, /\bpipes=owner,tests\b/u);
   assert.match(textOwnerTestsPipeSeeds.stdout, /\|seed owner:.*src\/index\.ts/u);
   assert.match(textOwnerTestsPipeSeeds.stdout, /\|seed owner:.*tests\/index\.test\.ts/u);
@@ -287,7 +287,7 @@ test("CLI exposes semantic-search protocol commands", () => {
   const textQuerySetSeeds = runCliCapture(
     [
       "search",
-      "text",
+      "fzf",
       "--query-set",
       "findOrderStatus",
       "--query-set",
@@ -301,17 +301,20 @@ test("CLI exposes semantic-search protocol commands", () => {
     root,
   );
   assert.equal(textQuerySetSeeds.exitCode, 0);
-  assert.match(textQuerySetSeeds.stdout, /^\[search-text\] /u);
+  assert.match(textQuerySetSeeds.stdout, /^\[search-fzf\] /u);
   assert.match(textQuerySetSeeds.stdout, /\bquerySet=2\b/u);
-  assert.match(textQuerySetSeeds.stdout, /\bselector=exact-set\b/u);
+  assert.match(textQuerySetSeeds.stdout, /\bselector=fuzzy-set\b/u);
   assert.match(textQuerySetSeeds.stdout, /\|seed owner:.*src\/index\.ts/u);
   assert.match(textQuerySetSeeds.stdout, /\|seed owner:.*src\/consumer\.ts/u);
   assert.match(textQuerySetSeeds.stdout, /\|seed tests:tests\/index\.test\.ts/u);
+  assert.match(textQuerySetSeeds.stdout, /\bwindowSet=[^\n]*owner:src\/index\.ts/u);
+  assert.match(textQuerySetSeeds.stdout, /\bwindowSet=[^\n]*owner:src\/consumer\.ts/u);
+  assert.match(textQuerySetSeeds.stdout, /\bwindowSet=[^\n]*tests:tests\/index\.test\.ts/u);
 
   const scopedTextQuerySetJson = runCliCapture(
     [
       "search",
-      "text",
+      "fzf",
       "--query-set",
       "findOrderStatus",
       "--query-set",
@@ -339,6 +342,9 @@ test("CLI exposes semantic-search protocol commands", () => {
       readonly ownerPath: string;
       readonly fields?: { readonly queryTerms?: readonly string[] };
     }[];
+    readonly searchSynthesis?: {
+      readonly windowSet?: readonly { readonly kind: string; readonly target: string }[];
+    };
   };
   assert.equal(scopedQuerySetPacket.query, "findOrderStatus,internalOrderToken");
   assert.deepEqual(
@@ -349,7 +355,7 @@ test("CLI exposes semantic-search protocol commands", () => {
     ],
   );
   assert.equal(scopedQuerySetPacket.queryComposition.mode, "query-set");
-  assert.equal(scopedQuerySetPacket.queryComposition.selector, "exact-set");
+  assert.equal(scopedQuerySetPacket.queryComposition.selector, "fuzzy-set");
   assert.equal(scopedQuerySetPacket.queryComposition.scope?.ownerPath, "src/consumer.ts");
   assert.equal(scopedQuerySetPacket.header.fields.querySet, 2);
   assert.equal(scopedQuerySetPacket.header.fields.scopeOwner, "src/consumer.ts");
@@ -358,53 +364,56 @@ test("CLI exposes semantic-search protocol commands", () => {
   assert.ok(
     scopedQuerySetPacket.hits.some((hit) => hit.fields?.queryTerms?.includes("internalOrderToken")),
   );
+  assert.deepEqual(scopedQuerySetPacket.searchSynthesis?.windowSet, [
+    { kind: "owner", target: "src/consumer.ts" },
+  ]);
 
   const flagLikeTextQuery = runCliCapture(
-    ["search", "text", "--json", "--view", "seeds", "."],
+    ["search", "fzf", "--json", "--view", "seeds", "."],
     root,
   );
   assert.equal(flagLikeTextQuery.exitCode, 0);
-  assert.match(flagLikeTextQuery.stdout, /^\[search-text\] q=--json\b/u);
+  assert.match(flagLikeTextQuery.stdout, /^\[search-fzf\] q=--json\b/u);
   assert.match(flagLikeTextQuery.stdout, /\|seed ingest:--json/u);
   assert.doesNotMatch(flagLikeTextQuery.stdout, /^\{/u);
 
   const testOnlyTextPipe = runCliCapture(
-    ["search", "text", "testOnlyMarker", "owner", "tests", "."],
+    ["search", "fzf", "testOnlyMarker", "owner", "tests", "."],
     root,
   );
   assert.equal(testOnlyTextPipe.exitCode, 0);
-  assert.match(testOnlyTextPipe.stdout, /^\[search-text\] /u);
+  assert.match(testOnlyTextPipe.stdout, /^\[search-fzf\] /u);
   assert.match(testOnlyTextPipe.stdout, /\|owner tests\/index\.test\.ts/u);
   assert.match(testOnlyTextPipe.stdout, /\|hit path=tests\/index\.test\.ts line=2\b/u);
-  assert.match(testOnlyTextPipe.stdout, /\bsurface=test\b/u);
-  assert.match(testOnlyTextPipe.stdout, /\bownerRole=test\b/u);
-  assert.match(testOnlyTextPipe.stdout, /\btext=.*testOnlyMarker/u);
+  assert.match(testOnlyTextPipe.stdout, /\blayer=test\b/u);
+  assert.match(testOnlyTextPipe.stdout, /\brole=test\b/u);
+  assert.match(testOnlyTextPipe.stdout, /\bq=testOnlyMarker\b/u);
   assert.doesNotMatch(testOnlyTextPipe.stdout, /\|owner src\/index\.ts/u);
   assert.doesNotMatch(testOnlyTextPipe.stdout, /\|edge O:src\/index\.ts -test->/u);
 
-  const specText = runCliCapture(["search", "text", "specOnlyMarker", "."], root);
+  const specText = runCliCapture(["search", "fzf", "specOnlyMarker", "."], root);
   assert.equal(specText.exitCode, 0);
   assert.match(specText.stdout, /\|hit path=tests\/flow\.spec\.ts line=1\b/u);
-  assert.match(specText.stdout, /\bsurface=test\b/u);
+  assert.match(specText.stdout, /\blayer=test\b/u);
 
   const invalidTextPipe = runCliCapture(
-    ["search", "text", "findOrderStatus", "tests", "owner", "."],
+    ["search", "fzf", "findOrderStatus", "tests", "owner", "."],
     root,
   );
   assert.equal(invalidTextPipe.exitCode, 2);
   assert.match(invalidTextPipe.stderr, /expected pipes \(owner,tests\) before PROJECT_ROOT/u);
 
-  const sourceText = runCliCapture(["search", "text", "internalOrderToken", "."], root);
+  const sourceText = runCliCapture(["search", "fzf", "internalOrderToken", "."], root);
   assert.equal(sourceText.exitCode, 0);
-  assert.match(sourceText.stdout, /^\[search-text\] /u);
+  assert.match(sourceText.stdout, /^\[search-fzf\] /u);
   assert.match(sourceText.stdout, /\|hit path=src\/consumer\.ts line=3 column=7\b/u);
   assert.match(sourceText.stdout, /\bkind=text\b/u);
   assert.match(sourceText.stdout, /\breason=source-text\b/u);
   assert.match(sourceText.stdout, /\bsource=parser-visible-source\b/u);
 
-  const recencyText = runCliCapture(["search", "text", "sharedMtimeNeedle", "."], root);
+  const recencyText = runCliCapture(["search", "fzf", "sharedMtimeNeedle", "."], root);
   assert.equal(recencyText.exitCode, 0);
-  assert.match(recencyText.stdout, /^\[search-text\] /u);
+  assert.match(recencyText.stdout, /^\[search-fzf\] /u);
   assert.match(recencyText.stdout, /\|hit path=src\/z-new\.ts line=2\b/u);
   assert.match(recencyText.stdout, /\|hit path=src\/a-old\.ts line=2\b/u);
   assert.ok(
@@ -553,7 +562,7 @@ test("CLI exposes semantic-search protocol commands", () => {
   assert.match(ownerItemsSeeds.stdout, /\|seed text:SearchPacket\b/u);
   assert.match(
     ownerItemsSeeds.stdout,
-    /\|next-run ts-harness search text --query-set SearchPacket --query-set SearchOwner /u,
+    /\|next-run ts-harness search fzf --query-set SearchPacket --query-set SearchOwner /u,
   );
   assert.doesNotMatch(ownerItemsSeeds.stdout, /\|edge /u);
 
@@ -637,9 +646,12 @@ test("CLI exposes semantic-search protocol commands", () => {
     { kind: "ingest", target: "test-fixtures/semantic_search_schema.test.ts" },
   ]);
 
-  const textMiss = runCliCapture(["search", "text", "semantic-search-packet", "."], root);
+  const textMiss = runCliCapture(["search", "fzf", "semantic-search-packet", "."], root);
   assert.equal(textMiss.exitCode, 0);
-  assert.match(textMiss.stdout, /^\[search-text\] q=semantic-search-packet own=0 hit=0/u);
+  assert.match(
+    textMiss.stdout,
+    /^\[search-fzf\] q=semantic-search-packet mode=fuzzy backend=provider own=0 hit=0/u,
+  );
   assert.match(textMiss.stdout, /pipe rg output to search ingest/u);
   assert.match(textMiss.stdout, /\|next ingest:semantic-search-packet/u);
 
@@ -710,6 +722,7 @@ test("CLI exposes semantic-search protocol commands", () => {
         readonly clients?: readonly string[];
         readonly requiredOptions?: readonly string[];
         readonly input?: string;
+        readonly outputModes?: readonly string[];
         readonly supportsJson: boolean;
         readonly supportsCompact: boolean;
       }[];
@@ -726,12 +739,15 @@ test("CLI exposes semantic-search protocol commands", () => {
     "search/docs",
     "search/api",
     "search/public-external-types",
+    "search/policy",
     "search/symbol",
     "search/callsite",
     "search/import",
     "search/tests",
-    "search/text",
+    "search/fzf",
     "search/ingest",
+    "query/owner-items",
+    "query/direct-source-read",
     "check/changed",
     "check/full",
     "agent/doctor",
@@ -751,7 +767,18 @@ test("CLI exposes semantic-search protocol commands", () => {
           method,
           command: "search",
           view: method.slice("search/".length),
-          outputSchemaIds: ["agent.semantic-protocols.semantic-search-packet"],
+          outputSchemaIds:
+            method === "search/public-external-types"
+              ? [
+                  "agent.semantic-protocols.semantic-search-packet",
+                  "agent.semantic-protocols.semantic-type-surface",
+                ]
+              : method === "search/policy"
+                ? [
+                    "agent.semantic-protocols.semantic-search-packet",
+                    "agent.semantic-protocols.semantic-handle",
+                  ]
+                : ["agent.semantic-protocols.semantic-search-packet"],
           requiresQuery: [
             "search/owner",
             "search/dependency",
@@ -759,25 +786,48 @@ test("CLI exposes semantic-search protocol commands", () => {
             "search/docs",
             "search/api",
             "search/public-external-types",
+            "search/policy",
             "search/symbol",
             "search/callsite",
             "search/import",
             "search/tests",
-            "search/text",
+            "search/fzf",
           ].includes(method),
           acceptsStdin: method === "search/ingest",
           supportsPackageScope: true,
-          ...(method === "search/text"
+          ...(method === "search/fzf" || method === "search/policy"
             ? { acceptedPipes: ["owner", "tests"] }
             : method === "search/owner"
               ? { acceptedPipes: ["items"] }
               : {}),
-          ...(method === "search/text"
+          ...(method === "search/owner"
+            ? {
+                fallbacks: [
+                  {
+                    name: "owner-top-items",
+                    trigger: "item-query-miss",
+                    appliesToPipes: ["items"],
+                    maxItems: 4,
+                  },
+                ],
+                input: "search owner <path> [items] [--query <symbol-or-a|b|c>] [--code]",
+                outputModes: ["compact", "json", "code"],
+              }
+            : {}),
+          ...(method === "search/fzf"
             ? {
                 supportsQuerySet: true,
-                acceptedQuerySetSelectors: ["exact-set"],
+                acceptedQuerySetSelectors: [method === "search/fzf" ? "fuzzy-set" : "exact-set"],
                 querySetScopes: ["project", "owner"],
+                clients: ["semantic-agent-hook"],
+                input:
+                  method === "search/fzf"
+                    ? "search fzf <query> [owner|tests...] or --query-set TERM [--query-set TERM...]"
+                    : "search fzf <query> [owner|tests...] or hook query with --from-hook, --selector, --term, and --surface",
               }
+            : {}),
+          ...(method === "search/policy"
+            ? { input: "search policy <rule-id-or-alias> [owner tests]" }
             : {}),
           capabilities: expectedSearchCapabilities(method),
           ...(expectedSearchIngestRequiredFor(method).length === 0
@@ -786,6 +836,32 @@ test("CLI exposes semantic-search protocol commands", () => {
           supportsJson: true,
           supportsCompact: true,
         })),
+      {
+        method: "query/owner-items",
+        command: "query",
+        input: "owner-path",
+        requiredOptions: ["--term"],
+        outputSchemaIds: ["agent.semantic-protocols.semantic-query-packet"],
+        supportsJson: true,
+        supportsCompact: true,
+        supportsQuerySet: true,
+        acceptedQuerySetSelectors: ["fuzzy-set"],
+        querySetScopes: ["owner"],
+        outputModes: ["compact", "json", "code", "names"],
+      },
+      {
+        method: "query/direct-source-read",
+        command: "query",
+        input: "owner-path",
+        requiredOptions: ["--from-hook", "--selector"],
+        outputSchemaIds: [
+          "agent.semantic-protocols.semantic-query-packet",
+          "agent.semantic-protocols.semantic-read-packet",
+        ],
+        supportsJson: true,
+        supportsCompact: true,
+        outputModes: ["compact", "json", "names", "read-packet"],
+      },
       ...expectedMethods
         .filter((method) => method.startsWith("check/"))
         .map((method) => ({
@@ -813,6 +889,61 @@ test("CLI exposes semantic-search protocol commands", () => {
         schemaId: "agent.semantic-protocols.semantic-search-packet",
         schemaVersion: "1",
         path: "schemas/semantic-search-packet.v1.schema.json",
+      },
+      {
+        schemaId: "agent.semantic-protocols.semantic-query-packet",
+        schemaVersion: "1",
+        path: "schemas/semantic-query-packet.v1.schema.json",
+      },
+      {
+        schemaId: "agent.semantic-protocols.semantic-read-packet",
+        schemaVersion: "1",
+        path: "schemas/semantic-read-packet.v1.schema.json",
+      },
+      {
+        schemaId: "agent.semantic-protocols.semantic-graph",
+        schemaVersion: "1",
+        path: "schemas/semantic-graph.v1.schema.json",
+      },
+      {
+        schemaId: "agent.semantic-protocols.semantic-verification-receipt",
+        schemaVersion: "1",
+        path: "schemas/semantic-verification-receipt.v1.schema.json",
+      },
+      {
+        schemaId: "agent.semantic-protocols.semantic-behavior-snapshot",
+        schemaVersion: "1",
+        path: "schemas/semantic-behavior-snapshot.v1.schema.json",
+      },
+      {
+        schemaId: "agent.semantic-protocols.semantic-determinism-readiness",
+        schemaVersion: "1",
+        path: "schemas/semantic-determinism-readiness.v1.schema.json",
+      },
+      {
+        schemaId: "agent.semantic-protocols.semantic-formal-proof-pilot",
+        schemaVersion: "1",
+        path: "schemas/semantic-formal-proof-pilot.v1.schema.json",
+      },
+      {
+        schemaId: "agent.semantic-protocols.semantic-review-packet",
+        schemaVersion: "1",
+        path: "schemas/semantic-review-packet.v1.schema.json",
+      },
+      {
+        schemaId: "agent.semantic-protocols.semantic-evidence-graph",
+        schemaVersion: "1",
+        path: "schemas/semantic-evidence-graph.v1.schema.json",
+      },
+      {
+        schemaId: "agent.semantic-protocols.semantic-assurance-case",
+        schemaVersion: "1",
+        path: "schemas/semantic-assurance-case.v1.schema.json",
+      },
+      {
+        schemaId: "agent.semantic-protocols.semantic-type-surface",
+        schemaVersion: "1",
+        path: "schemas/semantic-type-surface.v1.schema.json",
       },
       {
         schemaId: "agent.semantic-protocols.semantic-language-registry",
@@ -846,6 +977,9 @@ function expectedSearchCapabilities(
         typeScriptCapability("parser-visible-module-owner-search"),
         typeScriptCapability("test-owner-search"),
         semanticCapability("path-owner-fallback"),
+        typeScriptCapability("owner-item-query"),
+        typeScriptCapability("owner-item-code-projection"),
+        typeScriptCapability("owner-top-items-fallback"),
       ];
     case "search/dependency":
       return [
@@ -878,6 +1012,13 @@ function expectedSearchCapabilities(
         typeScriptCapability("public-external-type-search"),
         typeScriptCapability("public-api-type-text-search"),
       ];
+    case "search/policy":
+      return [
+        semanticCapability("policy-rule-handle-search"),
+        typeScriptCapability("typescript-project-policy-rule-handle-search"),
+        typeScriptCapability("typescript-agent-policy-rule-handle-search"),
+        typeScriptCapability("typescript-extension-policy-rule-handle-search"),
+      ];
     case "search/symbol":
       return [typeScriptCapability("symbol-export-search")];
     case "search/callsite":
@@ -886,11 +1027,10 @@ function expectedSearchCapabilities(
       return [typeScriptCapability("import-edge-search")];
     case "search/tests":
       return [typeScriptCapability("test-owner-search")];
-    case "search/text":
+    case "search/fzf":
       return [
-        semanticCapability("owner-path-text-search"),
-        typeScriptCapability("export-text-search"),
-        typeScriptCapability("parser-visible-source-text-search"),
+        semanticCapability("finder-fuzzy-candidate-search"),
+        typeScriptCapability("parser-visible-source-fuzzy-search"),
       ];
     case "search/ingest":
       return [
@@ -909,7 +1049,7 @@ function expectedSearchIngestRequiredFor(
   switch (method) {
     case "search/owner":
       return [typeScriptCapability("non-parser-path")];
-    case "search/text":
+    case "search/fzf":
       return [
         typeScriptCapability("non-parser-text"),
         typeScriptCapability("docs-text"),

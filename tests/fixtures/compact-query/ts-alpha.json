@@ -1,0 +1,180 @@
+{
+  "matches": [
+    {
+      "name": "alpha",
+      "kind": "function",
+      "read": "src/demo.ts:1-7",
+      "code": "export function alpha(flag: boolean) { const value = flag ? 1 : 0; if (value > 0) { return value; } return 0; }",
+      "projection": {
+        "mode": "compact",
+        "syntax": "brace-block",
+        "sourceAuthority": "native-parser",
+        "sourceFingerprint": "src/demo.ts:1-7:111:a3fc4d34",
+        "losslessStructure": true,
+        "exactRead": "src/demo.ts:1-7",
+        "nodes": [
+          {
+            "id": "alpha",
+            "kind": "function",
+            "role": "declaration",
+            "label": "export function alpha(flag: boolean)",
+            "depth": 0,
+            "read": "src/demo.ts:1-7",
+            "flags": [
+              "mutation",
+              "branch",
+              "return"
+            ]
+          },
+          {
+            "id": "alpha:1",
+            "parentId": "alpha",
+            "kind": "const",
+            "role": "mutation",
+            "label": "value",
+            "depth": 1,
+            "read": "src/demo.ts:2-2",
+            "flags": [
+              "mutation"
+            ]
+          },
+          {
+            "id": "alpha:2",
+            "parentId": "alpha",
+            "kind": "if",
+            "role": "control-flow",
+            "label": "if",
+            "depth": 1,
+            "read": "src/demo.ts:3-5",
+            "flags": [
+              "branch"
+            ]
+          },
+          {
+            "id": "alpha:3",
+            "parentId": "alpha:2",
+            "kind": "return",
+            "role": "terminal",
+            "label": "value",
+            "depth": 2,
+            "read": "src/demo.ts:4-4",
+            "flags": [
+              "return"
+            ]
+          },
+          {
+            "id": "alpha:4",
+            "parentId": "alpha",
+            "kind": "return",
+            "role": "terminal",
+            "label": "0",
+            "depth": 1,
+            "read": "src/demo.ts:6-6",
+            "flags": [
+              "return"
+            ]
+          }
+        ],
+        "omitted": [
+          {
+            "kind": "source-formatting",
+            "reason": "compact projection removes original whitespace and comments",
+            "count": 7,
+            "read": "src/demo.ts:1-7"
+          }
+        ],
+        "expandActions": [
+          {
+            "kind": "exact-read",
+            "target": "alpha",
+            "read": "src/demo.ts:1-7",
+            "argv": [
+              "ts-harness",
+              "query",
+              "--from-hook",
+              "direct-source-read",
+              "--selector",
+              "src/demo.ts:1-7",
+              "."
+            ],
+            "reason": "read exact source before editing"
+          },
+          {
+            "kind": "exact-read",
+            "target": "alpha:1",
+            "read": "src/demo.ts:2-2",
+            "argv": [
+              "ts-harness",
+              "query",
+              "--from-hook",
+              "direct-source-read",
+              "--selector",
+              "src/demo.ts:2-2",
+              "."
+            ],
+            "reason": "expand const node before editing"
+          },
+          {
+            "kind": "exact-read",
+            "target": "alpha:2",
+            "read": "src/demo.ts:3-5",
+            "argv": [
+              "ts-harness",
+              "query",
+              "--from-hook",
+              "direct-source-read",
+              "--selector",
+              "src/demo.ts:3-5",
+              "."
+            ],
+            "reason": "expand if node before editing"
+          },
+          {
+            "kind": "exact-read",
+            "target": "alpha:3",
+            "read": "src/demo.ts:4-4",
+            "argv": [
+              "ts-harness",
+              "query",
+              "--from-hook",
+              "direct-source-read",
+              "--selector",
+              "src/demo.ts:4-4",
+              "."
+            ],
+            "reason": "expand return node before editing"
+          },
+          {
+            "kind": "exact-read",
+            "target": "alpha:4",
+            "read": "src/demo.ts:6-6",
+            "argv": [
+              "ts-harness",
+              "query",
+              "--from-hook",
+              "direct-source-read",
+              "--selector",
+              "src/demo.ts:6-6",
+              "."
+            ],
+            "reason": "expand return node before editing"
+          },
+          {
+            "kind": "owner-names",
+            "target": "src/demo.ts",
+            "argv": [
+              "ts-harness",
+              "query",
+              "--from-hook",
+              "direct-source-read",
+              "--selector",
+              "src/demo.ts",
+              "."
+            ],
+            "reason": "return owner-local item names without code windows"
+          }
+        ]
+      }
+    }
+  ]
+}

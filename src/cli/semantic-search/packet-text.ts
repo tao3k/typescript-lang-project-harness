@@ -9,8 +9,6 @@ import {
   ownersForPaths,
   testEdges,
   testHits,
-  textHits,
-  textQueryHitsByTerm,
   textQuerySetHitsFromHitsByTerm,
   uniqueOwners,
 } from "./hits.js";
@@ -30,6 +28,8 @@ import type {
 } from "./types.js";
 import { findOwner, resolveOwnerPath, stripNodePrefix } from "./utils.js";
 
+import { fuzzyTextHits, fuzzyTextQueryHitsByTerm } from "./hit-search.js";
+
 export function buildTextPacket(
   report: TypeScriptHarnessReport,
   options: SemanticSearchBuildOptions,
@@ -39,7 +39,7 @@ export function buildTextPacket(
     return buildTextQuerySetPacket(report, options, queryTerms);
   }
   const query = options.query ?? "";
-  const hits = textHits(report, query);
+  const hits = fuzzyTextHits(report, query);
   const pipes = options.pipes ?? [];
   const textOwners = ownersForHits(report, hits);
   const testEdgesForText = pipes.includes("tests") ? testEdgesForOwners(report, textOwners) : [];
@@ -61,15 +61,17 @@ export function buildTextPacket(
             {
               kind: "not-found" as const,
               message:
-                "text search covers parser-visible source text, owner paths, and exports; pipe rg output to search ingest for docs, schema files, and other non-parser text",
+                "fzf search covers parser-visible source text, owner paths, and exports; pipe rg output to search ingest for docs, schema files, and other non-parser text",
             },
           ]
         : [];
   return basePacket(report, options, {
     header: {
-      kind: "search-text",
+      kind: "search-fzf",
       fields: {
         q: query,
+        mode: "fuzzy",
+        backend: "provider",
         own: owners.length,
         hit: hits.length + testHitsForText.length,
         view: testEdgesForText.length > 0 ? "both" : "hits",
@@ -113,7 +115,7 @@ function buildTextQuerySetPacket(
     ...(ownerScope === undefined ? {} : { queryScope: { ownerPath: ownerScope } }),
   };
   const pipes = options.pipes ?? [];
-  const hitsByTerm = textQueryHitsByTerm(report, queryTerms, ownerScope);
+  const hitsByTerm = fuzzyTextQueryHitsByTerm(report, queryTerms, ownerScope);
   const hits = textQuerySetHitsFromHitsByTerm(report, hitsByTerm);
   const textOwners = ownersForHits(report, hits);
   const testEdgesForText = pipes.includes("tests") ? testEdgesForOwners(report, textOwners) : [];
@@ -142,17 +144,19 @@ function buildTextQuerySetPacket(
           {
             kind: "not-found" as const,
             message:
-              "text query-set covers parser-visible source text, owner paths, and exports; pipe external candidates to search ingest",
+              "fzf query-set covers parser-visible source text, owner paths, and exports; pipe external candidates to search ingest",
           },
         ]
       : [];
   return basePacket(report, scopedOptions, {
     header: {
-      kind: "search-text",
+      kind: "search-fzf",
       fields: {
         q: query,
         querySet: queryTerms.length,
-        selector: "exact-set",
+        selector: "fuzzy-set",
+        mode: "fuzzy",
+        backend: "provider",
         ...(ownerScope === undefined ? {} : { scopeOwner: ownerScope }),
         own: owners.length,
         hit: hits.length + testHitsForText.length,

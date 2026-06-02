@@ -19,6 +19,8 @@ import {
 import { buildPublicExternalTypesPacketPayload } from "./public-external-types.js";
 import type { SemanticSearchBuildOptions, SemanticSearchPacket } from "./types.js";
 
+import { buildPolicyPacket } from "./policy.js";
+
 export function buildSemanticSearchPacket(
   report: TypeScriptHarnessReport,
   options: SemanticSearchBuildOptions,
@@ -40,6 +42,8 @@ export function buildSemanticSearchPacket(
       return basePacket(report, options, buildApiPacketPayload(report, options));
     case "public-external-types":
       return basePacket(report, options, buildPublicExternalTypesPacketPayload(report, options));
+    case "policy":
+      return buildPolicyPacket(report, options);
     case "symbol":
       return buildSymbolPacket(report, options);
     case "callsite":
@@ -48,6 +52,8 @@ export function buildSemanticSearchPacket(
       return buildImportPacket(report, options);
     case "tests":
       return buildTestsPacket(report, options);
+    case "fzf":
+      return buildTextPacket(report, options);
     case "text":
       return buildTextPacket(report, options);
     case "ingest":

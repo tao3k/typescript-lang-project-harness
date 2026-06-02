@@ -96,6 +96,19 @@ export function textSearchSynthesis(
   if (queryTerms.length === 0) return undefined;
   const realOwners = realOwnerMap(report);
   const rankedOwners = rankedSynthesisOwners(hits, ownerPaths, ownerResolution, realOwners);
+  const editFrontier = rankedOwners
+    .filter((ownerPath) => surfaceForOwnerPath(ownerPath) !== "test-source")
+    .slice(0, 4);
+  const testFrontier = unique([
+    ...rankedOwners.filter((ownerPath) => surfaceForOwnerPath(ownerPath) === "test-source"),
+    ...hits
+      .map((hit) => hit.ownerPath)
+      .filter((ownerPath) => surfaceForOwnerPath(ownerPath) === "test-source"),
+  ]).slice(0, 4);
+  const windowSet = [
+    ...editFrontier.map((ownerPath) => ({ kind: "owner" as const, target: ownerPath })),
+    ...testFrontier.map((ownerPath) => ({ kind: "tests" as const, target: ownerPath })),
+  ].slice(0, 8);
   const seeds: SemanticSearchNextAction[] = [];
   for (const ownerPath of rankedOwners) {
     const branch = realOwners.get(ownerPath);
@@ -111,6 +124,10 @@ export function textSearchSynthesis(
     algorithm: "query-set-owner-resolution",
     scope: "query-set",
     summary: `query-set compressed ${queryTerms.length} text terms into ${ownerPaths.length} parser-visible owners`,
+    selectedOwners: rankedOwners.length,
+    ...(editFrontier.length === 0 ? {} : { editFrontier }),
+    ...(testFrontier.length === 0 ? {} : { testFrontier }),
+    ...(windowSet.length === 0 ? {} : { windowSet }),
     seeds: seeds.slice(0, 8),
     fields: {
       querySet: queryTerms.length,
