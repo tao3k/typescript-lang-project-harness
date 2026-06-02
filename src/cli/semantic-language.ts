@@ -20,6 +20,8 @@ export const SEMANTIC_BEHAVIOR_SNAPSHOT_SCHEMA_ID =
   "agent.semantic-protocols.semantic-behavior-snapshot" as const;
 export const SEMANTIC_DETERMINISM_READINESS_SCHEMA_ID =
   "agent.semantic-protocols.semantic-determinism-readiness" as const;
+export const SEMANTIC_DEV_COMMAND_LOG_SCHEMA_ID =
+  "agent.semantic-protocols.dev-command-log" as const;
 export const SEMANTIC_FORMAL_PROOF_PILOT_SCHEMA_ID =
   "agent.semantic-protocols.semantic-formal-proof-pilot" as const;
 export const SEMANTIC_REVIEW_PACKET_SCHEMA_ID =
@@ -381,6 +383,11 @@ export function typeScriptSemanticLanguageRegistration(): SemanticLanguageRegist
         schemaId: SEMANTIC_DETERMINISM_READINESS_SCHEMA_ID,
         schemaVersion: "1",
         path: "schemas/semantic-determinism-readiness.v1.schema.json",
+      },
+      {
+        schemaId: SEMANTIC_DEV_COMMAND_LOG_SCHEMA_ID,
+        schemaVersion: "1",
+        path: "schemas/semantic-dev-command-log.v1.schema.json",
       },
       {
         schemaId: SEMANTIC_FORMAL_PROOF_PILOT_SCHEMA_ID,

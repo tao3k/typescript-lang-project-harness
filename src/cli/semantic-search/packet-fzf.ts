@@ -1,5 +1,5 @@
 /**
- * Semantic-search packet builders for text views and query-set composition.
+ * Semantic-search packet builders for fzf views and query-set composition.
  */
 
 import type { TypeScriptHarnessReport } from "../../model.js";
@@ -9,17 +9,17 @@ import {
   ownersForPaths,
   testEdges,
   testHits,
-  textQuerySetHitsFromHitsByTerm,
+  fzfQuerySetHitsFromHitsByTerm,
   uniqueOwners,
 } from "./hits.js";
 import { basePacket, normalizedQuerySet } from "./packet-base.js";
 import { isTestOwnerPath } from "./test-path.js";
 import {
-  textAvoidNextActions,
-  textOwnerResolution,
-  textQueryCoverage,
-  textSearchSynthesis,
-} from "./text-query-synthesis.js";
+  fzfAvoidNextActions,
+  fzfOwnerResolution,
+  fzfQueryCoverage,
+  fzfSearchSynthesis,
+} from "./fzf-query-synthesis.js";
 import type {
   SemanticSearchBuildOptions,
   SemanticSearchEdge,
@@ -28,9 +28,9 @@ import type {
 } from "./types.js";
 import { findOwner, resolveOwnerPath, stripNodePrefix } from "./utils.js";
 
-import { fuzzyTextHits, fuzzyTextQueryHitsByTerm } from "./hit-search.js";
+import { fuzzyFzfHits, fuzzyFzfQueryHitsByTerm } from "./hit-search.js";
 
-export function buildTextPacket(
+export function buildFzfPacket(
   report: TypeScriptHarnessReport,
   options: SemanticSearchBuildOptions,
 ): SemanticSearchPacket {
@@ -39,23 +39,22 @@ export function buildTextPacket(
     return buildTextQuerySetPacket(report, options, queryTerms);
   }
   const query = options.query ?? "";
-  const hits = fuzzyTextHits(report, query);
+  const hits = fuzzyFzfHits(report, query);
   const pipes = options.pipes ?? [];
-  const textOwners = ownersForHits(report, hits);
-  const testEdgesForText = pipes.includes("tests") ? testEdgesForOwners(report, textOwners) : [];
-  const testHitsForText =
-    testEdgesForText.length > 0 ? testHits(report, testEdgesForText, query) : [];
+  const fzfOwners = ownersForHits(report, hits);
+  const testEdgesForFzf = pipes.includes("tests") ? testEdgesForOwners(report, fzfOwners) : [];
+  const testHitsForFzf = testEdgesForFzf.length > 0 ? testHits(report, testEdgesForFzf, query) : [];
   const owners = uniqueOwners([
-    ...textOwners,
+    ...fzfOwners,
     ...ownersForPaths(
       report,
-      testEdgesForText.flatMap((edge) => [stripNodePrefix(edge.from), stripNodePrefix(edge.to)]),
+      testEdgesForFzf.flatMap((edge) => [stripNodePrefix(edge.from), stripNodePrefix(edge.to)]),
     ),
-    ...ownersForHits(report, testHitsForText),
+    ...ownersForHits(report, testHitsForFzf),
   ]);
   const notes =
     query.trim() === ""
-      ? [{ kind: "empty-query" as const, message: "text search requires a non-empty query" }]
+      ? [{ kind: "empty-query" as const, message: "fzf search requires a non-empty query" }]
       : hits.length === 0
         ? [
             {
@@ -73,10 +72,10 @@ export function buildTextPacket(
         mode: "fuzzy",
         backend: "provider",
         own: owners.length,
-        hit: hits.length + testHitsForText.length,
-        view: testEdgesForText.length > 0 ? "both" : "hits",
+        hit: hits.length + testHitsForFzf.length,
+        view: testEdgesForFzf.length > 0 ? "both" : "hits",
         pipes,
-        ...(testEdgesForText.length > 0 ? { test: testHitsForText.length } : {}),
+        ...(testEdgesForFzf.length > 0 ? { test: testHitsForFzf.length } : {}),
       },
     },
     nodes: owners.map((owner) =>
@@ -84,9 +83,9 @@ export function buildTextPacket(
         ? testNode(owner)
         : ownerNode(owner),
     ),
-    edges: testEdgesForText,
+    edges: testEdgesForFzf,
     owners,
-    hits: [...hits, ...testHitsForText],
+    hits: [...hits, ...testHitsForFzf],
     findings: [],
     nextActions:
       owners.length > 0
@@ -115,29 +114,22 @@ function buildTextQuerySetPacket(
     ...(ownerScope === undefined ? {} : { queryScope: { ownerPath: ownerScope } }),
   };
   const pipes = options.pipes ?? [];
-  const hitsByTerm = fuzzyTextQueryHitsByTerm(report, queryTerms, ownerScope);
-  const hits = textQuerySetHitsFromHitsByTerm(report, hitsByTerm);
-  const textOwners = ownersForHits(report, hits);
-  const testEdgesForText = pipes.includes("tests") ? testEdgesForOwners(report, textOwners) : [];
-  const testHitsForText =
-    testEdgesForText.length > 0 ? testHits(report, testEdgesForText, query) : [];
+  const hitsByTerm = fuzzyFzfQueryHitsByTerm(report, queryTerms, ownerScope);
+  const hits = fzfQuerySetHitsFromHitsByTerm(report, hitsByTerm);
+  const fzfOwners = ownersForHits(report, hits);
+  const testEdgesForFzf = pipes.includes("tests") ? testEdgesForOwners(report, fzfOwners) : [];
+  const testHitsForFzf = testEdgesForFzf.length > 0 ? testHits(report, testEdgesForFzf, query) : [];
   const owners = uniqueOwners([
-    ...textOwners,
+    ...fzfOwners,
     ...ownersForPaths(
       report,
-      testEdgesForText.flatMap((edge) => [stripNodePrefix(edge.from), stripNodePrefix(edge.to)]),
+      testEdgesForFzf.flatMap((edge) => [stripNodePrefix(edge.from), stripNodePrefix(edge.to)]),
     ),
-    ...ownersForHits(report, testHitsForText),
+    ...ownersForHits(report, testHitsForFzf),
   ]);
   const ownerPaths = owners.map((owner) => owner.path);
-  const ownerResolution = textOwnerResolution(report, owners, hits);
-  const searchSynthesis = textSearchSynthesis(
-    report,
-    queryTerms,
-    hits,
-    ownerPaths,
-    ownerResolution,
-  );
+  const ownerResolution = fzfOwnerResolution(report, owners, hits);
+  const searchSynthesis = fzfSearchSynthesis(report, queryTerms, hits, ownerPaths, ownerResolution);
   const notes =
     hits.length === 0
       ? [
@@ -159,10 +151,10 @@ function buildTextQuerySetPacket(
         backend: "provider",
         ...(ownerScope === undefined ? {} : { scopeOwner: ownerScope }),
         own: owners.length,
-        hit: hits.length + testHitsForText.length,
-        view: testEdgesForText.length > 0 ? "both" : "hits",
+        hit: hits.length + testHitsForFzf.length,
+        view: testEdgesForFzf.length > 0 ? "both" : "hits",
         pipes,
-        ...(testEdgesForText.length > 0 ? { test: testHitsForText.length } : {}),
+        ...(testEdgesForFzf.length > 0 ? { test: testHitsForFzf.length } : {}),
       },
     },
     nodes: owners.map((owner) =>
@@ -170,13 +162,13 @@ function buildTextQuerySetPacket(
         ? testNode(owner)
         : ownerNode(owner),
     ),
-    edges: testEdgesForText,
+    edges: testEdgesForFzf,
     owners,
-    hits: [...hits, ...testHitsForText],
-    queryCoverage: textQueryCoverage(queryTerms, hitsByTerm, hits),
+    hits: [...hits, ...testHitsForFzf],
+    queryCoverage: fzfQueryCoverage(queryTerms, hitsByTerm, hits),
     ownerResolution,
     ...(searchSynthesis === undefined ? {} : { searchSynthesis }),
-    avoidNextActions: textAvoidNextActions(queryTerms, ownerResolution),
+    avoidNextActions: fzfAvoidNextActions(queryTerms, ownerResolution),
     findings: [],
     nextActions:
       owners.length > 0

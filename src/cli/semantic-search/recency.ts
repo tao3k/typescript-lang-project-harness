@@ -14,8 +14,8 @@ export function compareHitsByRecency(
 ): number {
   const recency = compareProjectPathsByRecency(projectRoot, left.ownerPath, right.ownerPath);
   if (recency !== 0) return recency;
-  return `${left.ownerPath}:${left.location.line ?? 0}:${left.location.column ?? 0}`.localeCompare(
-    `${right.ownerPath}:${right.location.line ?? 0}:${right.location.column ?? 0}`,
+  return `${left.ownerPath}:${left.location.lineRange ?? ""}`.localeCompare(
+    `${right.ownerPath}:${right.location.lineRange ?? ""}`,
   );
 }
 

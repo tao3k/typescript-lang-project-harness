@@ -22,23 +22,37 @@ function compactQuerySnapshot(packet: CompactSnapshotPacket): unknown {
       name: match.name,
       kind: match.kind,
       read: match.read,
-      code: match.code,
       projection: match.projection,
     })),
   };
 }
 
+function compactCodeSnapshot(packet: CompactSnapshotPacket): readonly string[] {
+  return packet.matches.map((match) => {
+    if (match.code === undefined) {
+      throw new Error(`missing compact code for ${match.name}`);
+    }
+    return match.code;
+  });
+}
+
+function fixturePath(relativePath: string): string {
+  return path.resolve(new URL(`../../../tests/fixtures/${relativePath}`, import.meta.url).pathname);
+}
+
 function readJsonFixture(relativePath: string): unknown {
-  const fixturePath = path.resolve(
-    new URL(`../../../tests/fixtures/${relativePath}`, import.meta.url).pathname,
-  );
-  return JSON.parse(fs.readFileSync(fixturePath, "utf8"));
+  return JSON.parse(fs.readFileSync(fixturePath(relativePath), "utf8"));
+}
+
+function readTextFixture(relativePath: string): string {
+  return fs.readFileSync(fixturePath(relativePath), "utf8").replace(/\r\n/gu, "\n");
 }
 
 function writeSnapshotProject(
   root: string,
   fileName: string,
-  sourceLines: readonly string[],
+  sourceText: string,
+  compilerOptions: Record<string, unknown> = {},
 ): void {
   fs.mkdirSync(path.join(root, "src"), { recursive: true });
   fs.writeFileSync(
@@ -53,54 +67,51 @@ function writeSnapshotProject(
         moduleResolution: "NodeNext",
         target: "ES2022",
         strict: true,
+        ...compilerOptions,
       },
       include: ["src/**/*.ts"],
     }),
   );
-  fs.writeFileSync(path.join(root, "src", fileName), sourceLines.join("\n"));
+  fs.writeFileSync(path.join(root, "src", fileName), sourceText);
 }
 
-function querySnapshot(root: string, ownerPath: string, term: string): unknown {
+function queryPacket(root: string, ownerPath: string, term: string): CompactSnapshotPacket {
   const result = runCliCapture(["query", ownerPath, "--term", term, "--json", "."], root);
   assert.equal(result.exitCode, 0, result.stderr);
-  return compactQuerySnapshot(JSON.parse(result.stdout) as CompactSnapshotPacket);
+  return JSON.parse(result.stdout) as CompactSnapshotPacket;
 }
 
 test("owner item query compact packet matches branch parser snapshot", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-owner-item-snapshot-"));
-  writeSnapshotProject(root, "demo.ts", [
-    "export function alpha(flag: boolean) {",
-    "  const value = flag ? 1 : 0;",
-    "  if (value > 0) {",
-    "    return value;",
-    "  }",
-    "  return 0;",
-    "}",
-  ]);
+  writeSnapshotProject(root, "demo.ts", readTextFixture("compact-query/sources/ts-alpha.ts"));
+  const packet = queryPacket(root, "src/demo.ts", "alpha");
 
-  assert.deepEqual(
-    querySnapshot(root, "src/demo.ts", "alpha"),
-    readJsonFixture("compact-query/ts-alpha.json"),
-  );
+  assert.deepEqual(compactQuerySnapshot(packet), readJsonFixture("compact-query/ts-alpha.json"));
+  assert.deepEqual(compactCodeSnapshot(packet), [
+    readTextFixture("compact-query/ts-alpha.code.txt").trimEnd(),
+  ]);
 });
 
 test("owner item query compact packet matches flow parser snapshot", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-owner-flow-snapshot-"));
-  writeSnapshotProject(root, "flow.ts", [
-    "export async function beta(values: string[], mapper: (value: string) => Promise<string>) {",
-    "  const output: string[] = [];",
-    "  for (const value of values) {",
-    '    if (value.trim() === "") {',
-    "      continue;",
-    "    }",
-    "    output.push(await mapper(value));",
-    "  }",
-    "  return output;",
-    "}",
-  ]);
+  writeSnapshotProject(root, "flow.ts", readTextFixture("compact-query/sources/ts-flow.ts"));
+  const packet = queryPacket(root, "src/flow.ts", "beta");
 
-  assert.deepEqual(
-    querySnapshot(root, "src/flow.ts", "beta"),
-    readJsonFixture("compact-query/ts-flow.json"),
-  );
+  assert.deepEqual(compactQuerySnapshot(packet), readJsonFixture("compact-query/ts-flow.json"));
+  assert.deepEqual(compactCodeSnapshot(packet), [
+    readTextFixture("compact-query/ts-flow.code.txt").trimEnd(),
+  ]);
+});
+
+test("query class compact packet matches parser snapshot", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-compact-class-"));
+  writeSnapshotProject(root, "service.ts", readTextFixture("compact-query/sources/ts-class.ts"), {
+    experimentalDecorators: true,
+  });
+  const packet = queryPacket(root, "src/service.ts", "Service");
+
+  assert.deepEqual(compactQuerySnapshot(packet), readJsonFixture("compact-query/ts-class.json"));
+  assert.deepEqual(compactCodeSnapshot(packet), [
+    readTextFixture("compact-query/ts-class.code.txt").trimEnd(),
+  ]);
 });

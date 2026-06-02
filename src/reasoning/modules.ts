@@ -175,7 +175,7 @@ function moduleRole(
     isEntryPointPath(filePath) ||
     isRuntimeAdapterEntrypoint(moduleReport) ||
     entrypointOwnerPaths.has(filePath) ||
-    isInsideAny(filePath, entrypointOwnerRoots)
+    isDirectChildOfAny(filePath, entrypointOwnerRoots)
   ) {
     return "entrypoint";
   }
@@ -264,17 +264,29 @@ function packageEntrypointOwnerRoots(
   for (const ownerPath of entrypointOwnerPaths) {
     const relativePath = path.relative(projectRoot, ownerPath);
     const parts = relativePath.split(path.sep);
-    if (parts[0] === "src" && parts[1] === "cli") {
-      roots.add(path.join(projectRoot, "src", "cli"));
-    }
     if (parts[0] === "src" && parts[1] === "bin") {
       roots.add(path.join(projectRoot, "src", "bin"));
+    }
+    if (parts[0] === "src" && parts[1] === "cli" && parts.length === 3) {
+      roots.add(path.join(projectRoot, "src", "cli"));
     }
     if (path.basename(path.dirname(ownerPath)) === "bin") {
       roots.add(path.dirname(ownerPath));
     }
   }
   return [...roots].sort();
+}
+
+function isDirectChildOfAny(filePath: string, directories: readonly string[]): boolean {
+  return directories.some((directory) => {
+    const relativePath = path.relative(directory, filePath);
+    return (
+      relativePath.length > 0 &&
+      !relativePath.startsWith("..") &&
+      !path.isAbsolute(relativePath) &&
+      !relativePath.includes(path.sep)
+    );
+  });
 }
 
 function packageScriptEntrypointTargets(command: string): string[] {

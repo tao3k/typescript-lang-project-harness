@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 import { runCliCapture } from "./cli_helpers.js";
+import { jsonPacket, semanticSearchFixture } from "./semantic_search_schema_fixture.js";
 import {
   expectedSearchCapabilities,
   expectedSearchIngestRequiredFor,
@@ -446,6 +446,10 @@ test("semantic language registry JSON documents the TypeScript provider identity
     "schemas/semantic-determinism-readiness.v1.schema.json",
   );
   assertRegisteredSchema(
+    "agent.semantic-protocols.dev-command-log",
+    "schemas/semantic-dev-command-log.v1.schema.json",
+  );
+  assertRegisteredSchema(
     "agent.semantic-protocols.semantic-formal-proof-pilot",
     "schemas/semantic-formal-proof-pilot.v1.schema.json",
   );
@@ -482,6 +486,8 @@ test("package-local semantic schemas stay synchronized with the protocol reposit
     "semantic-read-packet.v1.schema.json",
     "semantic-graph.v1.schema.json",
     "semantic-type-surface.v1.schema.json",
+    "semantic-dev-command-log.v1.schema.json",
+    "semantic-dev-active-context.v1.schema.json",
     "semantic-review-packet.v1.schema.json",
     "semantic-evidence-graph.v1.schema.json",
     "semantic-assurance-case.v1.schema.json",
@@ -550,78 +556,6 @@ function protocolRepositorySchemaPath(schemaFileName: string): string | undefine
 
 function readJson(filePath: string): JsonObject {
   return JSON.parse(fs.readFileSync(filePath, "utf8")) as JsonObject;
-}
-
-function semanticSearchFixture(): string {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-semantic-search-schema-"));
-  fs.mkdirSync(path.join(root, "src"));
-  fs.mkdirSync(path.join(root, "tests"));
-  fs.mkdirSync(path.join(root, "packages", "core", "src"), { recursive: true });
-  fs.writeFileSync(
-    path.join(root, "package.json"),
-    JSON.stringify({
-      name: "@example/schema-search",
-      dependencies: { react: "^19.0.0" },
-      workspaces: ["packages/*"],
-    }),
-  );
-  fs.writeFileSync(
-    path.join(root, "packages", "core", "package.json"),
-    JSON.stringify({
-      name: "@example/core",
-      type: "module",
-      types: "./src/index.ts",
-    }),
-  );
-  fs.writeFileSync(
-    path.join(root, "packages", "core", "src", "index.ts"),
-    "export interface Core { readonly ok: true; }\n",
-  );
-  fs.writeFileSync(
-    path.join(root, "packages", "core", "tsconfig.json"),
-    JSON.stringify({ include: ["src/**/*.ts"] }),
-  );
-  fs.writeFileSync(
-    path.join(root, "tsconfig.json"),
-    JSON.stringify({
-      compilerOptions: {
-        baseUrl: ".",
-        paths: { "@example/core": ["packages/core/src/index.ts"] },
-      },
-      include: ["src/**/*.ts", "tests/**/*.ts"],
-    }),
-  );
-  fs.writeFileSync(
-    path.join(root, "src", "index.ts"),
-    [
-      "export type OrderStatus = 'ok';",
-      "export function findOrderStatus(input: string): string { return input; }",
-    ].join("\n"),
-  );
-  fs.writeFileSync(
-    path.join(root, "src", "consumer.ts"),
-    [
-      'import { findOrderStatus } from "./index.js";',
-      'import type { ReactNode } from "react";',
-      'import type { Core } from "@example/core";',
-      'export const status = findOrderStatus("ok");',
-      "export function renderNode(node: ReactNode): ReactNode { return node; }",
-      'export function renderImported(node: import("react").ReactNode): import("react").ReactNode { return node; }',
-      "export type StatusNode = ReactNode;",
-      "export type CoreStatus = Core;",
-    ].join("\n"),
-  );
-  fs.writeFileSync(
-    path.join(root, "tests", "index.test.ts"),
-    'import { findOrderStatus } from "../src/index.js";\nfindOrderStatus("ok");\n',
-  );
-  return root;
-}
-
-function jsonPacket(root: string, argv: readonly string[], stdin = ""): JsonObject {
-  const result = runCliCapture(argv, root, stdin);
-  assert.equal(result.exitCode, 0, result.stderr);
-  return JSON.parse(result.stdout) as JsonObject;
 }
 
 function assertSemanticSearchPacket(schema: JsonObject, packet: JsonObject): void {
@@ -900,13 +834,12 @@ function assertSchemaObject(value: JsonObject, schema: JsonObject, context: stri
 }
 
 function assertLocation(location: JsonObject, context: string): void {
-  assertAllowedKeys(location, ["path", "line", "column", "endLine", "endColumn"], context);
+  assertAllowedKeys(location, ["path", "lineRange"], context);
   assertString(location.path, `${context}.path`);
-  if (location.line !== undefined) assertPositiveInteger(location.line, `${context}.line`);
-  if (location.column !== undefined) assertPositiveInteger(location.column, `${context}.column`);
-  if (location.endLine !== undefined) assertPositiveInteger(location.endLine, `${context}.endLine`);
-  if (location.endColumn !== undefined)
-    assertPositiveInteger(location.endColumn, `${context}.endColumn`);
+  if (location.lineRange !== undefined) {
+    assertString(location.lineRange, `${context}.lineRange`);
+    assert.match(String(location.lineRange), /^[1-9][0-9]*:[1-9][0-9]*$/u);
+  }
 }
 
 function assertFields(value: unknown, context: string): void {

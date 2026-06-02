@@ -31,7 +31,9 @@ test("owner item query falls back to bounded top-level items on miss", () => {
     /^\[search-owner\].*item=3.*itemQuery=types\|Types.*fallback=owner-top-items/mu,
   );
   assert.match(result.stdout, /\|item function makePayload owner=src\/types\.ts/mu);
-  assert.match(result.stdout, /\|code .*reason=item-query.*makePayload/mu);
+  assert.match(result.stdout, /output=names/u);
+  assert.match(result.stdout, /next=revise-query/u);
+  assert.doesNotMatch(result.stdout, /\|code /u);
   fs.rmSync(root, { recursive: true, force: true });
 });
 

@@ -16,7 +16,7 @@ import { compareHitsByRecency } from "./recency.js";
 import { fuzzySourceTextHits, fuzzyTextMatch, sourceTextHits } from "./source-text.js";
 import { isTestOwnerPath } from "./test-path.js";
 import type { SemanticSearchEdge, SemanticSearchHit, SemanticSearchSurfaceKind } from "./types.js";
-import { MAX_IMPORT_HITS, MAX_SYMBOL_HITS, MAX_TEXT_HITS } from "./types.js";
+import { MAX_IMPORT_HITS, MAX_SYMBOL_HITS, MAX_FZF_HITS } from "./types.js";
 import { locationFromSource, relPath } from "./utils.js";
 
 export function textHits(
@@ -44,10 +44,10 @@ export function textHits(
     });
   }
   hits.push(...sourceTextHits(report, query.trim(), needle));
-  return hits.sort((left, right) => compareHits(report, left, right)).slice(0, MAX_TEXT_HITS);
+  return hits.sort((left, right) => compareHits(report, left, right)).slice(0, MAX_FZF_HITS);
 }
 
-export function fuzzyTextHits(
+export function fuzzyFzfHits(
   report: TypeScriptHarnessReport,
   query: string,
 ): readonly SemanticSearchHit[] {
@@ -82,7 +82,7 @@ export function fuzzyTextHits(
     });
   }
   hits.push(...fuzzySourceTextHits(report, query));
-  return hits.sort((left, right) => compareHits(report, left, right)).slice(0, MAX_TEXT_HITS);
+  return hits.sort((left, right) => compareHits(report, left, right)).slice(0, MAX_FZF_HITS);
 }
 
 export function textQuerySetHits(
@@ -90,10 +90,7 @@ export function textQuerySetHits(
   queryTerms: readonly string[],
   ownerScope: string | undefined,
 ): readonly SemanticSearchHit[] {
-  return textQuerySetHitsFromHitsByTerm(
-    report,
-    textQueryHitsByTerm(report, queryTerms, ownerScope),
-  );
+  return fzfQuerySetHitsFromHitsByTerm(report, textQueryHitsByTerm(report, queryTerms, ownerScope));
 }
 
 export function textQueryHitsByTerm(
@@ -111,7 +108,7 @@ export function textQueryHitsByTerm(
   );
 }
 
-export function fuzzyTextQueryHitsByTerm(
+export function fuzzyFzfQueryHitsByTerm(
   report: TypeScriptHarnessReport,
   queryTerms: readonly string[],
   ownerScope: string | undefined,
@@ -119,14 +116,14 @@ export function fuzzyTextQueryHitsByTerm(
   return new Map(
     queryTerms.map((queryTerm) => [
       queryTerm,
-      fuzzyTextHits(report, queryTerm).filter(
+      fuzzyFzfHits(report, queryTerm).filter(
         (hit) => ownerScope === undefined || hit.ownerPath === ownerScope,
       ),
     ]),
   );
 }
 
-export function textQuerySetHitsFromHitsByTerm(
+export function fzfQuerySetHitsFromHitsByTerm(
   report: TypeScriptHarnessReport,
   hitsByTerm: ReadonlyMap<string, readonly SemanticSearchHit[]>,
 ): readonly SemanticSearchHit[] {
@@ -153,7 +150,7 @@ export function textQuerySetHitsFromHitsByTerm(
       },
     }))
     .sort((left, right) => compareHits(report, left, right))
-    .slice(0, MAX_TEXT_HITS);
+    .slice(0, MAX_FZF_HITS);
 }
 
 function mergeTextQuerySetHit(
@@ -164,7 +161,7 @@ function mergeTextQuerySetHit(
   const key = semanticHitKey(hit);
   const current = byKey.get(key);
   if (current === undefined) {
-    if (byKey.size >= MAX_TEXT_HITS) return;
+    if (byKey.size >= MAX_FZF_HITS) return;
     byKey.set(key, { hit, queryTerms: new Set([queryTerm]) });
     return;
   }
@@ -188,8 +185,7 @@ function semanticHitKey(hit: SemanticSearchHit): string {
     hit.ownerPath,
     hit.symbol ?? "",
     hit.location.path,
-    hit.location.line ?? "",
-    hit.location.column ?? "",
+    hit.location.lineRange ?? "",
     hit.reason,
   ].join("\0");
 }
@@ -273,7 +269,7 @@ export function callsiteHits(
         right.score - left.score ||
         compareHitsByRecency(report.reasoningTree.projectRoot, left, right),
     )
-    .slice(0, MAX_TEXT_HITS);
+    .slice(0, MAX_FZF_HITS);
 }
 
 export function callsiteHit(

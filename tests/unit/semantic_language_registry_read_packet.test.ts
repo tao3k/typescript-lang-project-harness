@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  SEMANTIC_DEV_COMMAND_LOG_SCHEMA_ID,
   SEMANTIC_QUERY_PACKET_SCHEMA_ID,
   SEMANTIC_READ_PACKET_SCHEMA_ID,
   semanticLanguageRegistryDocument,
@@ -25,4 +26,15 @@ test("registry declares TypeScript direct-source-read read packet output", () =>
   ]);
   assert.ok(descriptor.outputModes?.includes("read-packet"));
   assert.equal(descriptor.supportsJson, true);
+});
+
+test("registry advertises dev command log schema", () => {
+  const registry = semanticLanguageRegistryDocument();
+  const language = registry.languages.find((candidate) => candidate.languageId === "typescript");
+  assert.ok(language, "typescript language registration should exist");
+  const schema = language.schemas.find(
+    (candidate) => candidate.schemaId === SEMANTIC_DEV_COMMAND_LOG_SCHEMA_ID,
+  );
+  assert.ok(schema, "dev command log schema should be advertised");
+  assert.equal(schema.path, "schemas/semantic-dev-command-log.v1.schema.json");
 });

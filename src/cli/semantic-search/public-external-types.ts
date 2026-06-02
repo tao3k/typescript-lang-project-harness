@@ -462,8 +462,8 @@ function comparePublicExternalTypeHits(
     if (scoreDiff !== 0) return scoreDiff;
     const recencyDiff = compareHitsByRecency(report.reasoningTree.projectRoot, left, right);
     if (recencyDiff !== 0) return recencyDiff;
-    return `${left.location.line ?? 0}:${left.symbol ?? ""}:${left.fields?.surface ?? ""}`.localeCompare(
-      `${right.location.line ?? 0}:${right.symbol ?? ""}:${right.fields?.surface ?? ""}`,
+    return `${left.location.lineRange ?? ""}:${left.symbol ?? ""}:${left.fields?.surface ?? ""}`.localeCompare(
+      `${right.location.lineRange ?? ""}:${right.symbol ?? ""}:${right.fields?.surface ?? ""}`,
     );
   };
 }

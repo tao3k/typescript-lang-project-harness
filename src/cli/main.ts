@@ -88,15 +88,25 @@ EXAMPLES
 `;
 
 export function runCliFromEnv(): number {
-  return runCli(
-    process.argv.slice(2),
-    {
-      stdout: process.stdout,
-      stderr: process.stderr,
-      stdin: process.stdin.isTTY ? "" : fs.readFileSync(0, "utf8"),
-    },
-    process.cwd(),
-  );
+  const argv = process.argv.slice(2);
+  const cwd = process.cwd();
+  const log = startDevCommandLog(argv, cwd);
+  try {
+    const exitCode = runCli(
+      argv,
+      {
+        stdout: process.stdout,
+        stderr: process.stderr,
+        stdin: process.stdin.isTTY ? "" : fs.readFileSync(0, "utf8"),
+      },
+      cwd,
+    );
+    finishDevCommandLog(log, exitCode);
+    return exitCode;
+  } catch (error) {
+    finishDevCommandLog(log, 2);
+    throw error;
+  }
 }
 
 export function runCli(argv: readonly string[], streams: CliStreams, cwd: string): number {
@@ -131,3 +141,4 @@ function isDirectCliEntry(argvPath: string | undefined): boolean {
     return currentPath === path.resolve(argvPath);
   }
 }
+import { finishDevCommandLog, startDevCommandLog } from "./dev-command-log.js";

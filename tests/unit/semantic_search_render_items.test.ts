@@ -1,0 +1,94 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+
+import { renderSemanticSearchPacket } from "../../src/cli/semantic-search/render.js";
+import type { SemanticSearchPacket } from "../../src/cli/semantic-search/types.js";
+
+test("owner items render as compact item inventory", () => {
+  const packet: SemanticSearchPacket = {
+    schemaId: "agent.semantic-protocols.semantic-search-packet",
+    schemaVersion: "1",
+    protocolId: "agent.semantic-protocols.semantic-language",
+    protocolVersion: "1",
+    languageId: "typescript",
+    providerId: "ts-harness",
+    binary: "ts-harness",
+    namespace: "agent.semantic-protocols.languages.typescript.ts-harness",
+    method: "search/owner",
+    projectRoot: ".",
+    view: "owner",
+    renderMode: "graph",
+    header: {
+      kind: "search-owner",
+      fields: {
+        q: "src/cli/semantic-search/item-query.ts",
+        pipes: "items",
+      },
+    },
+    nodes: [],
+    edges: [
+      {
+        from: "O:src/cli/protocol.ts",
+        kind: "import",
+        to: "O:src/cli/semantic-search/item-query.ts",
+      },
+    ],
+    owners: [
+      {
+        path: "src/cli/semantic-search/item-query.ts",
+        role: "source",
+        public: true,
+        exports: ["SemanticReadPacket", "renderOwnerItemQuery"],
+        fields: { imports: 3 },
+      },
+    ],
+    items: [
+      {
+        name: "SemanticReadPacket",
+        kind: "interface",
+        ownerPath: "src/cli/semantic-search/item-query.ts",
+        location: {
+          path: "src/cli/semantic-search/item-query.ts",
+          lineRange: "22:22",
+        },
+        fields: { exported: true, typeOnly: true },
+      },
+    ],
+    hits: [],
+    findings: [],
+    searchSynthesis: {
+      algorithm: "bounded-reachability-depth1",
+      scope: "owner",
+      summary: "bounded owner frontier",
+    },
+    nextActions: [
+      {
+        kind: "fzf",
+        target: "SemanticReadPacket",
+        ownerPath: "src/cli/semantic-search/item-query.ts",
+        fields: {
+          command: "ts-harness search fzf --query-set SemanticReadPacket owner --view seeds .",
+        },
+      },
+    ],
+    notes: [],
+  };
+
+  const rendered = renderSemanticSearchPacket(packet);
+
+  assert.match(
+    rendered,
+    /^\[search-owner\] q=src\/cli\/semantic-search\/item-query\.ts item=1 pipes=items/m,
+  );
+  assert.match(rendered, /^\|owner src\/cli\/semantic-search\/item-query\.ts role=source/m);
+  assert.match(
+    rendered,
+    /^\|item interface SemanticReadPacket lineRange=22:22 exported=true typeOnly=true/m,
+  );
+  assert.doesNotMatch(rendered, /^\|item .* owner=src\/cli\/semantic-search\/item-query\.ts/m);
+  assert.doesNotMatch(rendered, /^\|edge /m);
+  assert.doesNotMatch(rendered, / edge=/);
+  assert.doesNotMatch(rendered, / find=/);
+  assert.doesNotMatch(rendered, /^\|synthesis /m);
+  assert.doesNotMatch(rendered, /^\|next-run /m);
+});

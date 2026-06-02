@@ -134,7 +134,7 @@ export interface TypeScriptNativeImportResolutionFact {
 export interface TypeScriptSourceTextFixtureFact {
   readonly fixturePath: string;
   readonly location: SourceLocation;
-  readonly endLine: number;
+  readonly lineEnd: number;
 }
 
 export interface TypeScriptExportFact {

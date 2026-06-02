@@ -89,7 +89,7 @@ export function moduleOwnerFact(
   const ownerPath = relPath(report, moduleReport.path);
   const nextActions: SemanticSearchNextAction[] = [
     { kind: "owner", target: ownerPath },
-    { kind: "text", target: ownerPath, ownerPath },
+    { kind: "fzf", target: ownerPath, ownerPath },
   ];
   if (moduleReport.role === "test") {
     nextActions.push({ kind: "tests", target: ownerPath });
@@ -120,7 +120,7 @@ export function ownerNextActions(
   const actions: SemanticSearchNextAction[] = [{ kind: "owner", target: ownerPath }];
   const firstExport = branch.exportNames[0];
   if (firstExport !== undefined) {
-    actions.push({ kind: "text", target: firstExport, ownerPath });
+    actions.push({ kind: "fzf", target: firstExport, ownerPath });
   }
   return actions;
 }
@@ -354,7 +354,7 @@ export function primeNextActions(
     actions.push({ kind: "owner", target: owner.path });
     const firstExport = owner.exports?.[0];
     if (firstExport !== undefined) {
-      actions.push({ kind: "text", target: firstExport, ownerPath: owner.path });
+      actions.push({ kind: "fzf", target: firstExport, ownerPath: owner.path });
     }
   }
   return actions.slice(0, 8);

@@ -1,0 +1,246 @@
+{
+  "matches": [
+    {
+      "name": "Service",
+      "kind": "class",
+      "read": "src/service.ts:5:19",
+      "projection": {
+        "mode": "outline",
+        "syntax": "semantic-outline",
+        "sourceAuthority": "native-parser",
+        "sourceFingerprint": "src/service.ts:5:19:268:7d28339b",
+        "losslessStructure": true,
+        "exactRead": "src/service.ts:5:19",
+        "nodes": [
+          {
+            "id": "Service",
+            "kind": "class",
+            "role": "declaration",
+            "label": "@sealed export class Service",
+            "depth": 0,
+            "read": "src/service.ts:5:19",
+            "flags": [
+              "decorator",
+              "mutation",
+              "branch",
+              "throw",
+              "return",
+              "await",
+              "call"
+            ]
+          },
+          {
+            "id": "Service:1",
+            "parentId": "Service",
+            "kind": "decorator",
+            "role": "declaration",
+            "label": "@sealed",
+            "depth": 1,
+            "read": "src/service.ts:5:5",
+            "flags": [
+              "decorator"
+            ]
+          },
+          {
+            "id": "Service:2",
+            "parentId": "Service",
+            "kind": "field",
+            "role": "declaration",
+            "label": "readonly prefix: string",
+            "depth": 1,
+            "read": "src/service.ts:7:7"
+          },
+          {
+            "id": "Service:3",
+            "parentId": "Service",
+            "kind": "constructor",
+            "role": "declaration",
+            "label": "constructor",
+            "depth": 1,
+            "read": "src/service.ts:9:11"
+          },
+          {
+            "id": "Service:4",
+            "parentId": "Service:3",
+            "kind": "assign",
+            "role": "mutation",
+            "label": "this.prefix = prefix",
+            "depth": 2,
+            "read": "src/service.ts:10:10",
+            "flags": [
+              "mutation"
+            ]
+          },
+          {
+            "id": "Service:5",
+            "parentId": "Service",
+            "kind": "method",
+            "role": "declaration",
+            "label": "async run(value: string): Promise<string>",
+            "depth": 1,
+            "read": "src/service.ts:13:18"
+          },
+          {
+            "id": "Service:6",
+            "parentId": "Service:5",
+            "kind": "if",
+            "role": "control-flow",
+            "label": "if value.length === 0",
+            "depth": 2,
+            "read": "src/service.ts:14:16",
+            "flags": [
+              "branch"
+            ]
+          },
+          {
+            "id": "Service:7",
+            "parentId": "Service:6",
+            "kind": "throw",
+            "role": "terminal",
+            "label": "throw new Error(\"empty\")",
+            "depth": 3,
+            "read": "src/service.ts:15:15",
+            "flags": [
+              "throw"
+            ]
+          },
+          {
+            "id": "Service:8",
+            "parentId": "Service:5",
+            "kind": "return",
+            "role": "terminal",
+            "label": "return `${this.prefix}:${await Promise.resolve(value)}`",
+            "depth": 2,
+            "read": "src/service.ts:17:17",
+            "flags": [
+              "return"
+            ]
+          },
+          {
+            "id": "Service:9",
+            "parentId": "Service:8",
+            "kind": "await",
+            "role": "effect",
+            "label": "await",
+            "depth": 3,
+            "read": "src/service.ts:17:17",
+            "flags": [
+              "await"
+            ]
+          },
+          {
+            "id": "Service:10",
+            "parentId": "Service:9",
+            "kind": "call",
+            "role": "call",
+            "label": "resolve",
+            "depth": 4,
+            "read": "src/service.ts:17:17",
+            "flags": [
+              "call"
+            ]
+          }
+        ],
+        "omitted": [
+          {
+            "kind": "source-formatting",
+            "reason": "compact projection removes original whitespace and comments",
+            "count": 15,
+            "read": "src/service.ts:5:19"
+          }
+        ],
+        "expandActions": [
+          {
+            "kind": "exact-read",
+            "target": "Service",
+            "read": "src/service.ts:5:19",
+            "argv": [
+              "ts-harness",
+              "query",
+              "--from-hook",
+              "direct-source-read",
+              "--selector",
+              "src/service.ts:5:19",
+              "."
+            ],
+            "reason": "read exact source before editing"
+          },
+          {
+            "kind": "exact-read",
+            "target": "Service:4",
+            "read": "src/service.ts:10:10",
+            "argv": [
+              "ts-harness",
+              "query",
+              "--from-hook",
+              "direct-source-read",
+              "--selector",
+              "src/service.ts:10:10",
+              "."
+            ],
+            "reason": "expand assign node before editing"
+          },
+          {
+            "kind": "exact-read",
+            "target": "Service:6",
+            "read": "src/service.ts:14:16",
+            "argv": [
+              "ts-harness",
+              "query",
+              "--from-hook",
+              "direct-source-read",
+              "--selector",
+              "src/service.ts:14:16",
+              "."
+            ],
+            "reason": "expand if node before editing"
+          },
+          {
+            "kind": "exact-read",
+            "target": "Service:7",
+            "read": "src/service.ts:15:15",
+            "argv": [
+              "ts-harness",
+              "query",
+              "--from-hook",
+              "direct-source-read",
+              "--selector",
+              "src/service.ts:15:15",
+              "."
+            ],
+            "reason": "expand throw node before editing"
+          },
+          {
+            "kind": "exact-read",
+            "target": "Service:8",
+            "read": "src/service.ts:17:17",
+            "argv": [
+              "ts-harness",
+              "query",
+              "--from-hook",
+              "direct-source-read",
+              "--selector",
+              "src/service.ts:17:17",
+              "."
+            ],
+            "reason": "expand return node before editing"
+          },
+          {
+            "kind": "owner-names",
+            "target": "src/service.ts",
+            "argv": [
+              "ts-harness",
+              "query",
+              "--from-hook",
+              "direct-source-read",
+              "--selector",
+              "src/service.ts",
+              "."
+            ],
+            "reason": "return owner-local item names without code windows"
+          }
+        ]
+      }
+    }
+  ]
+}

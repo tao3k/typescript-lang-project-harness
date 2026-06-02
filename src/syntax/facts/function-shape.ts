@@ -39,8 +39,8 @@ function functionShape(
   sourceFile: ts.SourceFile,
 ): TsFunctionShapeFact {
   const body = node.body;
-  const startLine = sourceFile.getLineAndCharacterOfPosition(node.getStart()).line + 1;
-  const endLine = sourceFile.getLineAndCharacterOfPosition(node.getEnd()).line + 1;
+  const lineStart = sourceFile.getLineAndCharacterOfPosition(node.getStart()).line + 1;
+  const lineEnd = sourceFile.getLineAndCharacterOfPosition(node.getEnd()).line + 1;
 
   const metrics = body !== undefined ? walkBody(body) : emptyMetrics();
   const params = node.parameters;
@@ -49,8 +49,8 @@ function functionShape(
     name,
     exported,
     async: hasAsyncModifier(node),
-    line: startLine,
-    lineSpan: endLine - startLine + 1,
+    line: lineStart,
+    lineSpan: lineEnd - lineStart + 1,
     statementCount: metrics.statementCount,
     maxNestingDepth: metrics.maxNestingDepth,
     branchCount: metrics.branchCount,

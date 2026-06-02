@@ -15,7 +15,7 @@ import type {
 } from "./types.js";
 import { relPath } from "./utils.js";
 
-export function textQueryCoverage(
+export function fzfQueryCoverage(
   queryTerms: readonly string[],
   hitsByTerm: ReadonlyMap<string, readonly SemanticSearchHit[]>,
   selectedHits: readonly SemanticSearchHit[],
@@ -43,7 +43,7 @@ export function textQueryCoverage(
   });
 }
 
-export function textOwnerResolution(
+export function fzfOwnerResolution(
   report: TypeScriptHarnessReport,
   owners: readonly SemanticSearchOwner[],
   hits: readonly SemanticSearchHit[],
@@ -56,7 +56,7 @@ export function textOwnerResolution(
       status: "workspace-owner",
       realOwner: true,
       ownerPath: owner.path,
-      reason: "parser-visible owner selected by text search",
+      reason: "parser-visible owner selected by fzf search",
     });
   }
   for (const hit of hits) {
@@ -86,7 +86,7 @@ export function textOwnerResolution(
   return [...resolutions.values()].slice(0, 12);
 }
 
-export function textSearchSynthesis(
+export function fzfSearchSynthesis(
   report: TypeScriptHarnessReport,
   queryTerms: readonly string[],
   hits: readonly SemanticSearchHit[],
@@ -114,7 +114,7 @@ export function textSearchSynthesis(
     const branch = realOwners.get(ownerPath);
     if (branch !== undefined) {
       for (const exportName of rankedExportNames(branch, hits, queryTerms).slice(0, 4)) {
-        addSeed(seeds, { kind: "text", target: exportName, ownerPath });
+        addSeed(seeds, { kind: "symbol", target: exportName, ownerPath });
       }
     }
     addSeed(seeds, { kind: "owner", target: ownerPath });
@@ -123,7 +123,7 @@ export function textSearchSynthesis(
   return {
     algorithm: "query-set-owner-resolution",
     scope: "query-set",
-    summary: `query-set compressed ${queryTerms.length} text terms into ${ownerPaths.length} parser-visible owners`,
+    summary: `query-set compressed ${queryTerms.length} query terms into ${ownerPaths.length} parser-visible owners`,
     selectedOwners: rankedOwners.length,
     ...(editFrontier.length === 0 ? {} : { editFrontier }),
     ...(testFrontier.length === 0 ? {} : { testFrontier }),
@@ -137,7 +137,7 @@ export function textSearchSynthesis(
   };
 }
 
-export function textAvoidNextActions(
+export function fzfAvoidNextActions(
   queryTerms: readonly string[],
   ownerResolution: readonly SemanticSearchOwnerResolution[],
 ): readonly SemanticSearchAvoidNextAction[] {

@@ -8,7 +8,7 @@ import type {
   SemanticSearchInputDetection,
   SemanticSearchInputSource,
 } from "./types.js";
-import { MAX_TEXT_HITS } from "./types.js";
+import { MAX_FZF_HITS } from "./types.js";
 import { compareProjectPathsByRecency } from "./recency.js";
 import { isProjectPath, normalizeInputPath, resolveOwnerPath } from "./utils.js";
 
@@ -44,7 +44,7 @@ export function ingestHits(
     .sort((left, right) =>
       compareProjectPathsByRecency(report.reasoningTree.projectRoot, left.path, right.path),
     )
-    .slice(0, MAX_TEXT_HITS)
+    .slice(0, MAX_FZF_HITS)
     .map((record) => {
       const ownerPath = resolveOwnerPath(report, record.path);
       return {
@@ -52,8 +52,7 @@ export function ingestHits(
         ownerPath,
         location: {
           path: record.path,
-          ...(record.line !== undefined ? { line: record.line } : {}),
-          ...(record.column !== undefined ? { column: record.column } : {}),
+          ...(record.line !== undefined ? { lineRange: `${record.line}:${record.line}` } : {}),
         },
         score: record.line !== undefined ? 2 : 1,
         reason: source,

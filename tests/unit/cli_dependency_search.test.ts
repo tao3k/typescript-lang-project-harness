@@ -181,7 +181,7 @@ test("CLI searches external dependency usage", () => {
   assert.match(deps.stdout, /moduleSpecifier=react\/jsx-runtime/u);
   assert.match(
     deps.stdout,
-    /\|next dependency:react,public-external-types:react,api:react\/jsx-runtime@19\.0\.0::jsx,text:jsx,tests:jsx/u,
+    /\|next dependency:react,public-external-types:react,api:react\/jsx-runtime@19\.0\.0::jsx,fzf:jsx,tests:jsx/u,
   );
 
   const depsJson = runCliCapture(
@@ -308,7 +308,7 @@ test("CLI deps search handles scoped packages and range-only versions", () => {
   assert.match(scoped.stdout, /moduleSpecifier=@scope\/sdk\/client/u);
   assert.match(
     scoped.stdout,
-    /\|next dependency:@scope\/sdk,public-external-types:@scope\/sdk,api:@scope\/sdk\/client@2\.0\.0::Client,text:Client,tests:Client/u,
+    /\|next dependency:@scope\/sdk,public-external-types:@scope\/sdk,api:@scope\/sdk\/client@2\.0\.0::Client,fzf:Client,tests:Client/u,
   );
 
   const scopedJson = runCliCapture(

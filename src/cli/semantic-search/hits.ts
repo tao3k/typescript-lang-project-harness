@@ -27,7 +27,7 @@ export {
   symbolHits,
   textHits,
   textQueryHitsByTerm,
-  textQuerySetHitsFromHitsByTerm,
+  fzfQuerySetHitsFromHitsByTerm,
   textQuerySetHits,
 } from "./hit-search.js";
 export { testEdges, testHits } from "./hit-tests.js";

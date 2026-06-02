@@ -11,7 +11,7 @@ import type {
   SemanticSearchHit,
   SemanticSearchPacketPayload,
 } from "./types.js";
-import { MAX_TEXT_HITS } from "./types.js";
+import { MAX_FZF_HITS } from "./types.js";
 import { normalizeInputPath } from "./utils.js";
 
 interface SchemaDocumentCandidate {
@@ -58,7 +58,7 @@ export function buildDocsPacketPayload(
       ...(query.trim() === ""
         ? []
         : [
-            { kind: "text" as const, target: query },
+            { kind: "fzf" as const, target: query },
             { kind: "ingest" as const, target: query, scope: "external-docs" },
           ]),
     ],
@@ -81,7 +81,7 @@ function docsHits(report: TypeScriptHarnessReport, query: string): readonly Sema
   return schemaCandidates(report)
     .flatMap((candidate) => schemaMatches(candidate, needle))
     .sort(compareSchemaMatches)
-    .slice(0, MAX_TEXT_HITS)
+    .slice(0, MAX_FZF_HITS)
     .map((match) => ({
       kind: "text" as const,
       ownerPath: match.path,

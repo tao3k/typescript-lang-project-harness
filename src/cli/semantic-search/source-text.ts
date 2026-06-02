@@ -32,7 +32,7 @@ export function sourceTextHits(
       hits.push({
         kind: "text",
         ownerPath,
-        location: { path: ownerPath, line: index + 1, column: column + 1 },
+        location: { path: ownerPath, lineRange: `${index + 1}:${index + 1}` },
         score: sourceTextScore(line, query),
         reason: "source-text",
         snippet: line.trim().slice(0, MAX_SOURCE_TEXT_SNIPPET_LENGTH),
@@ -95,7 +95,7 @@ export function fuzzySourceTextHits(
       hits.push({
         kind: "text",
         ownerPath,
-        location: { path: ownerPath, line: index + 1, column: match.column },
+        location: { path: ownerPath, lineRange: `${index + 1}:${index + 1}` },
         score: match.score,
         reason: "source-text-fuzzy",
         snippet: line.trim().slice(0, MAX_SOURCE_TEXT_SNIPPET_LENGTH),
@@ -167,7 +167,7 @@ function fixtureContextsByLine(
 ): ReadonlyMap<number, FixtureContext> {
   const contexts = new Map<number, FixtureContext>();
   for (const fixture of fixtures) {
-    for (let line = fixture.location.line; line <= fixture.endLine; line += 1) {
+    for (let line = fixture.location.line; line <= fixture.lineEnd; line += 1) {
       contexts.set(line, { fixturePath: fixture.fixturePath, fixtureOwner });
     }
   }

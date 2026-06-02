@@ -66,8 +66,7 @@ export function locationFromSource(
 ): SemanticSearchLocation {
   return {
     path: locationPath(report, location),
-    line: location.line,
-    column: location.column + 1,
+    lineRange: `${location.line}:${location.line}`,
   };
 }
 

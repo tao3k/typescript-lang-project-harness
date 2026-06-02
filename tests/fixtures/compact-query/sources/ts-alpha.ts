@@ -1,0 +1,7 @@
+export function alpha(flag: boolean) {
+  const value = flag ? 1 : 0;
+  if (value > 0) {
+    return value;
+  }
+  return 0;
+}

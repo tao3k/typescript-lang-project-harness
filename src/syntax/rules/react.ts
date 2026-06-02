@@ -307,7 +307,7 @@ function findContextValues(source: string): ContextValue[] {
   let inValueObj = false;
   let braceDepth = 0;
   let propCount = 0;
-  let startLine = 0;
+  let lineStart = 0;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]!;
@@ -317,7 +317,7 @@ function findContextValues(source: string): ContextValue[] {
         inValueObj = true;
         braceDepth = 1; // the opening brace is on this line
         propCount = 0;
-        startLine = i + 1;
+        lineStart = i + 1;
       }
       continue;
     }
@@ -336,7 +336,7 @@ function findContextValues(source: string): ContextValue[] {
     // End of value object
     if (braceDepth <= 0) {
       if (propCount > 0) {
-        results.push({ line: startLine, propCount });
+        results.push({ line: lineStart, propCount });
       }
       inValueObj = false;
     }

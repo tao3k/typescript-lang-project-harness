@@ -22,7 +22,7 @@ export function collectSourceTextFixtureFacts(
         line: start.line + 1,
         column: start.character + 1,
       },
-      endLine: end.line + 1,
+      lineEnd: end.line + 1,
     });
   });
   return facts;

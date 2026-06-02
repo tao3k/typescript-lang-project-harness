@@ -161,7 +161,7 @@ function policySemanticHandle(match: PolicyHandleMatch, query: string): Semantic
     ownerPath: semanticSearchHandlePath(match.ownerPath),
     implementationOwnerPath: semanticSearchHandlePath(match.ownerPath),
     testPaths: match.tests.map(semanticSearchHandlePath),
-    locations: [{ path: match.ownerPath, line: 1 }],
+    locations: [{ path: match.ownerPath, lineRange: "1:1" }],
     queryTerms: [query],
     fields: {
       packId: match.rule.packId,

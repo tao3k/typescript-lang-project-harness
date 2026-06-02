@@ -65,7 +65,7 @@ test("CLI search uses fast syntax reasoning while check keeps semantic diagnosti
   assert.match(check.stdout, /TS-SEM-R001/u);
 });
 
-test("text query-set explains fixture paths and synthesizes real owners", () => {
+test("fzf query-set explains fixture paths and synthesizes real owners", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-search-fixture-resolution-"));
   const missingHookEvent = ["Agent", "Hook", "Event"].join("");
   const codexHookFunction = ["run", "Codex", "Agent", "Hook"].join("");
@@ -176,12 +176,12 @@ test("text query-set explains fixture paths and synthesizes real owners", () => 
   );
   assert.ok(
     packet.searchSynthesis.seeds.some(
-      (seed) => seed.kind === "text" && seed.target === protocolRunner,
+      (seed) => seed.kind === "symbol" && seed.target === protocolRunner,
     ),
   );
   assert.ok(
     packet.searchSynthesis.seeds.some(
-      (seed) => seed.kind === "text" && seed.target === protocolParser,
+      (seed) => seed.kind === "symbol" && seed.target === protocolParser,
     ),
   );
   assert.ok(
@@ -217,15 +217,15 @@ test("text query-set explains fixture paths and synthesizes real owners", () => 
     fixtureSeeds.stdout,
     new RegExp(`\\|query ${codexHookFunction} .*surface=test-fixture-string`, "u"),
   );
-  assert.match(fixtureSeeds.stdout, new RegExp(`\\|seed text:.*${protocolRunner}`, "u"));
-  assert.match(fixtureSeeds.stdout, new RegExp(`\\|seed text:.*${protocolParser}`, "u"));
+  assert.match(fixtureSeeds.stdout, new RegExp(`\\|seed symbol:.*${protocolRunner}`, "u"));
+  assert.match(fixtureSeeds.stdout, new RegExp(`\\|seed symbol:.*${protocolParser}`, "u"));
   assert.match(
     fixtureSeeds.stdout,
     /\|avoid owner:src\/cli\/agent-hooks\.ts reason=fixture-path-not-workspace-owner/u,
   );
 });
 
-test("text search prefilter scopes parser input and keeps requested owner", () => {
+test("fzf search prefilter scopes parser input and keeps requested owner", () => {
   if (!hasCommand("rg")) return;
 
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-search-prefilter-"));

@@ -186,7 +186,7 @@ export function buildDepsPacketPayload(
             ...(query.apiQuery === undefined || versionScope !== "current"
               ? []
               : [
-                  { kind: "text" as const, target: query.apiQuery },
+                  { kind: "fzf" as const, target: query.apiQuery },
                   { kind: "tests" as const, target: query.apiQuery },
                 ]),
           ],

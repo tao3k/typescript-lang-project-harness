@@ -162,7 +162,7 @@ export function buildTestsPacket(
     findings: [],
     nextActions: [
       ...hits.slice(0, 5).map((hit) => ({ kind: "owner" as const, target: hit.ownerPath })),
-      ...(query.trim() === "" ? [] : [{ kind: "text" as const, target: query, scope: "tests" }]),
+      ...(query.trim() === "" ? [] : [{ kind: "fzf" as const, target: query, scope: "tests" }]),
     ],
     notes: [
       ...(query.trim() === ""

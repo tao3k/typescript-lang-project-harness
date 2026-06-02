@@ -20,7 +20,6 @@ export type SemanticSearchView =
   | "import"
   | "tests"
   | "fzf"
-  | "text"
   | "ingest";
 export type SemanticSearchPipe = SemanticSearchView | "items";
 export type SemanticSearchRenderMode = "graph" | "hits" | "both" | "seeds";
@@ -203,7 +202,6 @@ export interface SemanticSearchSynthesis {
     | "policy"
     | "query"
     | "query-set"
-    | "text"
     | "ingest"
     | "custom";
   readonly summary?: string;
@@ -487,7 +485,7 @@ export type SemanticSearchNextActionKind =
   | "callsite"
   | "import"
   | "tests"
-  | "text"
+  | "fzf"
   | "ingest";
 
 export interface SemanticSearchNextAction {
@@ -515,10 +513,7 @@ export interface SemanticSearchNote {
 
 export interface SemanticSearchLocation {
   readonly path: string;
-  readonly line?: number;
-  readonly column?: number;
-  readonly endLine?: number;
-  readonly endColumn?: number;
+  readonly lineRange?: string;
 }
 
 export const MAX_PRIME_OWNERS = 8;
@@ -526,6 +521,6 @@ export const MAX_PRIME_EDGES = 24;
 export const MAX_FINDINGS = 8;
 export const MAX_WORKSPACE_PACKAGES = 24;
 export const MAX_WORKSPACE_EDGES = 8;
-export const MAX_TEXT_HITS = 12;
+export const MAX_FZF_HITS = 12;
 export const MAX_SYMBOL_HITS = 20;
 export const MAX_IMPORT_HITS = 30;

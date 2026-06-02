@@ -106,7 +106,7 @@ export function buildApiPacketPayload(
       ...(apiQuery.trim() === ""
         ? []
         : [
-            { kind: "text" as const, target: apiQuery },
+            { kind: "fzf" as const, target: apiQuery },
             { kind: "tests" as const, target: apiQuery },
           ]),
     ],
@@ -456,7 +456,7 @@ function compareApiHits(
   if (scoreDiff !== 0) return scoreDiff;
   const recencyDiff = compareHitsByRecency(report.reasoningTree.projectRoot, left, right);
   if (recencyDiff !== 0) return recencyDiff;
-  return `${left.location.line ?? 0}:${left.symbol ?? ""}`.localeCompare(
-    `${right.location.line ?? 0}:${right.symbol ?? ""}`,
+  return `${left.location.lineRange ?? ""}:${left.symbol ?? ""}`.localeCompare(
+    `${right.location.lineRange ?? ""}:${right.symbol ?? ""}`,
   );
 }

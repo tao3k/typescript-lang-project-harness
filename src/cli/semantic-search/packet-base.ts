@@ -39,8 +39,7 @@ export function basePacket(
     projectRoot: report.reasoningTree.projectRoot,
     ...(report.reasoningTree.packageName ? { packageName: report.reasoningTree.packageName } : {}),
     view: options.view,
-    renderMode:
-      options.renderMode ?? (options.view === "text" || options.view === "fzf" ? "hits" : "graph"),
+    renderMode: options.renderMode ?? (options.view === "fzf" ? "hits" : "graph"),
     ...(options.query ? { query: options.query } : {}),
     ...(querySet.length === 0
       ? {}

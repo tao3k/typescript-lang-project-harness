@@ -74,6 +74,7 @@ interface SearchArgs {
   readonly querySet: readonly string[];
   readonly json: boolean;
   readonly codeOnly?: boolean;
+  readonly namesOnly?: boolean;
   readonly renderMode: SemanticSearchRenderMode | undefined;
 }
 
@@ -126,7 +127,12 @@ export function parseProtocolArgs(argv: readonly string[]): ProtocolArgs | undef
   if (command === undefined) return undefined;
   if (command === "--help" || command === "-h") return { kind: "help" };
   if (command === "search") return parseSearchArgs(argv.slice(1));
-  if (command === "query") return parseQueryArgs(argv.slice(1));
+  if (command === "query") {
+    const queryArgs = argv.slice(1);
+    return isBroadHookQueryArgs(queryArgs)
+      ? parseSearchQueryArgs(queryArgs)
+      : parseQueryArgs(queryArgs);
+  }
   if (command === "check") return parseCheckArgs(argv.slice(1));
   if (command === "agent") return parseAgentArgs(argv.slice(1));
   return undefined;
@@ -185,6 +191,10 @@ export function runProtocolCli(
                 ),
               ),
         );
+      } else if (args.codeOnly) {
+        streams.stdout.write(
+          `${renderOwnerItemQueryCode(projectRoot, args.ownerPath, itemQuery, args.selector)}\n`,
+        );
       } else if (selectorHasLineRange(args.selector, args.ownerPath)) {
         streams.stdout.write(
           `${renderOwnerItemSemanticReadPacket(
@@ -197,14 +207,9 @@ export function runProtocolCli(
           )}\n`,
         );
       } else {
+        const itemQueryOptions = args.namesOnly === undefined ? {} : { namesOnly: args.namesOnly };
         streams.stdout.write(
-          `${
-            args.codeOnly
-              ? renderOwnerItemQueryCode(projectRoot, args.ownerPath, itemQuery)
-              : renderOwnerItemQuery(projectRoot, args.ownerPath, itemQuery, {
-                  namesOnly: args.namesOnly,
-                })
-          }\n`,
+          `${renderOwnerItemQuery(projectRoot, args.ownerPath, itemQuery, itemQueryOptions)}\n`,
         );
       }
       return 0;
@@ -246,7 +251,9 @@ export function runProtocolCli(
           : `${
               args.codeOnly === true
                 ? renderOwnerItemQueryCode(searchPlan.projectRoot, args.query, args.itemQuery)
-                : renderOwnerItemQuery(searchPlan.projectRoot, args.query, args.itemQuery)
+                : renderOwnerItemQuery(searchPlan.projectRoot, args.query, args.itemQuery, {
+                    namesOnly: args.namesOnly === true,
+                  })
             }\n`,
       );
       return 0;
@@ -474,6 +481,7 @@ function parseSearchArgs(argv: readonly string[]): ProtocolArgs {
   const positionals: string[] = [];
   let itemQuery: string | undefined;
   let codeOnly = false;
+  let namesOnly = false;
   for (let index = 1; index < argv.length; index++) {
     const arg = argv[index]!;
     if (isFlagLikeLiteralSearchQuery(searchView.view, positionals, querySet, arg)) {
@@ -508,6 +516,8 @@ function parseSearchArgs(argv: readonly string[]): ProtocolArgs {
       index++;
     } else if (arg === "--code") {
       codeOnly = true;
+    } else if (arg === "--names-only") {
+      namesOnly = true;
     } else if (arg === "--query-set") {
       const value = argv[index + 1];
       if (value === undefined) {
@@ -532,8 +542,14 @@ function parseSearchArgs(argv: readonly string[]): ProtocolArgs {
   if (codeOnly && json) {
     return { kind: "error", message: "--code cannot be combined with --json" };
   }
+  if (codeOnly && namesOnly) {
+    return { kind: "error", message: "--names-only cannot be combined with --code" };
+  }
   if (codeOnly && !(searchView.view === "owner" && itemQuery !== undefined)) {
     return { kind: "error", message: "--code requires search owner <path> --query <symbol>" };
+  }
+  if (namesOnly && !(searchView.view === "owner" && itemQuery !== undefined)) {
+    return { kind: "error", message: "--names-only requires search owner <path> --query <symbol>" };
   }
   if (searchView.requiresQuery) {
     const query = querySet.length > 0 ? querySet.join(",") : positionals[0];
@@ -562,6 +578,7 @@ function parseSearchArgs(argv: readonly string[]): ProtocolArgs {
       querySet,
       json,
       ...(codeOnly ? { codeOnly } : {}),
+      ...(namesOnly ? { namesOnly } : {}),
       renderMode,
     };
   }
@@ -580,6 +597,7 @@ function parseSearchArgs(argv: readonly string[]): ProtocolArgs {
     querySet: [],
     json,
     ...(codeOnly ? { codeOnly } : {}),
+    ...(namesOnly ? { namesOnly } : {}),
     renderMode,
   };
 }
@@ -687,13 +705,43 @@ function parseSearchQuerySurfaces(value: string): TypeScriptSemanticSearchPipe[]
   if (surfaces.length === 0) return "--surface requires at least one surface";
   const pipes: TypeScriptSemanticSearchPipe[] = [];
   for (const surface of surfaces) {
-    if (surface === "items" || typeScriptSemanticSearchViewDescriptor(surface) !== undefined) {
-      pipes.push(surface as TypeScriptSemanticSearchPipe);
+    const pipe = surface === "owners" ? "owner" : surface;
+    if (pipe === "items" || typeScriptSemanticSearchViewDescriptor(pipe) !== undefined) {
+      pipes.push(pipe as TypeScriptSemanticSearchPipe);
     } else {
       return `unknown search query surface: ${surface}`;
     }
   }
   return pipes;
+}
+
+function isBroadHookQueryArgs(argv: readonly string[]): boolean {
+  let fromHook: string | undefined;
+  let selector: string | undefined;
+  let hasTerm = false;
+  for (let index = 0; index < argv.length; index++) {
+    const arg = argv[index]!;
+    if (arg === "--from-hook") {
+      fromHook = argv[index + 1];
+      index += 1;
+    } else if (arg === "--selector") {
+      selector = argv[index + 1];
+      index += 1;
+    } else if (arg === "--term") {
+      hasTerm = argv[index + 1] !== undefined;
+      index += 1;
+    }
+  }
+  return (
+    fromHook === "direct-source-read" &&
+    hasTerm &&
+    selector !== undefined &&
+    querySelectorHasGlob(selector)
+  );
+}
+
+function querySelectorHasGlob(selector: string): boolean {
+  return /[*?[{}\]]/u.test(selector);
 }
 
 function ownerPathFromQuerySelector(selector: string | undefined): string | undefined {
@@ -702,7 +750,7 @@ function ownerPathFromQuerySelector(selector: string | undefined): string | unde
     return undefined;
   }
   const normalized = selector.replace(/\\/gu, "/").replace(/^owner:/u, "");
-  return normalized.replace(/:\d+(?:-\d+)?$/u, "");
+  return normalized.replace(/:\d+(?::|-)\d+$/u, "");
 }
 
 function selectorHasLineRange(
@@ -712,7 +760,7 @@ function selectorHasLineRange(
   if (selector === undefined || ownerPath === undefined) return false;
   const normalized = selector.replace(/\\/gu, "/").replace(/^owner:/u, "");
   if (!normalized.startsWith(`${ownerPath}:`)) return false;
-  return /:\d+(?:-\d+)?$/u.test(normalized);
+  return /:\d+(?::|-)\d+$/u.test(normalized);
 }
 
 function parseSearchPipePositionals(

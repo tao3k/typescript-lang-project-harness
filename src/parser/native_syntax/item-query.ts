@@ -7,8 +7,8 @@ export interface TypeScriptItemQueryMatch {
   readonly kind: string;
   readonly exported: boolean;
   readonly typeOnly: boolean;
-  readonly startLine: number;
-  readonly endLine: number;
+  readonly lineStart: number;
+  readonly lineEnd: number;
   readonly column: number;
   readonly code: string;
   readonly sourceLines: readonly string[];
@@ -29,8 +29,8 @@ export interface TypeScriptItemProjectionNode {
     | "unknown";
   readonly label: string;
   readonly depth: number;
-  readonly startLine: number;
-  readonly endLine: number;
+  readonly lineStart: number;
+  readonly lineEnd: number;
   readonly flags: readonly string[];
 }
 
@@ -117,18 +117,18 @@ function itemFromNode(
 ): TypeScriptItemQueryMatch {
   const start = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile));
   const end = sourceFile.getLineAndCharacterOfPosition(node.getEnd());
-  const startLine = start.line + 1;
-  const endLine = end.line + 1;
+  const lineStart = start.line + 1;
+  const lineEnd = end.line + 1;
   const projectionNodes = projectionNodesForItem(sourceFile, node, name, kind);
   return {
     name,
     kind,
     exported: hasExportModifier(node),
     typeOnly: kind === "interface" || kind === "type",
-    startLine,
-    endLine,
+    lineStart,
+    lineEnd,
     column: start.character,
-    code: sourceCompactCode(sourceText, startLine, endLine),
+    code: sourceCompactCode(sourceText, lineStart, lineEnd),
     sourceLines: sourceText.split(/\r?\n/u),
     projectionNodes,
   };
@@ -149,8 +149,8 @@ function projectionNodesForItem(
       role: "declaration",
       label: declarationProjectionLabel(sourceFile, node, name, kind),
       depth: 0,
-      startLine: rootRange.startLine,
-      endLine: rootRange.endLine,
+      lineStart: rootRange.lineStart,
+      lineEnd: rootRange.lineEnd,
       flags: projectionFlagsForNode(node),
     },
   ];
@@ -165,6 +165,7 @@ function projectionNodesForItem(
 
 interface ProjectionNodeContext {
   readonly parentId: string;
+  readonly parentKind?: string;
   readonly rootId: string;
   readonly depth: number;
   readonly nodes: TypeScriptItemProjectionNode[];
@@ -182,6 +183,7 @@ function collectProjectionChildNodes(
         ? context
         : {
             parentId: projection.id,
+            parentKind: projection.kind,
             rootId: context.rootId,
             depth: Math.min(context.depth + 1, 8),
             nodes: context.nodes,
@@ -200,6 +202,7 @@ function projectionNodeForAstNode(
 ): TypeScriptItemProjectionNode | undefined {
   const kind = projectionKindForNode(node);
   if (kind === undefined) return undefined;
+  if (shouldOmitNestedProjectionKind(kind, context)) return undefined;
   const range = nodeRange(sourceFile, node);
   const label = projectionLabelForNode(node, kind);
   return {
@@ -209,13 +212,31 @@ function projectionNodeForAstNode(
     role: projectionRoleForKind(kind),
     label,
     depth: context.depth,
-    startLine: range.startLine,
-    endLine: range.endLine,
+    lineStart: range.lineStart,
+    lineEnd: range.lineEnd,
     flags: projectionFlagsForKind(kind),
   };
 }
 
+function shouldOmitNestedProjectionKind(kind: string, context: ProjectionNodeContext): boolean {
+  if (kind !== "call") return false;
+  return expressionCarrierProjectionKinds.has(context.parentKind ?? "");
+}
+
+const expressionCarrierProjectionKinds = new Set([
+  "assign",
+  "case",
+  "const",
+  "if",
+  "let",
+  "return",
+  "switch",
+  "throw",
+  "var",
+]);
+
 function projectionKindForNode(node: ts.Node): string | undefined {
+  if (ts.isDecorator(node)) return "decorator";
   if (ts.isVariableStatement(node)) return variableDeclarationKind(node);
   if (ts.isPropertySignature(node) || ts.isPropertyDeclaration(node)) return "field";
   if (ts.isMethodSignature(node) || ts.isMethodDeclaration(node)) return "method";
@@ -234,7 +255,7 @@ function projectionKindForNode(node: ts.Node): string | undefined {
   if (ts.isContinueStatement(node)) return "continue";
   if (ts.isAwaitExpression(node)) return "await";
   if (ts.isCallExpression(node)) return "call";
-  if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken)
+  if (ts.isBinaryExpression(node) && assignmentOperatorText(node.operatorToken.kind) !== undefined)
     return "assign";
   return undefined;
 }
@@ -242,7 +263,8 @@ function projectionKindForNode(node: ts.Node): string | undefined {
 function projectionRoleForKind(
   kind: string,
 ): "declaration" | "control-flow" | "call" | "terminal" | "mutation" | "effect" | "unknown" {
-  if (["field", "method", "constructor", "member"].includes(kind)) return "declaration";
+  if (["decorator", "field", "method", "constructor", "member"].includes(kind))
+    return "declaration";
   if (["if", "switch", "case", "for", "while", "try"].includes(kind)) return "control-flow";
   if (kind === "call") return "call";
   if (["return", "throw", "break", "continue"].includes(kind)) return "terminal";
@@ -252,6 +274,7 @@ function projectionRoleForKind(
 }
 
 function projectionFlagsForKind(kind: string): readonly string[] {
+  if (kind === "decorator") return ["decorator"];
   if (["if", "switch", "case"].includes(kind)) return ["branch"];
   if (["for", "while"].includes(kind)) return ["loop"];
   if (kind === "call") return ["call"];
@@ -268,6 +291,9 @@ function projectionFlagsForKind(kind: string): readonly string[] {
 function projectionFlagsForNode(node: ts.Node): readonly string[] {
   const flags = new Set<string>();
   const visit = (current: ts.Node): void => {
+    for (const decorator of decoratorsForNode(current)) {
+      if (decorator !== undefined) flags.add("decorator");
+    }
     for (const flag of projectionFlagsForKind(projectionKindForNode(current) ?? "")) {
       flags.add(flag);
     }
@@ -278,18 +304,31 @@ function projectionFlagsForNode(node: ts.Node): readonly string[] {
 }
 
 function projectionLabelForNode(node: ts.Node, kind: string): string {
+  if (ts.isDecorator(node)) return `@${compactNodeText(node.getSourceFile(), node.expression)}`;
   if (ts.isCallExpression(node)) return callExpressionLabel(node);
   if (ts.isVariableStatement(node)) return variableStatementLabel(node);
+  if (ts.isIfStatement(node)) return `if ${compactNodeText(node.getSourceFile(), node.expression)}`;
+  if (ts.isForOfStatement(node))
+    return `for ${compactNodeText(node.getSourceFile(), node.initializer)} of ${compactNodeText(node.getSourceFile(), node.expression)}`;
+  if (ts.isForInStatement(node))
+    return `for ${compactNodeText(node.getSourceFile(), node.initializer)} in ${compactNodeText(node.getSourceFile(), node.expression)}`;
+  if (ts.isForStatement(node)) return forStatementLabel(node);
+  if (ts.isWhileStatement(node))
+    return `while ${compactNodeText(node.getSourceFile(), node.expression)}`;
   if (ts.isPropertySignature(node) || ts.isPropertyDeclaration(node))
     return propertyLikeLabel(node);
   if (ts.isMethodSignature(node) || ts.isMethodDeclaration(node)) return methodLikeLabel(node);
   if (ts.isConstructorDeclaration(node)) return "constructor";
   if (ts.isEnumMember(node)) return compactNodeText(node.getSourceFile(), node.name);
   if (ts.isReturnStatement(node))
-    return node.expression ? compactNodeText(node.getSourceFile(), node.expression) : "return";
+    return node.expression
+      ? `return ${compactNodeText(node.getSourceFile(), node.expression)}`
+      : "return";
   if (ts.isThrowStatement(node))
-    return node.expression ? compactNodeText(node.getSourceFile(), node.expression) : "throw";
-  if (ts.isBinaryExpression(node) && kind === "assign") return "assign";
+    return node.expression
+      ? `throw ${compactNodeText(node.getSourceFile(), node.expression)}`
+      : "throw";
+  if (ts.isBinaryExpression(node) && kind === "assign") return assignmentLabel(node);
   return kind;
 }
 
@@ -302,10 +341,10 @@ function callExpressionLabel(node: ts.CallExpression): string {
 function nodeRange(
   sourceFile: ts.SourceFile,
   node: ts.Node,
-): { readonly startLine: number; readonly endLine: number } {
+): { readonly lineStart: number; readonly lineEnd: number } {
   const start = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile));
   const end = sourceFile.getLineAndCharacterOfPosition(node.getEnd());
-  return { startLine: start.line + 1, endLine: end.line + 1 };
+  return { lineStart: start.line + 1, lineEnd: end.line + 1 };
 }
 
 function projectionNodeId(value: string): string {
@@ -332,17 +371,17 @@ function fallbackTopLevelItems(
 }
 
 function itemFallbackRank(item: TypeScriptItemQueryMatch): number {
-  let rank = item.startLine;
+  let rank = item.lineStart;
   if (!item.exported) rank += 10_000;
   if (item.kind === "interface") rank -= 50;
   if (item.kind === "const" || item.kind === "let" || item.kind === "var") rank += 250;
   return rank;
 }
 
-function sourceCompactCode(sourceText: string, startLine: number, endLine: number): string {
+function sourceCompactCode(sourceText: string, lineStart: number, lineEnd: number): string {
   return sourceText
     .split(/\r\n|\r|\n/u)
-    .slice(startLine - 1, endLine)
+    .slice(lineStart - 1, lineEnd)
     .map((line) => line.trim())
     .filter((line) => line.length > 0)
     .join("\n");
@@ -362,9 +401,10 @@ function declarationProjectionLabel(
     )
       ? "async "
       : "";
-    return `${exportPrefix(node)}${asyncPrefix}function ${name}(${params})${returnType}`;
+    return `${decoratorPrefix(node)}${exportPrefix(node)}${asyncPrefix}function ${name}(${params})${returnType}`;
   }
-  if (ts.isClassDeclaration(node)) return `${exportPrefix(node)}class ${name}`;
+  if (ts.isClassDeclaration(node))
+    return `${decoratorPrefix(node)}${exportPrefix(node)}class ${name}`;
   if (ts.isInterfaceDeclaration(node)) return `${exportPrefix(node)}interface ${name}`;
   if (ts.isTypeAliasDeclaration(node)) {
     return `${exportPrefix(node)}type ${name} = ${compactNodeText(sourceFile, node.type)}`;
@@ -374,10 +414,46 @@ function declarationProjectionLabel(
 }
 
 function variableStatementLabel(node: ts.VariableStatement): string {
-  return node.declarationList.declarations
-    .map((declaration) => bindingNameText(declaration.name))
-    .filter((name): name is string => name !== undefined)
-    .join(",");
+  const declarationKind = variableDeclarationKind(node);
+  const declarations = node.declarationList.declarations
+    .map((declaration) => compactNodeText(node.getSourceFile(), declaration))
+    .join(", ");
+  return `${declarationKind} ${declarations}`;
+}
+
+function forStatementLabel(node: ts.ForStatement): string {
+  const sourceFile = node.getSourceFile();
+  const initializer =
+    node.initializer === undefined ? "" : compactNodeText(sourceFile, node.initializer);
+  const condition = node.condition === undefined ? "" : compactNodeText(sourceFile, node.condition);
+  const incrementor =
+    node.incrementor === undefined ? "" : compactNodeText(sourceFile, node.incrementor);
+  return `for ${initializer}; ${condition}; ${incrementor}`;
+}
+
+function assignmentLabel(node: ts.BinaryExpression): string {
+  const sourceFile = node.getSourceFile();
+  const operator = assignmentOperatorText(node.operatorToken.kind) ?? "=";
+  return `${compactNodeText(sourceFile, node.left)} ${operator} ${compactNodeText(sourceFile, node.right)}`;
+}
+
+function assignmentOperatorText(kind: ts.SyntaxKind): string | undefined {
+  const operators: Partial<Record<ts.SyntaxKind, string>> = {
+    [ts.SyntaxKind.EqualsToken]: "=",
+    [ts.SyntaxKind.PlusEqualsToken]: "+=",
+    [ts.SyntaxKind.MinusEqualsToken]: "-=",
+    [ts.SyntaxKind.AsteriskEqualsToken]: "*=",
+    [ts.SyntaxKind.AsteriskAsteriskEqualsToken]: "**=",
+    [ts.SyntaxKind.SlashEqualsToken]: "/=",
+    [ts.SyntaxKind.PercentEqualsToken]: "%=",
+    [ts.SyntaxKind.LessThanLessThanEqualsToken]: "<<=",
+    [ts.SyntaxKind.GreaterThanGreaterThanEqualsToken]: ">>=",
+    [ts.SyntaxKind.GreaterThanGreaterThanGreaterThanEqualsToken]: ">>>=",
+    [ts.SyntaxKind.AmpersandEqualsToken]: "&=",
+    [ts.SyntaxKind.BarEqualsToken]: "|=",
+    [ts.SyntaxKind.CaretEqualsToken]: "^=",
+  };
+  return operators[kind];
 }
 
 function propertyLikeLabel(node: ts.PropertySignature | ts.PropertyDeclaration): string {
@@ -394,11 +470,28 @@ function methodLikeLabel(node: ts.MethodSignature | ts.MethodDeclaration): strin
   const name = compactNodeText(sourceFile, node.name);
   const params = node.parameters.map((param) => parameterLabel(sourceFile, param)).join(", ");
   const returnType = node.type ? `: ${compactNodeText(sourceFile, node.type)}` : "";
-  return `${name}(${params})${returnType}`;
+  const asyncPrefix = node.modifiers?.some(
+    (modifier) => modifier.kind === ts.SyntaxKind.AsyncKeyword,
+  )
+    ? "async "
+    : "";
+  return `${decoratorPrefix(node)}${asyncPrefix}${name}(${params})${returnType}`;
 }
 
 function exportPrefix(node: ts.Node): string {
   return hasExportModifier(node) ? "export " : "";
+}
+
+function decoratorPrefix(node: ts.Node): string {
+  const decorators = decoratorsForNode(node);
+  if (decorators.length === 0) return "";
+  return `${decorators
+    .map((decorator) => `@${compactNodeText(node.getSourceFile(), decorator.expression)}`)
+    .join(" ")} `;
+}
+
+function decoratorsForNode(node: ts.Node): readonly ts.Decorator[] {
+  return ts.canHaveDecorators(node) ? (ts.getDecorators(node) ?? []) : [];
 }
 
 function parameterLabel(sourceFile: ts.SourceFile, parameter: ts.ParameterDeclaration): string {

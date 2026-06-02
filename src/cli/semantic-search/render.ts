@@ -21,6 +21,9 @@ export function renderSemanticSearchPacketJson(packet: SemanticSearchPacket): st
 }
 
 export function renderSemanticSearchPacket(packet: SemanticSearchPacket): string {
+  if ((packet.items?.length ?? 0) > 0) {
+    return renderSemanticSearchItemPacket(packet);
+  }
   if (packet.renderMode === "seeds") {
     return renderSemanticSearchSeedPacket(packet);
   }
@@ -34,6 +37,7 @@ export function renderSemanticSearchPacket(packet: SemanticSearchPacket): string
     lines.push(`|${node.kind} ${node.path ?? node.id} ${renderFields(node.fields)}`.trimEnd());
   }
   const hasItemPipe = (packet.items?.length ?? 0) > 0;
+  const itemContextOwnerPath = singleOwnerContextPath(packet);
   for (const owner of packet.owners) {
     const ownerNext = hasItemPipe
       ? []
@@ -48,7 +52,7 @@ export function renderSemanticSearchPacket(packet: SemanticSearchPacket): string
     lines.push(`|owner ${owner.path} ${renderFields(fields)}`.trimEnd());
   }
   for (const item of renderedItems(packet)) {
-    lines.push(renderItemLine(item));
+    lines.push(renderItemLine(item, itemContextOwnerPath));
   }
   for (const handle of packet.semanticHandles ?? []) {
     lines.push(renderSemanticHandleLine(handle));
@@ -76,9 +80,15 @@ export function renderSemanticSearchPacket(packet: SemanticSearchPacket): string
   }
   if (packet.view !== "workspace" && packet.view !== "prime") {
     for (const finding of packet.findings) {
-      lines.push(
-        `|find ${finding.ruleId} x${finding.count} at=${ownerId(finding.location.path)} severity=${finding.severity}`,
-      );
+      const fields: SemanticSearchFields = {
+        path: finding.location.path,
+        ...(finding.location.lineRange !== undefined
+          ? { lineRange: finding.location.lineRange }
+          : {}),
+        node: ownerId(finding.location.path),
+        severity: finding.severity,
+      };
+      lines.push(`|find ${finding.ruleId} x${finding.count} ${renderFields(fields)}`.trimEnd());
     }
   }
   const runtimeLine = renderRuntimeCostLine(packet);
@@ -100,11 +110,15 @@ export function renderSemanticSearchPacket(packet: SemanticSearchPacket): string
 }
 
 function renderSemanticSearchSeedPacket(packet: SemanticSearchPacket): string {
+  if ((packet.items?.length ?? 0) > 0) {
+    return renderSemanticSearchItemPacket(packet);
+  }
   const lines = [`[${packet.header.kind}] ${renderFields(packet.header.fields)}`];
-  lines.push("|flow prime->owner|deps|symbol|tests pipe=text:owner,tests ingest=stdin");
+  lines.push("|flow prime->owner|deps|symbol|tests pipe=fzf:owner,tests ingest=stdin");
   lines.push(...renderQueryCoverageLines(packet.queryCoverage ?? []));
+  const itemContextOwnerPath = singleOwnerContextPath(packet);
   for (const item of renderedItems(packet)) {
-    lines.push(renderItemLine(item));
+    lines.push(renderItemLine(item, itemContextOwnerPath));
   }
   for (const handle of packet.semanticHandles ?? []) {
     lines.push(renderSemanticHandleLine(handle));
@@ -125,6 +139,38 @@ function renderSemanticSearchSeedPacket(packet: SemanticSearchPacket): string {
   return `${lines.join("\n")}\n`;
 }
 
+function renderSemanticSearchItemPacket(packet: SemanticSearchPacket): string {
+  const items = renderedItems(packet);
+  const headerFields: SemanticSearchFields = {
+    ...(packet.header.fields.q === undefined ? {} : { q: packet.header.fields.q }),
+    ...(packet.header.fields.role === undefined ? {} : { role: packet.header.fields.role }),
+    ...(packet.header.fields.public === undefined ? {} : { public: packet.header.fields.public }),
+    item: items.length,
+    ...(packet.header.fields.pipes === undefined ? {} : { pipes: packet.header.fields.pipes }),
+  };
+  const lines = [`[${packet.header.kind}] ${renderFields(headerFields)}`];
+  lines.push(...renderQueryCoverageLines(packet.queryCoverage ?? []));
+  const itemContextOwnerPath = singleOwnerContextPath(packet);
+  for (const owner of packet.owners) {
+    const fields: SemanticSearchFields = {
+      role: owner.role,
+      public: owner.public,
+      exp: owner.exports?.slice(0, 8) ?? [],
+      ...owner.fields,
+    };
+    lines.push(`|owner ${owner.path} ${renderFields(fields)}`.trimEnd());
+  }
+  for (const item of items) {
+    lines.push(renderItemLine(item, itemContextOwnerPath));
+  }
+  for (const note of packet.notes) {
+    lines.push(`|note kind=${note.kind} message=${escapeFieldValue(note.message)}`);
+  }
+  const runtimeLine = renderRuntimeCostLine(packet);
+  if (runtimeLine !== undefined) lines.push(runtimeLine);
+  return `${lines.join("\n")}\n`;
+}
+
 function seedGroups(packet: SemanticSearchPacket): Map<string, string[]> {
   const groups = new Map<string, string[]>();
   const hasItemPipe = (packet.items?.length ?? 0) > 0;
@@ -140,7 +186,7 @@ function seedGroups(packet: SemanticSearchPacket): Map<string, string[]> {
       addSeed(groups, "symbol", exportName);
     }
     for (const action of owner.nextActions ?? []) {
-      if (hasItemPipe && action.kind === "text") continue;
+      if (hasItemPipe && action.kind === "fzf") continue;
       addSeed(groups, action.kind, action.target);
     }
   }
@@ -181,7 +227,7 @@ function hitEvidenceFields(
   ownerRole: string | undefined,
   hit: SemanticSearchPacket["hits"][number],
 ): SemanticSearchFields {
-  if (packet.view !== "text" && packet.view !== "ingest") {
+  if (packet.view !== "fzf" && packet.view !== "ingest") {
     return {};
   }
   const surface =
@@ -216,18 +262,27 @@ function renderedItems(
   return (packet.items ?? []).slice(0, MAX_RENDERED_ITEMS);
 }
 
-function renderItemLine(item: NonNullable<SemanticSearchPacket["items"]>[number]): string {
+function renderItemLine(
+  item: NonNullable<SemanticSearchPacket["items"]>[number],
+  contextOwnerPath?: string,
+): string {
   const read = typeof item.fields.read === "string" ? item.fields.read : undefined;
-  const owner = read?.startsWith(`${item.ownerPath}:`) ? undefined : item.ownerPath;
+  const owner =
+    item.ownerPath === contextOwnerPath || read?.startsWith(`${item.ownerPath}:`)
+      ? undefined
+      : item.ownerPath;
   const fields: SemanticSearchFields = {
     ...(owner === undefined ? {} : { owner }),
-    ...(read !== undefined || item.location?.line === undefined
+    ...(read !== undefined || item.location?.lineRange === undefined
       ? {}
-      : { line: item.location.line }),
-    ...(item.location?.column === undefined ? {} : { column: item.location.column }),
+      : { lineRange: item.location.lineRange }),
     ...item.fields,
   };
   return `|item ${item.kind} ${escapeScalar(item.name)} ${renderFields(fields)}`.trimEnd();
+}
+
+function singleOwnerContextPath(packet: SemanticSearchPacket): string | undefined {
+  return packet.owners.length === 1 ? packet.owners[0]?.path : undefined;
 }
 
 function renderSemanticHandleLine(
@@ -362,11 +417,8 @@ function escapeScalar(value: string | number | boolean): string {
 
 function renderLocation(location: SemanticSearchLocation): string {
   const fields: Record<string, SemanticSearchFieldValue> = { path: location.path };
-  if (location.line !== undefined) {
-    fields.line = location.line;
-  }
-  if (location.column !== undefined) {
-    fields.column = location.column;
+  if (location.lineRange !== undefined) {
+    fields.lineRange = location.lineRange;
   }
   return renderFields(fields);
 }

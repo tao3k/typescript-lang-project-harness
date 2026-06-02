@@ -132,13 +132,11 @@ function assertSchemaObject(value: JsonObject, schema: JsonObject, context: stri
 }
 
 function assertLocation(location: JsonObject, context: string): void {
-  assertAllowedKeys(location, ["path", "line", "column", "endLine", "endColumn"], context);
+  assertAllowedKeys(location, ["path", "lineRange"], context);
   assertString(location.path, `${context}.path`);
-  if (location.line !== undefined) assertPositiveInteger(location.line, `${context}.line`);
-  if (location.column !== undefined) assertPositiveInteger(location.column, `${context}.column`);
-  if (location.endLine !== undefined) assertPositiveInteger(location.endLine, `${context}.endLine`);
-  if (location.endColumn !== undefined) {
-    assertPositiveInteger(location.endColumn, `${context}.endColumn`);
+  if (location.lineRange !== undefined) {
+    assertString(location.lineRange, `${context}.lineRange`);
+    assert.match(String(location.lineRange), /^[1-9][0-9]*:[1-9][0-9]*$/u);
   }
 }
 

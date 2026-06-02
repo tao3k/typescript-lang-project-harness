@@ -8,7 +8,7 @@ import { buildDependencyPacketPayload, buildDepsPacketPayload } from "./dependen
 import { buildDocsPacketPayload } from "./packet-docs.js";
 import { basePacket } from "./packet-base.js";
 import { buildOwnerPacket, buildPrimePacket, buildWorkspacePacket } from "./packet-overview.js";
-import { buildTextPacket } from "./packet-text.js";
+import { buildFzfPacket } from "./packet-fzf.js";
 import {
   buildCallsitePacket,
   buildImportPacket,
@@ -53,9 +53,7 @@ export function buildSemanticSearchPacket(
     case "tests":
       return buildTestsPacket(report, options);
     case "fzf":
-      return buildTextPacket(report, options);
-    case "text":
-      return buildTextPacket(report, options);
+      return buildFzfPacket(report, options);
     case "ingest":
       return buildIngestPacket(report, options);
   }

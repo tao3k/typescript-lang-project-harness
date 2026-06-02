@@ -272,8 +272,7 @@ function ownerItem(ownerPath: string, exportFact: TypeScriptExportFact): Semanti
     ownerPath,
     location: {
       path: ownerPath,
-      line: exportFact.location.line,
-      column: exportFact.location.column,
+      lineRange: `${exportFact.location.line}:${exportFact.location.line}`,
     },
     fields: {
       exported: true,
@@ -305,7 +304,7 @@ function ownerItemNextActions(
     .join(" ");
   return [
     {
-      kind: "text",
+      kind: "fzf",
       target: terms[0]!,
       ownerPath,
       fields: {
@@ -351,9 +350,14 @@ function compareOwnerItems(left: SemanticSearchItem, right: SemanticSearchItem):
   const rankDiff = itemKindRank(left.kind) - itemKindRank(right.kind);
   if (rankDiff !== 0) return rankDiff;
   const lineDiff =
-    (left.location?.line ?? Number.MAX_SAFE_INTEGER) -
-    (right.location?.line ?? Number.MAX_SAFE_INTEGER);
+    lineRangeStart(left.location?.lineRange) - lineRangeStart(right.location?.lineRange);
   return lineDiff !== 0 ? lineDiff : left.name.localeCompare(right.name);
+}
+
+function lineRangeStart(lineRange: string | undefined): number {
+  if (lineRange === undefined) return Number.MAX_SAFE_INTEGER;
+  const start = Number.parseInt(lineRange.split(":", 1)[0] ?? "", 10);
+  return Number.isFinite(start) ? start : Number.MAX_SAFE_INTEGER;
 }
 
 function itemKindRank(kind: SemanticSearchItem["kind"]): number {
