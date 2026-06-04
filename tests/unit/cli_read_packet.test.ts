@@ -48,6 +48,7 @@ test("query direct-source-read emits semantic read packet", () => {
 
   const packet = JSON.parse(result.stdout) as JsonObject;
   assert.equal(packet.schemaId, "agent.semantic-protocols.semantic-read-packet");
+  assert.equal(packet.schemaVersion, "1");
   assert.equal(packet.protocolId, "agent.semantic-protocols.semantic-language");
   assert.equal(packet.languageId, "typescript");
   assert.equal(packet.providerId, "ts-harness");
@@ -100,17 +101,37 @@ test("query direct-source-read line selector emits bounded source window", () =>
 test("query direct-source-read wide selector emits read plan without source windows", () => {
   const root = readPacketFixture();
   const jsonResult = runCliCapture(
-    ["query", "--from-hook", "direct-source-read", "--selector", "src/demo.ts:1-80", "--json", "."],
+    [
+      "query",
+      "--from-hook",
+      "direct-source-read",
+      "--selector",
+      "src/demo.ts:1-80",
+      "--code",
+      "--view",
+      "read-packet",
+      "--json",
+      ".",
+    ],
     root,
   );
   assert.equal(jsonResult.exitCode, 0, jsonResult.stderr);
   const packet = JSON.parse(jsonResult.stdout) as JsonObject;
+  assert.equal(packet.schemaVersion, "1");
   assert.equal(packet.outputMode, "read-packet");
   assert.equal(packet.sourceWindows, undefined);
   const readPlan = packet.readPlan as JsonObject;
-  assert.equal(readPlan.mode, "range-outline");
+  assert.equal(readPlan.mode, "range-frontier");
   assert.equal(readPlan.code, false);
   assert.equal(readPlan.reason, "wide-selector");
+  assert.equal(readPlan.algorithm, "symbol-frontier");
+  assert.deepEqual(readPlan.avoid, ["repeat-wide-read", "manual-window-scan", "raw-read"]);
+  const frontier = readPlan.frontier as JsonObject[];
+  assert.equal(frontier[0]?.kind, "symbol");
+  assert.equal(frontier[0]?.action, "code");
+  assert.equal(frontier[0]?.read, "src/demo.ts:1:3");
+  const symbols = readPlan.symbols as JsonObject[];
+  assert.equal(symbols[0]?.itemName, "alpha");
 
   const lineResult = runCliCapture(
     ["query", "--from-hook", "direct-source-read", "--selector", "src/demo.ts:1-80", "--code", "."],
@@ -118,7 +139,9 @@ test("query direct-source-read wide selector emits read plan without source wind
   );
   assert.equal(lineResult.exitCode, 0, lineResult.stderr);
   assert.match(lineResult.stdout, /^\[read-plan\] /u);
-  assert.match(lineResult.stdout, /mode=range-outline/u);
+  assert.match(lineResult.stdout, /mode=range-frontier/u);
+  assert.match(lineResult.stdout, /alg=range-split/u);
+  assert.match(lineResult.stdout, /frontier=W\.code,W2\.code/u);
   assert.match(lineResult.stdout, /reason=wide-selector/u);
   assert.doesNotMatch(lineResult.stdout, /export function alpha/u);
   assert.doesNotMatch(lineResult.stdout, /\|code /u);

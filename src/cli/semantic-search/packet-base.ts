@@ -12,6 +12,7 @@ import {
   TYPE_SCRIPT_PROVIDER_NAMESPACE,
   semanticSearchMethod,
 } from "../semantic-language.js";
+import { typeScriptReasoningProfiles } from "./profiles.js";
 import type {
   SemanticSearchBuildOptions,
   SemanticSearchPacket,
@@ -40,6 +41,11 @@ export function basePacket(
     ...(report.reasoningTree.packageName ? { packageName: report.reasoningTree.packageName } : {}),
     view: options.view,
     renderMode: options.renderMode ?? (options.view === "fzf" ? "hits" : "graph"),
+    ...(options.renderMode === "graph" ||
+    options.renderMode === "seeds" ||
+    options.renderMode === "both"
+      ? { reasoningProfiles: typeScriptReasoningProfiles() }
+      : {}),
     ...(options.query ? { query: options.query } : {}),
     ...(querySet.length === 0
       ? {}

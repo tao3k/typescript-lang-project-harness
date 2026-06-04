@@ -1,6 +1,6 @@
-export async function beta(values: string[], mapper: (value: string) => Promise<string>)
-  const output: string[] = []
-  for const value of values
+async function beta
+  assign output
+  for value of values
     if value.trim() === ""
       continue
     push

@@ -48,10 +48,10 @@ test("CLI searches external dependency usage", () => {
   assert.match(dependency.stdout, /^\[search-dependency\] /u);
   assert.match(
     dependency.stdout,
-    /\|hit path=package\.json line=1 column=\d+ .*reason=manifest-package-exact/u,
+    /\|hit path=package\.json lineRange=1:1 .*reason=manifest-package-exact/u,
   );
   assert.match(dependency.stdout, /source=dependencies/u);
-  assert.match(dependency.stdout, /\|hit path=src\/index\.ts line=1\b/u);
+  assert.match(dependency.stdout, /\|hit path=src\/index\.ts lineRange=1:1\b/u);
   assert.match(dependency.stdout, /moduleSpecifier=react/u);
   assert.match(dependency.stdout, /\|edge O:src\/index\.ts -dependency-> C:react/u);
 
@@ -81,11 +81,11 @@ test("CLI searches external dependency usage", () => {
   assert.equal(publicExternalTypes.exitCode, 0);
   assert.match(publicExternalTypes.stdout, /^\[search-public-external-types\] /u);
   assert.match(publicExternalTypes.stdout, /\bpackage=react\b/u);
-  assert.match(publicExternalTypes.stdout, /\|api path=src\/index\.ts line=5\b/u);
+  assert.match(publicExternalTypes.stdout, /\|api path=src\/index\.ts lineRange=5:5\b/u);
   assert.match(publicExternalTypes.stdout, /\breason=public-external-type\b/u);
   assert.match(publicExternalTypes.stdout, /\bconfidence=direct\b/u);
   assert.match(publicExternalTypes.stdout, /\btypeText=import\("react"\)\.ReactNode\b/u);
-  assert.match(publicExternalTypes.stdout, /\|api path=src\/index\.ts line=4\b/u);
+  assert.match(publicExternalTypes.stdout, /\|api path=src\/index\.ts lineRange=4:4\b/u);
   assert.match(publicExternalTypes.stdout, /\breason=possible-public-external-type\b/u);
   assert.match(publicExternalTypes.stdout, /\bconfidence=possible\b/u);
 
@@ -177,7 +177,7 @@ test("CLI searches external dependency usage", () => {
   assert.match(deps.stdout, /\bcurrentWorkspaceVersion=19\.0\.0\b/u);
   assert.match(deps.stdout, /\bversionStatus=matched\b/u);
   assert.match(deps.stdout, /\bapi=jsx\b/u);
-  assert.match(deps.stdout, /\|hit path=src\/index\.ts line=2\b/u);
+  assert.match(deps.stdout, /\|hit path=src\/index\.ts lineRange=2:2\b/u);
   assert.match(deps.stdout, /moduleSpecifier=react\/jsx-runtime/u);
   assert.match(
     deps.stdout,

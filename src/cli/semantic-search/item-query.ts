@@ -1,3 +1,10 @@
+/**
+ * Builds parser-owned owner item query packets for the TypeScript search CLI.
+ *
+ * This module owns compact item inventories, semantic query packets, and the
+ * owner search packet projection. Direct source-read windows live in
+ * item-read.ts so query packet construction stays focused on item selection.
+ */
 import {
   queryTypeScriptOwnerItems,
   type TypeScriptItemQueryMatch,
@@ -6,7 +13,6 @@ import {
   SEMANTIC_LANGUAGE_PROTOCOL_ID,
   SEMANTIC_LANGUAGE_PROTOCOL_VERSION,
   SEMANTIC_QUERY_PACKET_SCHEMA_ID,
-  SEMANTIC_READ_PACKET_SCHEMA_ID,
   SEMANTIC_SEARCH_PACKET_SCHEMA_ID,
   TYPE_SCRIPT_BINARY,
   TYPE_SCRIPT_LANGUAGE_ID,
@@ -16,80 +22,6 @@ import {
 import type { SemanticSearchItem, SemanticSearchPacket } from "./types.js";
 
 export type OwnerItemQueryOutputMode = "code" | "names";
-
-const MAX_EXACT_DIRECT_READ_LINES = 40;
-
-export interface SemanticReadPacket {
-  readonly schemaId: typeof SEMANTIC_READ_PACKET_SCHEMA_ID;
-  readonly schemaVersion: "1";
-  readonly protocolId: typeof SEMANTIC_LANGUAGE_PROTOCOL_ID;
-  readonly protocolVersion: typeof SEMANTIC_LANGUAGE_PROTOCOL_VERSION;
-  readonly languageId: typeof TYPE_SCRIPT_LANGUAGE_ID;
-  readonly providerId: typeof TYPE_SCRIPT_PROVIDER_ID;
-  readonly binary: typeof TYPE_SCRIPT_BINARY;
-  readonly namespace: typeof TYPE_SCRIPT_PROVIDER_NAMESPACE;
-  readonly method: "query/direct-source-read";
-  readonly projectRoot: string;
-  readonly ownerPath: string;
-  readonly selector: string;
-  readonly fromHook: "direct-source-read";
-  readonly query?: string;
-  readonly queryTerms?: readonly string[];
-  readonly outputMode: "read-packet";
-  readonly sourceWindows?: readonly SemanticReadWindow[];
-  readonly readPlan?: SemanticReadPlan;
-  readonly truncated: boolean;
-  readonly notes?: readonly SemanticQueryNote[];
-}
-
-interface SemanticReadPlan {
-  readonly mode: "range-outline" | "search-repair";
-  readonly code: false;
-  readonly reason:
-    | "wide-selector"
-    | "low-signal-window"
-    | "broad-selector"
-    | "missing-query-terms"
-    | "low-confidence-selector";
-  readonly ranges: readonly SemanticReadPlanRange[];
-  readonly symbols: readonly SemanticReadPlanSymbol[];
-}
-
-interface SemanticReadPlanRange {
-  readonly path: string;
-  readonly requested: string;
-  readonly selected: string;
-  readonly matched: string;
-  readonly coverage: "full" | "head-only" | "tail-only" | "middle";
-  readonly density: "low" | "normal" | "mixed" | "unknown";
-}
-
-interface SemanticReadPlanSymbol {
-  readonly itemName: string;
-  readonly itemKind: string;
-  readonly lineRange: string;
-  readonly read: string;
-}
-
-interface SemanticReadWindow {
-  readonly ownerPath: string;
-  readonly itemName: string;
-  readonly itemKind: string;
-  readonly location: {
-    readonly path: string;
-    readonly lineRange: string;
-  };
-  readonly read: string;
-  readonly lineCount: number;
-  readonly reason: "direct-selector";
-  readonly text: string;
-  readonly truncated: boolean;
-  readonly fields: {
-    readonly exported: boolean;
-    readonly typeOnly: boolean;
-    readonly exportKind: string;
-  };
-}
 
 export interface SemanticQueryPacket {
   readonly schemaId: typeof SEMANTIC_QUERY_PACKET_SCHEMA_ID;
@@ -107,10 +39,18 @@ export interface SemanticQueryPacket {
   readonly queryTerms: readonly string[];
   readonly matchMode: "exact" | "fallback-contains" | "mixed" | "unknown";
   readonly outputMode: OwnerItemQueryOutputMode;
+  readonly patchSafety: SemanticQueryPatchSafety;
   readonly queryCoverage: readonly SemanticQueryCoverage[];
   readonly matches: readonly SemanticQueryMatch[];
   readonly truncated: boolean;
   readonly notes?: readonly SemanticQueryNote[];
+}
+
+interface SemanticQueryPatchSafety {
+  readonly level: "navigation-safe" | "read-safe" | "patch-verify-safe" | "ast-patch-safe";
+  readonly reason: string;
+  readonly nextAction?: string;
+  readonly exactRead?: string;
 }
 
 interface SemanticQueryCoverage {
@@ -129,6 +69,8 @@ interface SemanticQueryProjection {
   readonly losslessStructure?: boolean;
   readonly exactRead?: string;
   readonly nodes?: readonly SemanticQueryProjectionNode[];
+  readonly renderedNodeIds?: readonly string[];
+  readonly renderedRows?: readonly SemanticQueryProjectionRenderedRow[];
   readonly omitted?: readonly SemanticQueryProjectionOmission[];
   readonly expandActions?: readonly SemanticQueryExpandAction[];
 }
@@ -136,9 +78,12 @@ interface SemanticQueryProjection {
 interface SemanticQueryProjectionNode {
   readonly id: string;
   readonly parentId?: string;
+  readonly nativeId?: string | undefined;
+  readonly structuralFingerprint?: string | undefined;
   readonly kind: string;
   readonly role?:
     | "declaration"
+    | "field"
     | "control-flow"
     | "call"
     | "terminal"
@@ -151,10 +96,26 @@ interface SemanticQueryProjectionNode {
   readonly flags?: readonly string[];
 }
 
+interface SemanticQueryProjectionRenderedRow {
+  readonly nodeId: string;
+  readonly rowKind:
+    | "declaration"
+    | "field"
+    | "control-flow"
+    | "call"
+    | "terminal"
+    | "mutation"
+    | "effect"
+    | "unknown";
+  readonly text: string;
+  readonly semanticWeight?: number;
+}
+
 interface SemanticQueryProjectionOmission {
   readonly kind: string;
   readonly reason: string;
   readonly count?: number;
+  readonly nodeId?: string;
   readonly read?: string;
 }
 
@@ -175,6 +136,7 @@ interface SemanticQueryMatch {
     readonly lineRange: string;
   };
   readonly read: string;
+  readonly patchSafety: SemanticQueryPatchSafety;
   readonly code?: string;
   readonly projection?: SemanticQueryProjection;
   readonly truncated: boolean;
@@ -293,17 +255,32 @@ function compactTypeScriptCodeProjection(code: string): string {
 
 function semanticOutlineCode(item: TypeScriptItemQueryMatch): string {
   if (item.projectionNodes.length === 0) return compactTypeScriptCodeProjection(item.code);
-  const labels: string[] = [];
-  for (const node of item.projectionNodes) {
-    pushUniqueOutlineLabel(labels, `${"  ".repeat(node.depth)}${node.label}`);
-  }
-  return labels.join("\n");
+  return compactProjectionRowTexts(item.projectionNodes).join("\n");
 }
 
-function pushUniqueOutlineLabel(labels: string[], label: string): void {
-  const trimmed = label.trim();
-  if (trimmed.length === 0 || labels.some((line) => line.trim() === trimmed)) return;
-  labels.push(label.trimEnd());
+function compactProjectionRowTexts(
+  nodes: readonly { readonly depth?: number; readonly label: string }[],
+): readonly string[] {
+  return compactRenderedProjectionEntries(nodes).map(({ text }) => text);
+}
+
+function compactRenderedProjectionEntries<
+  T extends { readonly depth?: number; readonly label: string },
+>(nodes: readonly T[]): readonly { readonly node: T; readonly text: string }[] {
+  const entries: { node: T; text: string }[] = [];
+  const seen = new Set<string>();
+  for (const node of nodes) {
+    const text = compactRenderedRowText(node);
+    const trimmed = text.trim();
+    if (trimmed.length === 0 || seen.has(trimmed)) continue;
+    seen.add(trimmed);
+    entries.push({ node, text });
+  }
+  return entries;
+}
+
+function compactRenderedRowText(node: { readonly depth?: number; readonly label: string }): string {
+  return `${"  ".repeat(node.depth ?? 0)}${node.label}`.trimEnd();
 }
 
 function compactProjection(
@@ -321,9 +298,56 @@ function compactProjection(
     losslessStructure: true,
     exactRead,
     nodes,
-    omitted: compactProjectionOmissions(item, exactRead, compactCode),
-    expandActions: compactExpandActions(ownerPath, item.name, exactRead, nodes),
+    renderedNodeIds: compactRenderedNodeIds(nodes),
+    renderedRows: compactRenderedRows(nodes),
+    omitted: compactProjectionOmissions(item, exactRead, compactCode, projectionNodeId(item.name)),
+    expandActions: compactExpandActions(item.name, exactRead, nodes),
   };
+}
+
+function compactRenderedNodeIds(nodes: readonly SemanticQueryProjectionNode[]): readonly string[] {
+  return compactRenderedProjectionEntries(nodes).map(({ node }) => node.id);
+}
+
+function compactRenderedRows(
+  nodes: readonly SemanticQueryProjectionNode[],
+): readonly SemanticQueryProjectionRenderedRow[] {
+  return compactRenderedProjectionEntries(nodes).map(({ node, text }) => ({
+    nodeId: node.id,
+    rowKind: compactRenderedRowKind(node.role),
+    text,
+    semanticWeight: compactRenderedRowWeight(node.role),
+  }));
+}
+
+function compactRenderedRowKind(
+  role: SemanticQueryProjectionNode["role"],
+): SemanticQueryProjectionRenderedRow["rowKind"] {
+  switch (role) {
+    case "declaration":
+    case "field":
+    case "control-flow":
+    case "call":
+    case "terminal":
+    case "mutation":
+    case "effect":
+      return role;
+    default:
+      return "unknown";
+  }
+}
+
+function compactRenderedRowWeight(role: SemanticQueryProjectionNode["role"]): number {
+  switch (role) {
+    case "control-flow":
+    case "call":
+    case "terminal":
+    case "mutation":
+    case "effect":
+      return 2;
+    default:
+      return 1;
+  }
 }
 
 function compactProjectionNodes(
@@ -336,6 +360,8 @@ function compactProjectionNodes(
     return item.projectionNodes.map((node) => ({
       id: node.id,
       ...(node.parentId === undefined ? {} : { parentId: node.parentId }),
+      nativeId: node.nativeId,
+      structuralFingerprint: node.structuralFingerprint,
       kind: node.kind,
       role: node.role,
       label: node.label,
@@ -387,6 +413,7 @@ function compactProjectionOmissions(
   item: TypeScriptItemQueryMatch,
   exactRead: string,
   compactCode: string,
+  nodeId: string,
 ): readonly SemanticQueryProjectionOmission[] {
   const lineCount = item.lineEnd - item.lineStart + 1;
   const omitted: SemanticQueryProjectionOmission[] = [];
@@ -405,11 +432,10 @@ function compactProjectionOmissions(
       read: exactRead,
     });
   }
-  return omitted;
+  return omitted.map((omission) => ({ nodeId, ...omission }));
 }
 
 function compactExpandActions(
-  ownerPath: string,
   itemName: string,
   exactRead: string,
   nodes: readonly SemanticQueryProjectionNode[],
@@ -419,15 +445,6 @@ function compactExpandActions(
       kind: "exact-read",
       target: projectionNodeId(itemName),
       read: exactRead,
-      argv: [
-        "ts-harness",
-        "query",
-        "--from-hook",
-        "direct-source-read",
-        "--selector",
-        exactRead,
-        ".",
-      ],
       reason: "read exact source before editing",
     },
   ];
@@ -439,34 +456,15 @@ function compactExpandActions(
       kind: "exact-read",
       target: node.id,
       read: node.read,
-      argv: [
-        "ts-harness",
-        "query",
-        "--from-hook",
-        "direct-source-read",
-        "--selector",
-        node.read,
-        ".",
-      ],
       reason: `expand ${node.kind} node before editing`,
     });
     if (actions.length >= 8) break;
   }
-  actions.push({
-    kind: "owner-names",
-    target: ownerPath,
-    argv: [
-      "ts-harness",
-      "query",
-      "--from-hook",
-      "direct-source-read",
-      "--selector",
-      ownerPath,
-      ".",
-    ],
-    reason: "return owner-local item names without code windows",
-  });
   return actions;
+}
+
+function directReadArgv(selector: string): readonly string[] {
+  return ["ts-harness", "query", "--from-hook", "direct-source-read", "--selector", selector, "."];
 }
 
 function isHotProjectionNode(node: SemanticQueryProjectionNode): boolean {
@@ -517,43 +515,6 @@ export function renderOwnerItemSemanticQueryPacketJson(packet: SemanticQueryPack
   return JSON.stringify(packet);
 }
 
-export function renderOwnerItemSemanticReadPacketJson(packet: SemanticReadPacket): string {
-  return JSON.stringify(packet);
-}
-
-export function renderOwnerItemSemanticReadPacket(packet: SemanticReadPacket): string {
-  if (packet.readPlan !== undefined) {
-    const lines = [
-      `[read-plan] q=${fieldValue(packet.ownerPath)} selector=${fieldValue(packet.selector)} mode=${packet.readPlan.mode} code=false reason=${packet.readPlan.reason} window=${packet.readPlan.symbols.length}`,
-    ];
-    for (const [index, range] of packet.readPlan.ranges.entries()) {
-      lines.push(
-        `|range path=${fieldValue(range.path)} requested=${range.requested} selected=${range.selected} matched=${range.matched} coverage=${range.coverage} density=${range.density}`,
-      );
-      const symbol = packet.readPlan.symbols[index];
-      if (symbol !== undefined) {
-        lines.push(
-          `|symbol item=${fieldValue(symbol.itemName)} kind=${fieldValue(symbol.itemKind)} lineRange=${symbol.lineRange} read=${fieldValue(symbol.read)}`,
-        );
-      }
-    }
-    return lines.join("\n");
-  }
-  const sourceWindows = packet.sourceWindows ?? [];
-  const lines = [
-    `[read-owner] q=${packet.ownerPath} selector=${fieldValue(packet.selector)} window=${sourceWindows.length}`,
-  ];
-  for (const window of sourceWindows) {
-    lines.push(
-      `|read path=${window.ownerPath} item=${window.itemName} kind=${window.itemKind} lineRange=${window.location.lineRange} reason=${window.reason} truncated=${window.truncated}`,
-    );
-    lines.push(
-      `|code path=${window.ownerPath} lineRange=${window.location.lineRange} reason=direct-source-read text=${JSON.stringify(window.text)}`,
-    );
-  }
-  return lines.join("\n");
-}
-
 export function buildOwnerItemSemanticQueryPacket(
   projectRoot: string,
   ownerPath: string,
@@ -578,31 +539,44 @@ export function buildOwnerItemSemanticQueryPacket(
     queryTerms: result.queryTerms,
     matchMode,
     outputMode,
+    patchSafety: {
+      level: "read-safe",
+      reason: "compact query packet is not a mutation authority",
+      nextAction: "query --from-hook direct-source-read",
+    },
     queryCoverage: result.queryTerms.map((term) =>
       ownerItemQueryCoverage(term, result.matches, result.fallback),
     ),
-    matches: result.matches.map((item) => ({
-      name: item.name,
-      kind: item.kind,
-      visibility: item.exported ? "public" : "private",
-      location: {
-        path: result.ownerPath,
-        lineRange: `${item.lineStart}:${item.lineEnd}`,
-      },
-      read: `${result.ownerPath}:${item.lineStart}:${item.lineEnd}`,
-      ...(outputMode === "names"
-        ? {}
-        : {
-            code: semanticOutlineCode(item),
-            projection: compactProjection(result.ownerPath, item),
-          }),
-      truncated: false,
-      fields: {
-        exported: item.exported,
-        typeOnly: item.typeOnly,
-        exportKind: item.kind,
-      },
-    })),
+    matches: result.matches.map((item) => {
+      const read = `${result.ownerPath}:${item.lineStart}:${item.lineEnd}`;
+      return {
+        name: item.name,
+        kind: item.kind,
+        visibility: item.exported ? "public" : "private",
+        location: {
+          path: result.ownerPath,
+          lineRange: `${item.lineStart}:${item.lineEnd}`,
+        },
+        read,
+        patchSafety: {
+          level: "read-safe",
+          reason: "read exact source locator before editing this compact match",
+          exactRead: read,
+        },
+        ...(outputMode === "names"
+          ? {}
+          : {
+              code: semanticOutlineCode(item),
+              projection: compactProjection(result.ownerPath, item),
+            }),
+        truncated: false,
+        fields: {
+          exported: item.exported,
+          typeOnly: item.typeOnly,
+          exportKind: item.kind,
+        },
+      };
+    }),
     truncated: false,
     ...(result.fallback === undefined
       ? {}
@@ -615,76 +589,6 @@ export function buildOwnerItemSemanticQueryPacket(
           ],
         }),
   };
-}
-
-export function renderOwnerItemQueryCode(
-  projectRoot: string,
-  ownerPath: string,
-  itemQuery: string,
-  selector?: string,
-): string {
-  const result = queryTypeScriptOwnerItems(projectRoot, ownerPath, itemQuery);
-  const range =
-    selector === undefined ? undefined : sourceSelectorLineRange(selector, result.ownerPath);
-  if (range !== undefined && sourceRangeLineCount(range) > MAX_EXACT_DIRECT_READ_LINES) {
-    return renderSemanticReadPlanLines(
-      result.ownerPath,
-      selector ?? result.ownerPath,
-      "wide-selector",
-      range,
-      [],
-      "unknown",
-    );
-  }
-  const matches =
-    range === undefined
-      ? result.matches
-      : result.matches.filter(
-          (item) => item.lineEnd >= range.lineStart && item.lineStart <= range.lineEnd,
-        );
-  if (range !== undefined && matches.length > 0) {
-    const selectedText = matches
-      .map((item) =>
-        sourceWindowText(
-          item,
-          Math.max(item.lineStart, range.lineStart),
-          Math.min(item.lineEnd, range.lineEnd),
-        ),
-      )
-      .join("\n");
-    if (selectedText.length > 0 && isLowSignalSourceText(selectedText)) {
-      return renderSemanticReadPlanLines(
-        result.ownerPath,
-        selector ?? result.ownerPath,
-        "low-signal-window",
-        range,
-        matches,
-        "low",
-      );
-    }
-  }
-  return matches.map((item) => itemProjectionCode(item, range)).join("\n");
-}
-
-function itemProjectionCode(
-  item: TypeScriptItemQueryMatch,
-  range: { readonly lineStart: number; readonly lineEnd: number } | undefined,
-): string {
-  if (range === undefined) return semanticOutlineCode(item);
-  const labels: string[] = [];
-  const header = item.projectionNodes[0];
-  if (header !== undefined) pushUniqueProjectionLabel(labels, header.label);
-  for (const node of item.projectionNodes.slice(1)) {
-    if (node.lineEnd < range.lineStart || node.lineStart > range.lineEnd) continue;
-    pushUniqueProjectionLabel(labels, node.label);
-  }
-  return labels.join("\n");
-}
-
-function pushUniqueProjectionLabel(labels: string[], label: string): void {
-  const trimmed = label.trim();
-  if (trimmed.length === 0 || labels.includes(trimmed)) return;
-  labels.push(trimmed);
 }
 
 export function buildOwnerItemQueryPacket(
@@ -778,216 +682,6 @@ export function buildOwnerItemQueryPacket(
               fields: fallbackFields,
             },
           ],
-  };
-}
-
-export function buildOwnerItemSemanticReadPacket(
-  projectRoot: string,
-  ownerPath: string,
-  itemQuery: string,
-  selector: string = ownerPath,
-): SemanticReadPacket {
-  const result = queryTypeScriptOwnerItems(projectRoot, ownerPath, itemQuery);
-  const range = sourceSelectorLineRange(selector, result.ownerPath);
-  const query = result.queryTerms.join("|");
-  const basePacket = {
-    schemaId: SEMANTIC_READ_PACKET_SCHEMA_ID,
-    schemaVersion: "1",
-    protocolId: SEMANTIC_LANGUAGE_PROTOCOL_ID,
-    protocolVersion: SEMANTIC_LANGUAGE_PROTOCOL_VERSION,
-    languageId: TYPE_SCRIPT_LANGUAGE_ID,
-    providerId: TYPE_SCRIPT_PROVIDER_ID,
-    binary: TYPE_SCRIPT_BINARY,
-    namespace: TYPE_SCRIPT_PROVIDER_NAMESPACE,
-    method: "query/direct-source-read",
-    projectRoot,
-    ownerPath: result.ownerPath,
-    selector,
-    fromHook: "direct-source-read",
-    ...(query.length === 0 ? {} : { query, queryTerms: result.queryTerms }),
-    outputMode: "read-packet",
-    truncated: false,
-    ...(result.fallback === undefined
-      ? {}
-      : {
-          notes: [
-            {
-              kind: "owner-top-items",
-              message: "item query missed; returned bounded owner top-level items",
-            },
-          ],
-        }),
-  } satisfies Omit<SemanticReadPacket, "sourceWindows" | "readPlan">;
-  if (range !== undefined && sourceRangeLineCount(range) > MAX_EXACT_DIRECT_READ_LINES) {
-    return {
-      ...basePacket,
-      readPlan: semanticReadPlanForRange(result.ownerPath, "wide-selector", range, [], "unknown"),
-    };
-  }
-  const matches =
-    range === undefined
-      ? result.matches
-      : result.matches.filter(
-          (item) => item.lineEnd >= range.lineStart && item.lineStart <= range.lineEnd,
-        );
-  if (matches.length === 0) {
-    throw new Error(
-      `direct-source-read selector resolved to no parser-owned items: ${result.ownerPath}`,
-    );
-  }
-  return {
-    ...basePacket,
-    sourceWindows: matches.map((item) => semanticReadWindowForItem(result.ownerPath, item, range)),
-  };
-}
-
-function semanticReadWindowForItem(
-  ownerPath: string,
-  item: TypeScriptItemQueryMatch,
-  range: { readonly lineStart: number; readonly lineEnd: number } | undefined,
-): SemanticReadWindow {
-  const lineStart =
-    range === undefined ? item.lineStart : Math.max(item.lineStart, range.lineStart);
-  const lineEnd = range === undefined ? item.lineEnd : Math.min(item.lineEnd, range.lineEnd);
-  return {
-    ownerPath,
-    itemName: item.name,
-    itemKind: item.kind,
-    location: {
-      path: ownerPath,
-      lineRange: `${lineStart}:${lineEnd}`,
-    },
-    read: `${ownerPath}:${lineStart}:${lineEnd}`,
-    lineCount: Math.max(1, lineEnd - lineStart + 1),
-    reason: "direct-selector",
-    text: sourceWindowText(item, lineStart, lineEnd),
-    truncated: false,
-    fields: {
-      exported: item.exported,
-      typeOnly: item.typeOnly,
-      exportKind: item.kind,
-    },
-  };
-}
-
-function sourceWindowText(
-  item: TypeScriptItemQueryMatch,
-  lineStart: number,
-  lineEnd: number,
-): string {
-  return item.sourceLines
-    .slice(lineStart - 1, lineEnd)
-    .join("\n")
-    .trimEnd();
-}
-
-function sourceRangeLineCount(range: {
-  readonly lineStart: number;
-  readonly lineEnd: number;
-}): number {
-  return Math.max(1, range.lineEnd - range.lineStart + 1);
-}
-
-function isLowSignalSourceText(text: string): boolean {
-  return !/[A-Za-z0-9_]/u.test(text);
-}
-
-function renderSemanticReadPlanLines(
-  ownerPath: string,
-  selector: string,
-  reason: SemanticReadPlan["reason"],
-  range: { readonly lineStart: number; readonly lineEnd: number },
-  matches: readonly TypeScriptItemQueryMatch[],
-  density: SemanticReadPlanRange["density"],
-): string {
-  const plan = semanticReadPlanForRange(ownerPath, reason, range, matches, density);
-  const lines = [
-    `[read-plan] q=${fieldValue(ownerPath)} selector=${fieldValue(selector)} mode=${plan.mode} code=false reason=${plan.reason} window=${plan.symbols.length}`,
-  ];
-  for (const [index, rangeItem] of plan.ranges.entries()) {
-    lines.push(
-      `|range path=${fieldValue(rangeItem.path)} requested=${rangeItem.requested} selected=${rangeItem.selected} matched=${rangeItem.matched} coverage=${rangeItem.coverage} density=${rangeItem.density}`,
-    );
-    const symbol = plan.symbols[index];
-    if (symbol !== undefined) {
-      lines.push(
-        `|symbol item=${fieldValue(symbol.itemName)} kind=${fieldValue(symbol.itemKind)} lineRange=${symbol.lineRange} read=${fieldValue(symbol.read)}`,
-      );
-    }
-  }
-  return lines.join("\n");
-}
-
-function semanticReadPlanForRange(
-  ownerPath: string,
-  reason: SemanticReadPlan["reason"],
-  range: { readonly lineStart: number; readonly lineEnd: number },
-  matches: readonly TypeScriptItemQueryMatch[],
-  density: SemanticReadPlanRange["density"],
-): SemanticReadPlan {
-  const selectedMatches =
-    matches.length === 0
-      ? [
-          {
-            name: "local-window",
-            kind: "range",
-            lineStart: range.lineStart,
-            lineEnd: range.lineEnd,
-          },
-        ]
-      : matches;
-  return {
-    mode: "range-outline",
-    code: false,
-    reason,
-    ranges: selectedMatches.map((item) => {
-      const selectedStart = Math.max(item.lineStart, range.lineStart);
-      const selectedEnd = Math.min(item.lineEnd, range.lineEnd);
-      return {
-        path: ownerPath,
-        requested: `${range.lineStart}:${range.lineEnd}`,
-        selected: `${selectedStart}:${selectedEnd}`,
-        matched: `${item.lineStart}:${item.lineEnd}`,
-        coverage: rangeCoverage(item.lineStart, item.lineEnd, selectedStart, selectedEnd),
-        density,
-      };
-    }),
-    symbols: selectedMatches.map((item) => ({
-      itemName: item.name,
-      itemKind: item.kind,
-      lineRange: `${item.lineStart}:${item.lineEnd}`,
-      read: `${ownerPath}:${item.lineStart}:${item.lineEnd}`,
-    })),
-  };
-}
-
-function rangeCoverage(
-  itemStart: number,
-  itemEnd: number,
-  selectedStart: number,
-  selectedEnd: number,
-): SemanticReadPlanRange["coverage"] {
-  if (selectedStart <= itemStart && selectedEnd >= itemEnd) return "full";
-  if (selectedStart > itemStart && selectedEnd >= itemEnd) return "tail-only";
-  if (selectedStart <= itemStart && selectedEnd < itemEnd) return "head-only";
-  return "middle";
-}
-
-function sourceSelectorLineRange(
-  selector: string,
-  ownerPath: string,
-): { readonly lineStart: number; readonly lineEnd: number } | undefined {
-  const normalized = selector.replace(/\\/gu, "/").replace(/^owner:/u, "");
-  const match = /:(\d+)(?::|-)(\d+)$/u.exec(normalized);
-  if (match === null) return undefined;
-  const selectedOwnerPath = normalized.slice(0, match.index);
-  if (selectedOwnerPath !== ownerPath) return undefined;
-  const lineStart = Number.parseInt(match[1]!, 10);
-  const lineEnd = Number.parseInt(match[2]!, 10);
-  if (!Number.isFinite(lineStart) || !Number.isFinite(lineEnd)) return undefined;
-  return {
-    lineStart: Math.min(lineStart, lineEnd),
-    lineEnd: Math.max(lineStart, lineEnd),
   };
 }
 

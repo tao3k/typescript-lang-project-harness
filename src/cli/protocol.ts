@@ -10,21 +10,19 @@ import { runTypeScriptProjectHarness } from "../runner.js";
 import { isTypeScriptHarnessClean } from "../model.js";
 import { renderCodexAgentGuide } from "./agent-guide.js";
 import {
+  parseAgentArgs,
+  renderAgentDoctor,
+  renderAgentDoctorJson,
+  type AgentArgs,
+} from "./protocol-agent.js";
+import {
   prefilterTypeScriptSearchPaths,
   runtimeCostForTypeScriptPrefilter,
   typeScriptSearchScopeFileNames,
   type TypeScriptSearchPrefilterResult,
 } from "./search-prefilter.js";
 import {
-  SEMANTIC_LANGUAGE_PROTOCOL_ID,
-  SEMANTIC_LANGUAGE_REGISTRY_VERSION,
-  TYPE_SCRIPT_BINARY,
-  TYPE_SCRIPT_LANGUAGE_ID,
-  TYPE_SCRIPT_PROVIDER_NAMESPACE,
-  TYPE_SCRIPT_PROVIDER_ID,
-  semanticLanguageRegistryDocument,
   typeScriptSemanticSearchViewDescriptor,
-  typeScriptSemanticLanguageRegistration,
   type TypeScriptSemanticSearchPipe,
   type TypeScriptSemanticSearchView,
 } from "./semantic-language.js";
@@ -36,14 +34,18 @@ import {
 } from "./semantic-search.js";
 import {
   buildOwnerItemQueryPacket,
-  buildOwnerItemSemanticReadPacket,
   buildOwnerItemSemanticQueryPacket,
   renderOwnerItemQuery,
+  renderOwnerItemSemanticQueryPacketJson,
+} from "./semantic-search/item-query.js";
+import {
+  buildOwnerItemSemanticReadPacket,
+  renderOwnerExactSourceWindowCode,
   renderOwnerItemQueryCode,
   renderOwnerItemSemanticReadPacket,
   renderOwnerItemSemanticReadPacketJson,
-  renderOwnerItemSemanticQueryPacketJson,
-} from "./semantic-search/item-query.js";
+} from "./semantic-search/item-read.js";
+import { renderTypeScriptAstPatchDryRunReceiptJson } from "./ast-patch.js";
 
 export interface CliStreams {
   readonly stdout: { write(chunk: string): unknown };
@@ -56,6 +58,7 @@ export type ProtocolArgs =
   | QueryArgs
   | CheckArgs
   | AgentArgs
+  | AstPatchArgs
   | ProtocolHelpArgs
   | ProtocolErrorArgs;
 
@@ -98,18 +101,10 @@ interface CheckArgs {
   readonly json: boolean;
 }
 
-type AgentArgs = AgentDoctorArgs | AgentGuideArgs;
-
-interface AgentDoctorArgs {
-  readonly kind: "agent";
-  readonly action: "doctor";
-  readonly projectRoot: string | undefined;
-  readonly json: boolean;
-}
-
-interface AgentGuideArgs {
-  readonly kind: "agent";
-  readonly action: "guide";
+interface AstPatchArgs {
+  readonly kind: "ast-patch";
+  readonly mode: "dry-run";
+  readonly packetPath: string;
   readonly projectRoot: string | undefined;
 }
 
@@ -133,6 +128,7 @@ export function parseProtocolArgs(argv: readonly string[]): ProtocolArgs | undef
       ? parseSearchQueryArgs(queryArgs)
       : parseQueryArgs(queryArgs);
   }
+  if (command === "ast-patch") return parseAstPatchArgs(argv.slice(1));
   if (command === "check") return parseCheckArgs(argv.slice(1));
   if (command === "agent") return parseAgentArgs(argv.slice(1));
   return undefined;
@@ -165,6 +161,15 @@ export function runProtocolCli(
   }
 
   try {
+    if (args.kind === "ast-patch") {
+      const projectRoot = path.resolve(cwd, args.projectRoot ?? ".");
+      const packetText =
+        args.packetPath === "-"
+          ? (streams.stdin ?? "")
+          : fs.readFileSync(path.resolve(cwd, args.packetPath), "utf8");
+      streams.stdout.write(renderTypeScriptAstPatchDryRunReceiptJson(projectRoot, packetText));
+      return 0;
+    }
     if (args.kind === "query") {
       let projectRoot = path.resolve(cwd, args.projectRoot ?? ".");
       if (args.packagePath !== undefined) {
@@ -193,7 +198,15 @@ export function runProtocolCli(
         );
       } else if (args.codeOnly) {
         streams.stdout.write(
-          `${renderOwnerItemQueryCode(projectRoot, args.ownerPath, itemQuery, args.selector)}\n`,
+          `${
+            selectorHasLineRange(args.selector, args.ownerPath)
+              ? renderOwnerExactSourceWindowCode(
+                  projectRoot,
+                  args.ownerPath,
+                  args.selector ?? args.ownerPath,
+                )
+              : renderOwnerItemQueryCode(projectRoot, args.ownerPath, itemQuery, args.selector)
+          }\n`,
         );
       } else if (selectorHasLineRange(args.selector, args.ownerPath)) {
         streams.stdout.write(
@@ -289,11 +302,11 @@ export function runProtocolCli(
 function searchNeedsFullNativeSyntaxFacts(view: TypeScriptSemanticSearchView): boolean {
   switch (view) {
     case "workspace":
-    case "prime":
     case "owner":
     case "api":
     case "public-external-types":
       return true;
+    case "prime":
     case "dependency":
     case "deps":
     case "docs":
@@ -311,10 +324,10 @@ function searchNeedsFullNativeSyntaxFacts(view: TypeScriptSemanticSearchView): b
 function searchNeedsRuleEvaluation(view: TypeScriptSemanticSearchView): boolean {
   switch (view) {
     case "workspace":
-    case "prime":
     case "owner":
     case "policy":
       return true;
+    case "prime":
     case "dependency":
     case "deps":
     case "docs":
@@ -328,6 +341,52 @@ function searchNeedsRuleEvaluation(view: TypeScriptSemanticSearchView): boolean 
     case "ingest":
       return false;
   }
+}
+
+function parseAstPatchArgs(argv: readonly string[]): ProtocolArgs {
+  const mode = argv[0];
+  if (mode === "--help" || mode === "-h") return { kind: "help" };
+  if (mode === "apply") {
+    return {
+      kind: "error",
+      message: "ts-harness ast-patch apply is unavailable; use dry-run and Codex apply_patch",
+    };
+  }
+  if (mode !== "dry-run") {
+    return {
+      kind: "error",
+      message: "usage: ts-harness ast-patch dry-run --packet <path-or-> [PROJECT_ROOT]",
+    };
+  }
+  let packetPath: string | undefined;
+  const positionals: string[] = [];
+  for (let index = 1; index < argv.length; index++) {
+    const arg = argv[index]!;
+    if (arg === "--packet") {
+      const value = argv[index + 1];
+      if (value === undefined || (value.startsWith("-") && value !== "-")) {
+        return { kind: "error", message: "--packet requires a path or -" };
+      }
+      packetPath = value;
+      index += 1;
+    } else if (arg.startsWith("-")) {
+      return { kind: "error", message: `unknown ast-patch option: ${arg}` };
+    } else {
+      positionals.push(arg);
+    }
+  }
+  if (packetPath === undefined) {
+    return { kind: "error", message: "missing required --packet <path-or->" };
+  }
+  if (positionals.length > 1) {
+    return { kind: "error", message: "expected at most one PROJECT_ROOT argument" };
+  }
+  return {
+    kind: "ast-patch",
+    mode,
+    packetPath,
+    projectRoot: positionals[0],
+  };
 }
 
 function parseQueryArgs(argv: readonly string[]): ProtocolArgs {
@@ -437,7 +496,7 @@ function parseQueryArgs(argv: readonly string[]): ProtocolArgs {
   ) {
     namesOnly = true;
   }
-  if (json && codeOnly) {
+  if (json && codeOnly && renderMode !== "read-packet") {
     return { kind: "error", message: "--code cannot be combined with --json" };
   }
   if (namesOnly && codeOnly) {
@@ -819,72 +878,6 @@ function parseCheckArgs(argv: readonly string[]): ProtocolArgs {
   return { kind: "check", mode, projectRoot: positionals[0], json };
 }
 
-function parseAgentArgs(argv: readonly string[]): ProtocolArgs {
-  const action = argv[0] ?? "doctor";
-  if (action === "install" || action === "hook") {
-    return {
-      kind: "error",
-      message: `ts-harness agent ${action} moved to semantic-agent-hook; use semantic-agent-hook ${action} --client codex`,
-    };
-  }
-  if (action === "guide") return parseAgentGuideArgs(argv.slice(1));
-  if (action !== "doctor") return { kind: "error", message: `unknown agent action: ${action}` };
-  let json = false;
-  const positionals: string[] = [];
-  for (const arg of argv.slice(1)) {
-    if (arg === "--json") {
-      json = true;
-    } else if (arg === "--help" || arg === "-h") {
-      continue;
-    } else if (arg.startsWith("-")) {
-      return { kind: "error", message: `unknown agent option: ${arg}` };
-    } else {
-      positionals.push(arg);
-    }
-  }
-  if (positionals.length > 1) {
-    return { kind: "error", message: "expected at most one PROJECT_ROOT argument" };
-  }
-  return { kind: "agent", action: "doctor", projectRoot: positionals[0], json };
-}
-
-function parseAgentGuideArgs(argv: readonly string[]): ProtocolArgs {
-  const parsed = parseAgentGuidePositionals(argv);
-  if (parsed.error !== undefined) return { kind: "error", message: parsed.error };
-  if (parsed.positionals.length > 1) {
-    return { kind: "error", message: "expected at most one PROJECT_ROOT argument" };
-  }
-  return {
-    kind: "agent",
-    action: "guide",
-    projectRoot: parsed.positionals[0],
-  };
-}
-
-function parseAgentGuidePositionals(argv: readonly string[]): {
-  readonly positionals: readonly string[];
-  readonly error?: string;
-} {
-  const positionals: string[] = [];
-  for (let index = 0; index < argv.length; index++) {
-    const arg = argv[index]!;
-    if (arg === "--client") {
-      const value = argv[index + 1];
-      if (value === undefined || value.startsWith("-")) {
-        return { positionals, error: "--client requires a client name" };
-      }
-      index += 1;
-    } else if (arg === "--help" || arg === "-h") {
-      continue;
-    } else if (arg.startsWith("-")) {
-      return { positionals, error: `unknown agent option: ${arg}` };
-    } else {
-      positionals.push(arg);
-    }
-  }
-  return { positionals };
-}
-
 interface SearchRunPlan {
   readonly projectRoot: string;
   readonly fileNames?: readonly string[];
@@ -966,22 +959,4 @@ function isFlagLikeLiteralSearchQuery(
 
 function searchViewSupportsQuerySet(view: TypeScriptSemanticSearchView): boolean {
   return view === "fzf";
-}
-
-function renderAgentDoctor(projectRoot: string): string {
-  const registration = typeScriptSemanticLanguageRegistration();
-  return (
-    [
-      `[agent-doctor] status=ok protocol=${SEMANTIC_LANGUAGE_PROTOCOL_ID} registry=semantic-language-registry.v${SEMANTIC_LANGUAGE_REGISTRY_VERSION}`,
-      `|project ${projectRoot}`,
-      `|language id=${TYPE_SCRIPT_LANGUAGE_ID} provider=${TYPE_SCRIPT_PROVIDER_ID} binary=${TYPE_SCRIPT_BINARY}`,
-      `|namespace ${TYPE_SCRIPT_PROVIDER_NAMESPACE}`,
-      `|method ${registration.methods.join(",")}`,
-      "|schema semantic-search-packet.v1",
-    ].join("\n") + "\n"
-  );
-}
-
-function renderAgentDoctorJson(projectRoot: string): string {
-  return `${JSON.stringify(semanticLanguageRegistryDocument(projectRoot))}\n`;
 }

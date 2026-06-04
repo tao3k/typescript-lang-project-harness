@@ -1,11 +1,11 @@
-@sealed export class Service
+@sealed class Service
   @sealed
-  readonly prefix: string
+  field readonly prefix: string
   constructor
     this.prefix = prefix
-  async run(value: string): Promise<string>
+  async method run
     if value.length === 0
-      throw new Error("empty")
-    return `${this.prefix}:${await Promise.resolve(value)}`
+      throw new Error
+    return template
       await
         resolve

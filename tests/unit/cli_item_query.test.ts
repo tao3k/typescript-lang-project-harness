@@ -93,7 +93,7 @@ test("owner items --json emits parser nodes and node expand actions", () => {
           readonly role: string;
         }[];
         readonly expandActions: readonly {
-          readonly argv: readonly string[];
+          readonly kind: string;
           readonly read?: string;
           readonly target: string;
         }[];
@@ -117,8 +117,7 @@ test("owner items --json emits parser nodes and node expand actions", () => {
   );
   for (const action of projection.expandActions) {
     if (action.read === undefined) continue;
-    const selectorIndex = action.argv.indexOf("--selector");
-    assert.notEqual(selectorIndex, -1);
-    assert.equal(action.argv[selectorIndex + 1], action.read);
+    assert.equal(action.kind, "exact-read");
+    assert.match(action.read, /^src\/demo\.ts(?::\d+:\d+)?$/u);
   }
 });

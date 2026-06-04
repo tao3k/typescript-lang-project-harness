@@ -136,10 +136,14 @@ export function fzfQuerySetHitsFromHitsByTerm(
   for (let offset = 0; offset < depth; offset += 1) {
     for (const queryTerm of orderedTerms) {
       const hit = hitsByTerm.get(queryTerm)?.[offset];
-      if (hit === undefined) continue;
+      if (hit === undefined) {
+        continue;
+      }
       mergeTextQuerySetHit(byKey, queryTerm, hit);
     }
   }
+  mergeQuerySetOwnerCoverageHits(report, hitsByTerm, byKey);
+  const ownerCoverage = querySetOwnerCoverage(report, hitsByTerm, byKey);
   return [...byKey.values()]
     .map(({ hit, queryTerms: matchedTerms }) => ({
       ...hit,
@@ -149,10 +153,199 @@ export function fzfQuerySetHitsFromHitsByTerm(
         queryTerms: [...matchedTerms],
       },
     }))
-    .sort((left, right) => compareHits(report, left, right))
+    .sort((left, right) => {
+      const leftOwner = hitOwnerPath(left);
+      const rightOwner = hitOwnerPath(right);
+      const coverageDiff =
+        (ownerCoverage.get(rightOwner) ?? 0) - (ownerCoverage.get(leftOwner) ?? 0);
+      if (coverageDiff !== 0) {
+        return coverageDiff;
+      }
+      const surfaceDiff =
+        querySetOwnerSurfaceRank(rightOwner) - querySetOwnerSurfaceRank(leftOwner);
+      if (surfaceDiff !== 0) {
+        return surfaceDiff;
+      }
+      return compareHits(report, left, right);
+    })
     .slice(0, MAX_FZF_HITS);
 }
 
+function mergeQuerySetOwnerCoverageHits(
+  report: TypeScriptHarnessReport,
+  hitsByTerm: ReadonlyMap<string, readonly SemanticSearchHit[]>,
+  byKey: Map<string, { readonly hit: SemanticSearchHit; readonly queryTerms: Set<string> }>,
+): void {
+  for (const { hit } of byKey.values()) {
+    const ownerPath = hitOwnerPath(hit);
+    if (ownerPath === "") {
+      continue;
+    }
+    const queryTerms = querySetHitMatchedTerms(hit, hitsByTerm.keys());
+    if (queryTerms.length < 2) {
+      continue;
+    }
+    const coverageHit: SemanticSearchHit = {
+      kind: hit.symbol === undefined ? "path" : "export",
+      ownerPath,
+      ...(hit.symbol === undefined ? {} : { symbol: hit.symbol }),
+      location: { path: ownerPath },
+      score: 100 + queryTerms.length * 10 + querySetOwnerSurfaceRank(ownerPath),
+      reason: "query-set-owner-coverage",
+      surface: ownerSurface(ownerPath),
+      realOwner: true,
+      fields: {
+        queryTerms,
+        coverage: queryTerms.length,
+      },
+    };
+    setQuerySetCoverageHit(byKey, coverageHit, queryTerms);
+  }
+
+  for (const branch of report.reasoningTree.ownerBranches) {
+    const ownerPath = relPath(report, branch.path);
+    const queryTerms = querySetBranchMatchedTerms(branch.exportNames, ownerPath, hitsByTerm.keys());
+    if (queryTerms.length < 2) {
+      continue;
+    }
+    const symbol = branch.exportNames.find((name) => queryTerms.includes(name.toLowerCase()));
+    const hit: SemanticSearchHit = {
+      kind: symbol === undefined ? "path" : "export",
+      ownerPath,
+      ...(symbol === undefined ? {} : { symbol }),
+      location: { path: ownerPath },
+      score: 100 + queryTerms.length * 10 + querySetOwnerSurfaceRank(ownerPath),
+      reason: "query-set-owner-coverage",
+      surface: ownerSurface(ownerPath),
+      realOwner: true,
+      fields: {
+        queryTerms,
+        coverage: queryTerms.length,
+      },
+    };
+    setQuerySetCoverageHit(byKey, hit, queryTerms);
+  }
+}
+
+function setQuerySetCoverageHit(
+  byKey: Map<string, { readonly hit: SemanticSearchHit; readonly queryTerms: Set<string> }>,
+  hit: SemanticSearchHit,
+  queryTerms: readonly string[],
+): void {
+  byKey.set(semanticHitKey(hit), { hit, queryTerms: new Set(queryTerms) });
+}
+
+function querySetHitMatchedTerms(
+  hit: SemanticSearchHit,
+  queryTerms: Iterable<string>,
+): readonly string[] {
+  const haystackParts = [hitOwnerPath(hit), hit.location.path, hit.symbol ?? "", hit.snippet ?? ""];
+  const haystack = haystackParts.join("\n").toLowerCase();
+  const matchedTerms: string[] = [];
+  for (const queryTerm of queryTerms) {
+    const normalized = queryTerm.trim().toLowerCase();
+    if (normalized !== "" && haystack.includes(normalized)) {
+      matchedTerms.push(normalized);
+    }
+  }
+  return matchedTerms;
+}
+
+function querySetBranchMatchedTerms(
+  exportNames: readonly string[],
+  ownerPath: string,
+  queryTerms: Iterable<string>,
+): readonly string[] {
+  const matchedTerms: string[] = [];
+  for (const queryTerm of queryTerms) {
+    const normalized = queryTerm.trim().toLowerCase();
+    if (normalized === "") {
+      continue;
+    }
+    if (
+      ownerPath.toLowerCase().includes(normalized) ||
+      exportNames.some((name) => name.toLowerCase() === normalized)
+    ) {
+      matchedTerms.push(normalized);
+    }
+  }
+  return matchedTerms;
+}
+
+function querySetOwnerCoverage(
+  report: TypeScriptHarnessReport,
+  hitsByTerm: ReadonlyMap<string, readonly SemanticSearchHit[]>,
+  byKey: ReadonlyMap<
+    string,
+    { readonly hit: SemanticSearchHit; readonly queryTerms: ReadonlySet<string> }
+  >,
+): ReadonlyMap<string, number> {
+  const coverage = new Map<string, Set<string>>();
+  for (const { hit, queryTerms } of byKey.values()) {
+    const ownerPath = hitOwnerPath(hit);
+    if (ownerPath === "") {
+      continue;
+    }
+    for (const queryTerm of queryTerms) {
+      addQuerySetOwnerCoverage(coverage, ownerPath, queryTerm);
+    }
+  }
+  for (const branch of report.reasoningTree.ownerBranches) {
+    const ownerPath = relPath(report, branch.path);
+    for (const queryTerm of hitsByTerm.keys()) {
+      if (branchMatchesQueryTerm(branch.exportNames, ownerPath, queryTerm)) {
+        addQuerySetOwnerCoverage(coverage, ownerPath, queryTerm);
+      }
+    }
+  }
+  return new Map([...coverage].map(([ownerPath, queryTerms]) => [ownerPath, queryTerms.size]));
+}
+
+function addQuerySetOwnerCoverage(
+  coverage: Map<string, Set<string>>,
+  ownerPath: string,
+  queryTerm: string,
+): void {
+  const normalized = queryTerm.trim().toLowerCase();
+  if (normalized === "") {
+    return;
+  }
+  const queryTerms = coverage.get(ownerPath) ?? new Set<string>();
+  queryTerms.add(normalized);
+  coverage.set(ownerPath, queryTerms);
+}
+
+function branchMatchesQueryTerm(
+  exportNames: readonly string[],
+  ownerPath: string,
+  queryTerm: string,
+): boolean {
+  const needle = queryTerm.trim().toLowerCase();
+  if (needle === "") {
+    return false;
+  }
+  if (ownerPath.toLowerCase().includes(needle)) {
+    return true;
+  }
+  return exportNames.some((name) => name.toLowerCase() === needle);
+}
+
+function hitOwnerPath(hit: SemanticSearchHit): string {
+  return hit.ownerPath || hit.location.path;
+}
+
+function querySetOwnerSurfaceRank(ownerPath: string): number {
+  if (ownerPath === "") {
+    return 0;
+  }
+  if (isTestOwnerPath(ownerPath)) {
+    return 0;
+  }
+  if (ownerPath.endsWith(".d.ts")) {
+    return 1;
+  }
+  return 2;
+}
 function mergeTextQuerySetHit(
   byKey: Map<string, { readonly hit: SemanticSearchHit; readonly queryTerms: Set<string> }>,
   queryTerm: string,

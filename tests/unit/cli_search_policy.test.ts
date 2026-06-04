@@ -13,10 +13,12 @@ test("search policy returns provider-owned owner and test handles", () => {
     root,
   );
   assert.equal(result.exitCode, 0, result.stderr);
-  assert.match(result.stdout, /^\[search-policy\] q=TS-AGENT-R001 handle=1 owner=1 tests=3/mu);
-  assert.match(result.stdout, /\|handle TS-AGENT-R001 kind=policy-rule/u);
-  assert.match(result.stdout, /\|seed owner:src\/rules\/agent_policy\/pack\.ts/u);
-  assert.match(result.stdout, /\|seed tests:tests\/unit\/agent_policy\.test\.ts/u);
+  assert.match(result.stdout, /^\[search-policy\] q=TS-AGENT-R001 alg=policy-handle-catalog/mu);
+  assert.match(result.stdout, /^O=owner:path\(src\/rules\/agent_policy\/pack\.ts\)!owner;/mu);
+  assert.match(result.stdout, /^rank=O,T,T2,T3 frontier=O\.owner,T\.tests,T2\.tests,T3\.tests/mu);
+  assert.match(result.stdout, /O=owner:path\(src\/rules\/agent_policy\/pack\.ts\)!owner/u);
+  assert.match(result.stdout, /T=test:path\(tests\/unit\/agent_policy\.test\.ts\)!tests/u);
+  assert.doesNotMatch(result.stdout, /\|seed /u);
 });
 
 test("search policy JSON exposes semanticHandles", () => {

@@ -83,14 +83,16 @@ test("search query maps hook selector terms into query-set owner and test seeds"
   );
 
   assert.equal(result.exitCode, 0, result.stderr);
-  assert.match(result.stdout, /^\[search-fzf\].*querySet=3.*pipes=owner,tests/mu);
-  assert.match(result.stdout, /\|query parseSearchArgs status=hit/mu);
-  assert.match(result.stdout, /\|query querySets status=(?:hit|partial)/mu);
-  assert.match(result.stdout, /\|query buildSemanticSearchPacket status=hit/mu);
-  assert.match(result.stdout, /\|seed owner:.*src\/cli\/protocol\.ts/mu);
-  assert.match(result.stdout, /\|seed owner:.*src\/cli\/semantic-search\/build\.ts/mu);
-  assert.match(result.stdout, /\|seed tests:tests\/unit\/protocol\.test\.ts/mu);
-  assert.match(result.stdout, /algorithm=query-set-owner-resolution/mu);
+  assert.match(result.stdout, /^\[search-fzf\].*querySet=3.*alg=query-set-owner-resolution/mu);
+  assert.match(result.stdout, /;O=owner:path\(src\/cli\/semantic-search\/build\.ts\)!owner;/mu);
+  assert.match(
+    result.stdout,
+    /^rank=Q,O,O2,O3,T,S,T2,S2 frontier=Q\.fzf,O\.owner,O2\.owner,O3\.owner,T\.tests,S\.symbol,T2\.tests,S2\.symbol/mu,
+  );
+  assert.match(result.stdout, /S=symbol:symbol\(buildSemanticSearchPacket\)!symbol/mu);
+  assert.match(result.stdout, /S2=symbol:symbol\(parseSearchArgs\)!symbol/mu);
+  assert.doesNotMatch(result.stdout, /\|query /mu);
+  assert.doesNotMatch(result.stdout, /\|seed /mu);
 
   fs.rmSync(root, { recursive: true, force: true });
 });

@@ -139,6 +139,9 @@ export function buildPrimePacket(
         owners: tree.ownerBranches.length,
         edges: tree.ownerDependencies.length,
         findings: report.findings.length,
+        analysis: "structure",
+        nativeSyntaxFacts: "skipped",
+        policyFindings: "skipped",
         extensions: tree.packageExtensions.length,
         buildTools: tree.packageBuildTools.length,
         workspaces: tree.workspacePackages.length,
@@ -430,6 +433,11 @@ function primeGraphSynthesis(
     highImpactOwners: selectedOwners.slice(0, 4),
     frontierOwners,
     findingOwners,
+    fields: {
+      analysis: "structure",
+      nativeSyntaxFacts: "skipped",
+      policyFindings: "skipped",
+    },
   };
 }
 

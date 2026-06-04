@@ -8,19 +8,22 @@
         "mode": "outline",
         "syntax": "semantic-outline",
         "sourceAuthority": "native-parser",
-        "sourceFingerprint": "src/service.ts:5:19:268:7d28339b",
+        "sourceFingerprint": "src/service.ts:5:19:260:da06451b",
         "losslessStructure": true,
         "exactRead": "src/service.ts:5:19",
         "nodes": [
           {
             "id": "Service",
+            "nativeId": "typescript:class:5:19:8c947c74",
+            "structuralFingerprint": "class:declaration:5:19:ef49dd3e",
             "kind": "class",
             "role": "declaration",
-            "label": "@sealed export class Service",
+            "label": "@sealed class Service",
             "depth": 0,
             "read": "src/service.ts:5:19",
             "flags": [
               "decorator",
+              "field",
               "mutation",
               "branch",
               "throw",
@@ -30,8 +33,10 @@
             ]
           },
           {
-            "id": "Service:1",
+            "id": "Service:decorator:5:5:f27e01cf",
             "parentId": "Service",
+            "nativeId": "typescript:Decorator:5:5:f27e01cf",
+            "structuralFingerprint": "decorator:declaration:5:5:4fe13e00",
             "kind": "decorator",
             "role": "declaration",
             "label": "@sealed",
@@ -42,17 +47,24 @@
             ]
           },
           {
-            "id": "Service:2",
+            "id": "Service:field:7:7:3799461e",
             "parentId": "Service",
+            "nativeId": "typescript:PropertyDeclaration:7:7:3799461e",
+            "structuralFingerprint": "field:field:7:7:3c084d50",
             "kind": "field",
-            "role": "declaration",
-            "label": "readonly prefix: string",
+            "role": "field",
+            "label": "field readonly prefix: string",
             "depth": 1,
-            "read": "src/service.ts:7:7"
+            "read": "src/service.ts:7:7",
+            "flags": [
+              "field"
+            ]
           },
           {
-            "id": "Service:3",
+            "id": "Service:constructor:9:11:f25d9f4f",
             "parentId": "Service",
+            "nativeId": "typescript:Constructor:9:11:f25d9f4f",
+            "structuralFingerprint": "constructor:declaration:9:11:fe62052f",
             "kind": "constructor",
             "role": "declaration",
             "label": "constructor",
@@ -60,8 +72,10 @@
             "read": "src/service.ts:9:11"
           },
           {
-            "id": "Service:4",
-            "parentId": "Service:3",
+            "id": "Service:assign:10:10:dbe149d2",
+            "parentId": "Service:constructor:9:11:f25d9f4f",
+            "nativeId": "typescript:BinaryExpression:10:10:dbe149d2",
+            "structuralFingerprint": "assign:mutation:10:10:15c761f",
             "kind": "assign",
             "role": "mutation",
             "label": "this.prefix = prefix",
@@ -72,17 +86,21 @@
             ]
           },
           {
-            "id": "Service:5",
+            "id": "Service:method:13:18:f31c649d",
             "parentId": "Service",
+            "nativeId": "typescript:MethodDeclaration:13:18:f31c649d",
+            "structuralFingerprint": "method:declaration:13:18:5cb272e5",
             "kind": "method",
             "role": "declaration",
-            "label": "async run(value: string): Promise<string>",
+            "label": "async method run",
             "depth": 1,
             "read": "src/service.ts:13:18"
           },
           {
-            "id": "Service:6",
-            "parentId": "Service:5",
+            "id": "Service:if:14:16:631ebdde",
+            "parentId": "Service:method:13:18:f31c649d",
+            "nativeId": "typescript:IfStatement:14:16:631ebdde",
+            "structuralFingerprint": "if:control-flow:14:16:e64f6c54",
             "kind": "if",
             "role": "control-flow",
             "label": "if value.length === 0",
@@ -93,11 +111,13 @@
             ]
           },
           {
-            "id": "Service:7",
-            "parentId": "Service:6",
+            "id": "Service:throw:15:15:a6c35ff3",
+            "parentId": "Service:if:14:16:631ebdde",
+            "nativeId": "typescript:ThrowStatement:15:15:a6c35ff3",
+            "structuralFingerprint": "throw:terminal:15:15:ac8d41ed",
             "kind": "throw",
             "role": "terminal",
-            "label": "throw new Error(\"empty\")",
+            "label": "throw new Error",
             "depth": 3,
             "read": "src/service.ts:15:15",
             "flags": [
@@ -105,11 +125,13 @@
             ]
           },
           {
-            "id": "Service:8",
-            "parentId": "Service:5",
+            "id": "Service:return:17:17:5b26e2d3",
+            "parentId": "Service:method:13:18:f31c649d",
+            "nativeId": "typescript:ReturnStatement:17:17:5b26e2d3",
+            "structuralFingerprint": "return:terminal:17:17:1ce05e99",
             "kind": "return",
             "role": "terminal",
-            "label": "return `${this.prefix}:${await Promise.resolve(value)}`",
+            "label": "return template",
             "depth": 2,
             "read": "src/service.ts:17:17",
             "flags": [
@@ -117,8 +139,10 @@
             ]
           },
           {
-            "id": "Service:9",
-            "parentId": "Service:8",
+            "id": "Service:await:17:17:dc0bbf8d",
+            "parentId": "Service:return:17:17:5b26e2d3",
+            "nativeId": "typescript:AwaitExpression:17:17:dc0bbf8d",
+            "structuralFingerprint": "await:effect:17:17:b3e1513d",
             "kind": "await",
             "role": "effect",
             "label": "await",
@@ -129,8 +153,10 @@
             ]
           },
           {
-            "id": "Service:10",
-            "parentId": "Service:9",
+            "id": "Service:call:17:17:aef31c63",
+            "parentId": "Service:await:17:17:dc0bbf8d",
+            "nativeId": "typescript:CallExpression:17:17:aef31c63",
+            "structuralFingerprint": "call:call:17:17:58d5de8b",
             "kind": "call",
             "role": "call",
             "label": "resolve",
@@ -141,8 +167,90 @@
             ]
           }
         ],
+        "renderedNodeIds": [
+          "Service",
+          "Service:decorator:5:5:f27e01cf",
+          "Service:field:7:7:3799461e",
+          "Service:constructor:9:11:f25d9f4f",
+          "Service:assign:10:10:dbe149d2",
+          "Service:method:13:18:f31c649d",
+          "Service:if:14:16:631ebdde",
+          "Service:throw:15:15:a6c35ff3",
+          "Service:return:17:17:5b26e2d3",
+          "Service:await:17:17:dc0bbf8d",
+          "Service:call:17:17:aef31c63"
+        ],
+        "renderedRows": [
+          {
+            "nodeId": "Service",
+            "rowKind": "declaration",
+            "text": "@sealed class Service",
+            "semanticWeight": 1
+          },
+          {
+            "nodeId": "Service:decorator:5:5:f27e01cf",
+            "rowKind": "declaration",
+            "text": "  @sealed",
+            "semanticWeight": 1
+          },
+          {
+            "nodeId": "Service:field:7:7:3799461e",
+            "rowKind": "field",
+            "text": "  field readonly prefix: string",
+            "semanticWeight": 1
+          },
+          {
+            "nodeId": "Service:constructor:9:11:f25d9f4f",
+            "rowKind": "declaration",
+            "text": "  constructor",
+            "semanticWeight": 1
+          },
+          {
+            "nodeId": "Service:assign:10:10:dbe149d2",
+            "rowKind": "mutation",
+            "text": "    this.prefix = prefix",
+            "semanticWeight": 2
+          },
+          {
+            "nodeId": "Service:method:13:18:f31c649d",
+            "rowKind": "declaration",
+            "text": "  async method run",
+            "semanticWeight": 1
+          },
+          {
+            "nodeId": "Service:if:14:16:631ebdde",
+            "rowKind": "control-flow",
+            "text": "    if value.length === 0",
+            "semanticWeight": 2
+          },
+          {
+            "nodeId": "Service:throw:15:15:a6c35ff3",
+            "rowKind": "terminal",
+            "text": "      throw new Error",
+            "semanticWeight": 2
+          },
+          {
+            "nodeId": "Service:return:17:17:5b26e2d3",
+            "rowKind": "terminal",
+            "text": "    return template",
+            "semanticWeight": 2
+          },
+          {
+            "nodeId": "Service:await:17:17:dc0bbf8d",
+            "rowKind": "effect",
+            "text": "      await",
+            "semanticWeight": 2
+          },
+          {
+            "nodeId": "Service:call:17:17:aef31c63",
+            "rowKind": "call",
+            "text": "        resolve",
+            "semanticWeight": 2
+          }
+        ],
         "omitted": [
           {
+            "nodeId": "Service",
             "kind": "source-formatting",
             "reason": "compact projection removes original whitespace and comments",
             "count": 15,
@@ -154,90 +262,31 @@
             "kind": "exact-read",
             "target": "Service",
             "read": "src/service.ts:5:19",
-            "argv": [
-              "ts-harness",
-              "query",
-              "--from-hook",
-              "direct-source-read",
-              "--selector",
-              "src/service.ts:5:19",
-              "."
-            ],
             "reason": "read exact source before editing"
           },
           {
             "kind": "exact-read",
-            "target": "Service:4",
+            "target": "Service:assign:10:10:dbe149d2",
             "read": "src/service.ts:10:10",
-            "argv": [
-              "ts-harness",
-              "query",
-              "--from-hook",
-              "direct-source-read",
-              "--selector",
-              "src/service.ts:10:10",
-              "."
-            ],
             "reason": "expand assign node before editing"
           },
           {
             "kind": "exact-read",
-            "target": "Service:6",
+            "target": "Service:if:14:16:631ebdde",
             "read": "src/service.ts:14:16",
-            "argv": [
-              "ts-harness",
-              "query",
-              "--from-hook",
-              "direct-source-read",
-              "--selector",
-              "src/service.ts:14:16",
-              "."
-            ],
             "reason": "expand if node before editing"
           },
           {
             "kind": "exact-read",
-            "target": "Service:7",
+            "target": "Service:throw:15:15:a6c35ff3",
             "read": "src/service.ts:15:15",
-            "argv": [
-              "ts-harness",
-              "query",
-              "--from-hook",
-              "direct-source-read",
-              "--selector",
-              "src/service.ts:15:15",
-              "."
-            ],
             "reason": "expand throw node before editing"
           },
           {
             "kind": "exact-read",
-            "target": "Service:8",
+            "target": "Service:return:17:17:5b26e2d3",
             "read": "src/service.ts:17:17",
-            "argv": [
-              "ts-harness",
-              "query",
-              "--from-hook",
-              "direct-source-read",
-              "--selector",
-              "src/service.ts:17:17",
-              "."
-            ],
             "reason": "expand return node before editing"
-          },
-          {
-            "kind": "owner-names",
-            "target": "src/service.ts",
-            "argv": [
-              "ts-harness",
-              "query",
-              "--from-hook",
-              "direct-source-read",
-              "--selector",
-              "src/service.ts",
-              "."
-            ],
-            "reason": "return owner-local item names without code windows"
           }
         ]
       }

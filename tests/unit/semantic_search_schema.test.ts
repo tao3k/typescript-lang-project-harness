@@ -200,6 +200,7 @@ test("semantic language registry JSON documents the TypeScript provider identity
     "query/direct-source-read",
     "check/changed",
     "check/full",
+    "ast-patch/dry-run",
     "agent/doctor",
     "agent/guide",
   ]);
@@ -221,8 +222,13 @@ test("semantic language registry JSON documents the TypeScript provider identity
   for (const descriptor of methodDescriptors) {
     assertSchemaObject(descriptor, methodDescriptorSchema, String(descriptor.method));
     assert.equal(descriptor.supportsJson, descriptor.method === "agent/guide" ? false : true);
-    assert.equal(descriptor.supportsCompact, true);
-    assert.ok(["search", "query", "check", "agent"].includes(String(descriptor.command)));
+    assert.equal(
+      descriptor.supportsCompact,
+      descriptor.method === "ast-patch/dry-run" ? false : true,
+    );
+    assert.ok(
+      ["search", "query", "check", "ast-patch", "agent"].includes(String(descriptor.command)),
+    );
     if (String(descriptor.method).startsWith("search/")) {
       assert.equal(descriptor.command, "search");
       assert.equal(descriptor.view, String(descriptor.method).slice("search/".length));
@@ -316,6 +322,13 @@ test("semantic language registry JSON documents the TypeScript provider identity
           typeScriptCapabilityDescriptorSchema,
           `${String(descriptor.method)} TypeScript capability`,
         );
+      }
+      if (descriptor.method === "ast-patch/dry-run") {
+        assert.equal(descriptor.command, "ast-patch");
+        assert.deepEqual(descriptor.outputSchemaIds, [
+          "agent.semantic-protocols.semantic-ast-patch-receipt",
+        ]);
+        assert.equal(descriptor.mutationAvailable, false);
       }
       assert.deepEqual(capabilities, expectedSearchCapabilities(String(descriptor.method)));
       const ingestRequiredFor = descriptor.ingestRequiredFor;

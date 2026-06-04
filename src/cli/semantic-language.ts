@@ -30,6 +30,9 @@ export const SEMANTIC_EVIDENCE_GRAPH_SCHEMA_ID =
   "agent.semantic-protocols.semantic-evidence-graph" as const;
 export const SEMANTIC_ASSURANCE_CASE_SCHEMA_ID =
   "agent.semantic-protocols.semantic-assurance-case" as const;
+export const SEMANTIC_AST_PATCH_SCHEMA_ID = "agent.semantic-protocols.semantic-ast-patch" as const;
+export const SEMANTIC_AST_PATCH_RECEIPT_SCHEMA_ID =
+  "agent.semantic-protocols.semantic-ast-patch-receipt" as const;
 export const TYPE_SCRIPT_CAPABILITIES_SCHEMA_ID =
   "agent.semantic-protocols.languages.typescript.ts-harness.capabilities" as const;
 const SEMANTIC_TYPE_SURFACE_SCHEMA_ID = "agent.semantic-protocols.semantic-type-surface" as const;
@@ -212,14 +215,16 @@ export const TYPE_SCRIPT_SEARCH_METHODS = TYPE_SCRIPT_SEARCH_VIEW_DESCRIPTORS.ma
 
 export const TYPE_SCRIPT_CHECK_METHODS = ["check/changed", "check/full"] as const;
 export const TYPE_SCRIPT_QUERY_METHODS = ["query/owner-items", "query/direct-source-read"] as const;
+export const TYPE_SCRIPT_AST_PATCH_METHODS = ["ast-patch/dry-run"] as const;
 export const TYPE_SCRIPT_AGENT_METHODS = ["agent/doctor", "agent/guide"] as const;
 
 export type TypeScriptSemanticLanguageMethod =
   | TypeScriptSemanticSearchMethod
   | TypeScriptSemanticQueryMethod
   | (typeof TYPE_SCRIPT_CHECK_METHODS)[number]
+  | (typeof TYPE_SCRIPT_AST_PATCH_METHODS)[number]
   | (typeof TYPE_SCRIPT_AGENT_METHODS)[number];
-export type SemanticLanguageCommand = "search" | "query" | "check" | "agent";
+export type SemanticLanguageCommand = "search" | "query" | "check" | "ast-patch" | "agent";
 export type SemanticLanguageOutputMode = "compact" | "json" | "code" | "names" | "read-packet";
 export type SemanticLanguageCapabilityNamespace = "semantic" | typeof TYPE_SCRIPT_LANGUAGE_ID;
 
@@ -279,6 +284,7 @@ export interface SemanticLanguageMethodDescriptor {
   readonly requiredOptions?: readonly string[];
   readonly input?: string;
   readonly outputModes?: readonly SemanticLanguageOutputMode[];
+  readonly mutationAvailable?: boolean;
   readonly supportsJson: boolean;
   readonly supportsCompact: boolean;
 }
@@ -345,6 +351,7 @@ export function typeScriptSemanticLanguageRegistration(): SemanticLanguageRegist
       ...TYPE_SCRIPT_SEARCH_METHODS,
       ...TYPE_SCRIPT_QUERY_METHODS,
       ...TYPE_SCRIPT_CHECK_METHODS,
+      ...TYPE_SCRIPT_AST_PATCH_METHODS,
       ...TYPE_SCRIPT_AGENT_METHODS,
     ],
     methodDescriptors: typeScriptSemanticLanguageMethodDescriptors(),
@@ -408,6 +415,16 @@ export function typeScriptSemanticLanguageRegistration(): SemanticLanguageRegist
         schemaId: SEMANTIC_ASSURANCE_CASE_SCHEMA_ID,
         schemaVersion: "1",
         path: "schemas/semantic-assurance-case.v1.schema.json",
+      },
+      {
+        schemaId: SEMANTIC_AST_PATCH_SCHEMA_ID,
+        schemaVersion: "1",
+        path: "schemas/semantic-ast-patch.v1.schema.json",
+      },
+      {
+        schemaId: SEMANTIC_AST_PATCH_RECEIPT_SCHEMA_ID,
+        schemaVersion: "1",
+        path: "schemas/semantic-ast-patch-receipt.v1.schema.json",
       },
       {
         schemaId: SEMANTIC_TYPE_SURFACE_SCHEMA_ID,
@@ -474,6 +491,16 @@ function typeScriptSemanticLanguageMethodDescriptors(): readonly SemanticLanguag
       command: "check" as const,
       supportsJson: true,
       supportsCompact: true,
+    })),
+    ...TYPE_SCRIPT_AST_PATCH_METHODS.map((method) => ({
+      method,
+      command: "ast-patch" as const,
+      input: "semantic-ast-patch packet",
+      requiredOptions: ["--packet"],
+      outputSchemaIds: [SEMANTIC_AST_PATCH_RECEIPT_SCHEMA_ID],
+      supportsJson: true,
+      supportsCompact: false,
+      mutationAvailable: false,
     })),
     {
       method: "agent/doctor" as const,

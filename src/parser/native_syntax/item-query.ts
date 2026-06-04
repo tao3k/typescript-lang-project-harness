@@ -15,12 +15,17 @@ export interface TypeScriptItemQueryMatch {
   readonly projectionNodes: readonly TypeScriptItemProjectionNode[];
 }
 
+export type TypeScriptProjectionIdentity = string;
+
 export interface TypeScriptItemProjectionNode {
-  readonly id: string;
-  readonly parentId?: string;
+  readonly id: TypeScriptProjectionIdentity;
+  readonly parentId?: TypeScriptProjectionIdentity;
+  readonly nativeId?: TypeScriptProjectionIdentity;
+  readonly structuralFingerprint?: TypeScriptProjectionIdentity;
   readonly kind: string;
   readonly role:
     | "declaration"
+    | "field"
     | "control-flow"
     | "call"
     | "terminal"
@@ -142,16 +147,26 @@ function projectionNodesForItem(
 ): readonly TypeScriptItemProjectionNode[] {
   const rootId = projectionNodeId(name);
   const rootRange = nodeRange(sourceFile, node);
+  const rootLabel = declarationProjectionLabel(sourceFile, node, name, kind);
+  const rootFlags = projectionFlagsForNode(node);
   const nodes: TypeScriptItemProjectionNode[] = [
     {
       id: rootId,
+      nativeId: projectionNativeId(kind, rootRange, rootLabel),
+      structuralFingerprint: projectionStructuralFingerprint(
+        kind,
+        "declaration",
+        rootLabel,
+        rootRange,
+        rootFlags,
+      ),
       kind,
       role: "declaration",
-      label: declarationProjectionLabel(sourceFile, node, name, kind),
+      label: rootLabel,
       depth: 0,
       lineStart: rootRange.lineStart,
       lineEnd: rootRange.lineEnd,
-      flags: projectionFlagsForNode(node),
+      flags: rootFlags,
     },
   ];
   collectProjectionChildNodes(sourceFile, node, {
@@ -160,7 +175,7 @@ function projectionNodesForItem(
     depth: 1,
     nodes,
   });
-  return nodes.slice(0, 24);
+  return uniqueProjectionNodes(nodes).slice(0, 24);
 }
 
 interface ProjectionNodeContext {
@@ -205,17 +220,96 @@ function projectionNodeForAstNode(
   if (shouldOmitNestedProjectionKind(kind, context)) return undefined;
   const range = nodeRange(sourceFile, node);
   const label = projectionLabelForNode(node, kind);
+  const role = projectionRoleForKind(kind);
+  const flags = projectionFlagsForKind(kind);
   return {
-    id: `${context.rootId}:${context.nodes.length}`,
+    id: projectionNodeIdForAstNode(context.rootId, kind, range, label),
     parentId: context.parentId,
+    nativeId: projectionNativeId(ts.SyntaxKind[node.kind] ?? kind, range, label),
+    structuralFingerprint: projectionStructuralFingerprint(kind, role, label, range, flags),
     kind,
-    role: projectionRoleForKind(kind),
+    role,
     label,
     depth: context.depth,
     lineStart: range.lineStart,
     lineEnd: range.lineEnd,
-    flags: projectionFlagsForKind(kind),
+    flags,
   };
+}
+
+function uniqueProjectionNodes(
+  nodes: readonly TypeScriptItemProjectionNode[],
+): readonly TypeScriptItemProjectionNode[] {
+  const emittedIds = new Set<string>();
+  const unique: TypeScriptItemProjectionNode[] = [];
+  for (const node of nodes) {
+    if (emittedIds.has(node.id)) continue;
+    if (node.parentId !== undefined && !emittedIds.has(node.parentId)) {
+      continue;
+    }
+    emittedIds.add(node.id);
+    unique.push(node);
+  }
+  return unique;
+}
+
+function projectionNodeIdForAstNode(
+  rootId: string,
+  kind: string,
+  range: ReturnType<typeof nodeRange>,
+  label: string,
+): string {
+  return [
+    rootId,
+    safeProjectionIdPart(kind),
+    String(range.lineStart),
+    String(range.lineEnd),
+    stableProjectionHash(label),
+  ].join(":");
+}
+
+function projectionNativeId(
+  kind: string,
+  range: ReturnType<typeof nodeRange>,
+  label: string,
+): string {
+  return [
+    "typescript",
+    safeProjectionIdPart(kind),
+    String(range.lineStart),
+    String(range.lineEnd),
+    stableProjectionHash(label),
+  ].join(":");
+}
+
+function projectionStructuralFingerprint(
+  kind: string,
+  role: TypeScriptItemProjectionNode["role"],
+  label: string,
+  range: ReturnType<typeof nodeRange>,
+  flags: readonly string[],
+): string {
+  return [
+    safeProjectionIdPart(kind),
+    role,
+    String(range.lineStart),
+    String(range.lineEnd),
+    stableProjectionHash(`${label}:${flags.join(",")}`),
+  ].join(":");
+}
+
+function safeProjectionIdPart(value: string): string {
+  const normalized = value.replace(/[^A-Za-z0-9_.-]+/gu, "-");
+  return normalized.length === 0 ? "node" : normalized;
+}
+
+function stableProjectionHash(value: string): string {
+  let hash = 2166136261;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(16);
 }
 
 function shouldOmitNestedProjectionKind(kind: string, context: ProjectionNodeContext): boolean {
@@ -238,6 +332,7 @@ const expressionCarrierProjectionKinds = new Set([
 function projectionKindForNode(node: ts.Node): string | undefined {
   if (ts.isDecorator(node)) return "decorator";
   if (ts.isVariableStatement(node)) return variableDeclarationKind(node);
+  if (ts.isParameter(node) && isParameterProperty(node)) return "field";
   if (ts.isPropertySignature(node) || ts.isPropertyDeclaration(node)) return "field";
   if (ts.isMethodSignature(node) || ts.isMethodDeclaration(node)) return "method";
   if (ts.isConstructorDeclaration(node)) return "constructor";
@@ -262,9 +357,17 @@ function projectionKindForNode(node: ts.Node): string | undefined {
 
 function projectionRoleForKind(
   kind: string,
-): "declaration" | "control-flow" | "call" | "terminal" | "mutation" | "effect" | "unknown" {
-  if (["decorator", "field", "method", "constructor", "member"].includes(kind))
-    return "declaration";
+):
+  | "declaration"
+  | "field"
+  | "control-flow"
+  | "call"
+  | "terminal"
+  | "mutation"
+  | "effect"
+  | "unknown" {
+  if (kind === "field") return "field";
+  if (["decorator", "method", "constructor", "member"].includes(kind)) return "declaration";
   if (["if", "switch", "case", "for", "while", "try"].includes(kind)) return "control-flow";
   if (kind === "call") return "call";
   if (["return", "throw", "break", "continue"].includes(kind)) return "terminal";
@@ -274,6 +377,7 @@ function projectionRoleForKind(
 }
 
 function projectionFlagsForKind(kind: string): readonly string[] {
+  if (kind === "field") return ["field"];
   if (kind === "decorator") return ["decorator"];
   if (["if", "switch", "case"].includes(kind)) return ["branch"];
   if (["for", "while"].includes(kind)) return ["loop"];
@@ -309,25 +413,22 @@ function projectionLabelForNode(node: ts.Node, kind: string): string {
   if (ts.isVariableStatement(node)) return variableStatementLabel(node);
   if (ts.isIfStatement(node)) return `if ${compactNodeText(node.getSourceFile(), node.expression)}`;
   if (ts.isForOfStatement(node))
-    return `for ${compactNodeText(node.getSourceFile(), node.initializer)} of ${compactNodeText(node.getSourceFile(), node.expression)}`;
+    return `for ${forInitializerLabel(node.getSourceFile(), node.initializer)} of ${compactNodeText(node.getSourceFile(), node.expression)}`;
   if (ts.isForInStatement(node))
-    return `for ${compactNodeText(node.getSourceFile(), node.initializer)} in ${compactNodeText(node.getSourceFile(), node.expression)}`;
+    return `for ${forInitializerLabel(node.getSourceFile(), node.initializer)} in ${compactNodeText(node.getSourceFile(), node.expression)}`;
   if (ts.isForStatement(node)) return forStatementLabel(node);
   if (ts.isWhileStatement(node))
     return `while ${compactNodeText(node.getSourceFile(), node.expression)}`;
+  if (ts.isParameter(node) && kind === "field") return parameterPropertyLabel(node);
   if (ts.isPropertySignature(node) || ts.isPropertyDeclaration(node))
     return propertyLikeLabel(node);
   if (ts.isMethodSignature(node) || ts.isMethodDeclaration(node)) return methodLikeLabel(node);
   if (ts.isConstructorDeclaration(node)) return "constructor";
   if (ts.isEnumMember(node)) return compactNodeText(node.getSourceFile(), node.name);
   if (ts.isReturnStatement(node))
-    return node.expression
-      ? `return ${compactNodeText(node.getSourceFile(), node.expression)}`
-      : "return";
+    return node.expression ? `return ${expressionProjectionLabel(node.expression)}` : "return";
   if (ts.isThrowStatement(node))
-    return node.expression
-      ? `throw ${compactNodeText(node.getSourceFile(), node.expression)}`
-      : "throw";
+    return node.expression ? `throw ${expressionProjectionLabel(node.expression)}` : "throw";
   if (ts.isBinaryExpression(node) && kind === "assign") return assignmentLabel(node);
   return kind;
 }
@@ -336,6 +437,25 @@ function callExpressionLabel(node: ts.CallExpression): string {
   if (ts.isIdentifier(node.expression)) return node.expression.text;
   if (ts.isPropertyAccessExpression(node.expression)) return node.expression.name.text;
   return "call";
+}
+
+function expressionProjectionLabel(node: ts.Expression): string {
+  if (ts.isCallExpression(node)) return callExpressionLabel(node);
+  if (ts.isFunctionExpression(node)) return node.name ? `function ${node.name.text}` : "function";
+  if (ts.isArrowFunction(node)) return "arrow";
+  if (ts.isTemplateExpression(node) || ts.isNoSubstitutionTemplateLiteral(node)) return "template";
+  if (ts.isStringLiteralLike(node)) return "string";
+  if (ts.isNumericLiteral(node)) return "number";
+  if (ts.isObjectLiteralExpression(node)) return "object";
+  if (ts.isArrayLiteralExpression(node)) return "array";
+  if (ts.isNewExpression(node))
+    return `new ${compactNodeText(node.getSourceFile(), node.expression)}`;
+  if (node.kind === ts.SyntaxKind.TrueKeyword || node.kind === ts.SyntaxKind.FalseKeyword)
+    return "boolean";
+  if (node.kind === ts.SyntaxKind.NullKeyword) return "null";
+  if (ts.isIdentifier(node)) return node.text;
+  if (ts.isPropertyAccessExpression(node)) return node.name.text;
+  return compactNodeText(node.getSourceFile(), node);
 }
 
 function nodeRange(
@@ -383,8 +503,12 @@ function sourceCompactCode(sourceText: string, lineStart: number, lineEnd: numbe
     .split(/\r\n|\r|\n/u)
     .slice(lineStart - 1, lineEnd)
     .map((line) => line.trim())
-    .filter((line) => line.length > 0)
+    .filter((line) => line.length > 0 && !isStandalonePunctuationLine(line))
     .join("\n");
+}
+
+function isStandalonePunctuationLine(line: string): boolean {
+  return /^[{}()[\].,;:]+$/u.test(line);
 }
 
 function declarationProjectionLabel(
@@ -394,31 +518,43 @@ function declarationProjectionLabel(
   kind: string,
 ): string {
   if (ts.isFunctionDeclaration(node)) {
-    const params = node.parameters.map((param) => parameterLabel(sourceFile, param)).join(", ");
-    const returnType = node.type ? `: ${compactNodeText(sourceFile, node.type)}` : "";
     const asyncPrefix = node.modifiers?.some(
       (modifier) => modifier.kind === ts.SyntaxKind.AsyncKeyword,
     )
       ? "async "
       : "";
-    return `${decoratorPrefix(node)}${exportPrefix(node)}${asyncPrefix}function ${name}(${params})${returnType}`;
+    return `${decoratorPrefix(node)}${asyncPrefix}function ${name}`;
   }
-  if (ts.isClassDeclaration(node))
-    return `${decoratorPrefix(node)}${exportPrefix(node)}class ${name}`;
-  if (ts.isInterfaceDeclaration(node)) return `${exportPrefix(node)}interface ${name}`;
+  if (ts.isClassDeclaration(node)) return `${decoratorPrefix(node)}class ${name}`;
+  if (ts.isInterfaceDeclaration(node)) return `interface ${name}`;
   if (ts.isTypeAliasDeclaration(node)) {
-    return `${exportPrefix(node)}type ${name} = ${compactNodeText(sourceFile, node.type)}`;
+    return `type ${name} = ${compactNodeText(sourceFile, node.type)}`;
   }
-  if (ts.isEnumDeclaration(node)) return `${exportPrefix(node)}enum ${name}`;
+  if (ts.isEnumDeclaration(node)) return `enum ${name}`;
   return `${kind} ${name}`;
 }
 
 function variableStatementLabel(node: ts.VariableStatement): string {
-  const declarationKind = variableDeclarationKind(node);
   const declarations = node.declarationList.declarations
-    .map((declaration) => compactNodeText(node.getSourceFile(), declaration))
+    .map(
+      (declaration) =>
+        bindingNameText(declaration.name) ??
+        compactNodeText(node.getSourceFile(), declaration.name),
+    )
     .join(", ");
-  return `${declarationKind} ${declarations}`;
+  return `assign ${declarations}`;
+}
+
+function forInitializerLabel(sourceFile: ts.SourceFile, initializer: ts.ForInitializer): string {
+  if (ts.isVariableDeclarationList(initializer)) {
+    return initializer.declarations
+      .map(
+        (declaration) =>
+          bindingNameText(declaration.name) ?? compactNodeText(sourceFile, declaration.name),
+      )
+      .join(", ");
+  }
+  return compactNodeText(sourceFile, initializer);
 }
 
 function forStatementLabel(node: ts.ForStatement): string {
@@ -462,24 +598,37 @@ function propertyLikeLabel(node: ts.PropertySignature | ts.PropertyDeclaration):
   const readonly = hasReadonlyModifier(node) ? "readonly " : "";
   const optional = "questionToken" in node && node.questionToken ? "?" : "";
   const type = node.type ? `: ${compactNodeText(sourceFile, node.type)}` : "";
-  return `${readonly}${name}${optional}${type}`;
+  return `field ${readonly}${name}${optional}${type}`;
+}
+
+function parameterPropertyLabel(node: ts.ParameterDeclaration): string {
+  const sourceFile = node.getSourceFile();
+  const name = bindingNameText(node.name) ?? compactNodeText(sourceFile, node.name);
+  const readonly = hasReadonlyModifier(node) ? "readonly " : "";
+  const type = node.type ? `: ${compactNodeText(sourceFile, node.type)}` : "";
+  return `field ${readonly}${name}${type}`;
+}
+
+function isParameterProperty(node: ts.ParameterDeclaration): boolean {
+  const modifiers = ts.canHaveModifiers(node) ? (ts.getModifiers(node) ?? []) : [];
+  return modifiers.some(
+    (modifier) =>
+      modifier.kind === ts.SyntaxKind.PublicKeyword ||
+      modifier.kind === ts.SyntaxKind.PrivateKeyword ||
+      modifier.kind === ts.SyntaxKind.ProtectedKeyword ||
+      modifier.kind === ts.SyntaxKind.ReadonlyKeyword,
+  );
 }
 
 function methodLikeLabel(node: ts.MethodSignature | ts.MethodDeclaration): string {
   const sourceFile = node.getSourceFile();
   const name = compactNodeText(sourceFile, node.name);
-  const params = node.parameters.map((param) => parameterLabel(sourceFile, param)).join(", ");
-  const returnType = node.type ? `: ${compactNodeText(sourceFile, node.type)}` : "";
   const asyncPrefix = node.modifiers?.some(
     (modifier) => modifier.kind === ts.SyntaxKind.AsyncKeyword,
   )
     ? "async "
     : "";
-  return `${decoratorPrefix(node)}${asyncPrefix}${name}(${params})${returnType}`;
-}
-
-function exportPrefix(node: ts.Node): string {
-  return hasExportModifier(node) ? "export " : "";
+  return `${decoratorPrefix(node)}${asyncPrefix}method ${name}`;
 }
 
 function decoratorPrefix(node: ts.Node): string {

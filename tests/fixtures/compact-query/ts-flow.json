@@ -8,15 +8,17 @@
         "mode": "outline",
         "syntax": "semantic-outline",
         "sourceAuthority": "native-parser",
-        "sourceFingerprint": "src/flow.ts:1:10:241:d3a57dd1",
+        "sourceFingerprint": "src/flow.ts:1:10:235:1c29c5e6",
         "losslessStructure": true,
         "exactRead": "src/flow.ts:1:10",
         "nodes": [
           {
             "id": "beta",
+            "nativeId": "typescript:function:1:10:9802c5e9",
+            "structuralFingerprint": "function:declaration:1:10:4a3e260b",
             "kind": "function",
             "role": "declaration",
-            "label": "export async function beta(values: string[], mapper: (value: string) => Promise<string>)",
+            "label": "async function beta",
             "depth": 0,
             "read": "src/flow.ts:1:10",
             "flags": [
@@ -30,11 +32,13 @@
             ]
           },
           {
-            "id": "beta:1",
+            "id": "beta:const:2:2:544d39c9",
             "parentId": "beta",
+            "nativeId": "typescript:FirstStatement:2:2:544d39c9",
+            "structuralFingerprint": "const:mutation:2:2:10f90b06",
             "kind": "const",
             "role": "mutation",
-            "label": "const output: string[] = []",
+            "label": "assign output",
             "depth": 1,
             "read": "src/flow.ts:2:2",
             "flags": [
@@ -42,11 +46,13 @@
             ]
           },
           {
-            "id": "beta:2",
+            "id": "beta:for:3:8:723a9048",
             "parentId": "beta",
+            "nativeId": "typescript:ForOfStatement:3:8:723a9048",
+            "structuralFingerprint": "for:control-flow:3:8:b5ecf20c",
             "kind": "for",
             "role": "control-flow",
-            "label": "for const value of values",
+            "label": "for value of values",
             "depth": 1,
             "read": "src/flow.ts:3:8",
             "flags": [
@@ -54,8 +60,10 @@
             ]
           },
           {
-            "id": "beta:3",
-            "parentId": "beta:2",
+            "id": "beta:if:4:6:2660d8a7",
+            "parentId": "beta:for:3:8:723a9048",
+            "nativeId": "typescript:IfStatement:4:6:2660d8a7",
+            "structuralFingerprint": "if:control-flow:4:6:a4850f7",
             "kind": "if",
             "role": "control-flow",
             "label": "if value.trim() === \"\"",
@@ -66,8 +74,10 @@
             ]
           },
           {
-            "id": "beta:4",
-            "parentId": "beta:3",
+            "id": "beta:continue:5:5:b1727e44",
+            "parentId": "beta:if:4:6:2660d8a7",
+            "nativeId": "typescript:ContinueStatement:5:5:b1727e44",
+            "structuralFingerprint": "continue:terminal:5:5:8a93d963",
             "kind": "continue",
             "role": "terminal",
             "label": "continue",
@@ -78,8 +88,10 @@
             ]
           },
           {
-            "id": "beta:5",
-            "parentId": "beta:2",
+            "id": "beta:call:7:7:876fffdd",
+            "parentId": "beta:for:3:8:723a9048",
+            "nativeId": "typescript:CallExpression:7:7:876fffdd",
+            "structuralFingerprint": "call:call:7:7:41b12389",
             "kind": "call",
             "role": "call",
             "label": "push",
@@ -90,8 +102,10 @@
             ]
           },
           {
-            "id": "beta:6",
-            "parentId": "beta:5",
+            "id": "beta:await:7:7:dc0bbf8d",
+            "parentId": "beta:call:7:7:876fffdd",
+            "nativeId": "typescript:AwaitExpression:7:7:dc0bbf8d",
+            "structuralFingerprint": "await:effect:7:7:b3e1513d",
             "kind": "await",
             "role": "effect",
             "label": "await",
@@ -102,8 +116,10 @@
             ]
           },
           {
-            "id": "beta:7",
-            "parentId": "beta:6",
+            "id": "beta:call:7:7:b77effd0",
+            "parentId": "beta:await:7:7:dc0bbf8d",
+            "nativeId": "typescript:CallExpression:7:7:b77effd0",
+            "structuralFingerprint": "call:call:7:7:d350a882",
             "kind": "call",
             "role": "call",
             "label": "mapper",
@@ -114,8 +130,10 @@
             ]
           },
           {
-            "id": "beta:8",
+            "id": "beta:return:9:9:1f7d21bc",
             "parentId": "beta",
+            "nativeId": "typescript:ReturnStatement:9:9:1f7d21bc",
+            "structuralFingerprint": "return:terminal:9:9:56d2197c",
             "kind": "return",
             "role": "terminal",
             "label": "return output",
@@ -126,8 +144,76 @@
             ]
           }
         ],
+        "renderedNodeIds": [
+          "beta",
+          "beta:const:2:2:544d39c9",
+          "beta:for:3:8:723a9048",
+          "beta:if:4:6:2660d8a7",
+          "beta:continue:5:5:b1727e44",
+          "beta:call:7:7:876fffdd",
+          "beta:await:7:7:dc0bbf8d",
+          "beta:call:7:7:b77effd0",
+          "beta:return:9:9:1f7d21bc"
+        ],
+        "renderedRows": [
+          {
+            "nodeId": "beta",
+            "rowKind": "declaration",
+            "text": "async function beta",
+            "semanticWeight": 1
+          },
+          {
+            "nodeId": "beta:const:2:2:544d39c9",
+            "rowKind": "mutation",
+            "text": "  assign output",
+            "semanticWeight": 2
+          },
+          {
+            "nodeId": "beta:for:3:8:723a9048",
+            "rowKind": "control-flow",
+            "text": "  for value of values",
+            "semanticWeight": 2
+          },
+          {
+            "nodeId": "beta:if:4:6:2660d8a7",
+            "rowKind": "control-flow",
+            "text": "    if value.trim() === \"\"",
+            "semanticWeight": 2
+          },
+          {
+            "nodeId": "beta:continue:5:5:b1727e44",
+            "rowKind": "terminal",
+            "text": "      continue",
+            "semanticWeight": 2
+          },
+          {
+            "nodeId": "beta:call:7:7:876fffdd",
+            "rowKind": "call",
+            "text": "    push",
+            "semanticWeight": 2
+          },
+          {
+            "nodeId": "beta:await:7:7:dc0bbf8d",
+            "rowKind": "effect",
+            "text": "      await",
+            "semanticWeight": 2
+          },
+          {
+            "nodeId": "beta:call:7:7:b77effd0",
+            "rowKind": "call",
+            "text": "        mapper",
+            "semanticWeight": 2
+          },
+          {
+            "nodeId": "beta:return:9:9:1f7d21bc",
+            "rowKind": "terminal",
+            "text": "  return output",
+            "semanticWeight": 2
+          }
+        ],
         "omitted": [
           {
+            "nodeId": "beta",
             "kind": "source-formatting",
             "reason": "compact projection removes original whitespace and comments",
             "count": 10,
@@ -139,120 +225,43 @@
             "kind": "exact-read",
             "target": "beta",
             "read": "src/flow.ts:1:10",
-            "argv": [
-              "ts-harness",
-              "query",
-              "--from-hook",
-              "direct-source-read",
-              "--selector",
-              "src/flow.ts:1:10",
-              "."
-            ],
             "reason": "read exact source before editing"
           },
           {
             "kind": "exact-read",
-            "target": "beta:1",
+            "target": "beta:const:2:2:544d39c9",
             "read": "src/flow.ts:2:2",
-            "argv": [
-              "ts-harness",
-              "query",
-              "--from-hook",
-              "direct-source-read",
-              "--selector",
-              "src/flow.ts:2:2",
-              "."
-            ],
             "reason": "expand const node before editing"
           },
           {
             "kind": "exact-read",
-            "target": "beta:2",
+            "target": "beta:for:3:8:723a9048",
             "read": "src/flow.ts:3:8",
-            "argv": [
-              "ts-harness",
-              "query",
-              "--from-hook",
-              "direct-source-read",
-              "--selector",
-              "src/flow.ts:3:8",
-              "."
-            ],
             "reason": "expand for node before editing"
           },
           {
             "kind": "exact-read",
-            "target": "beta:3",
+            "target": "beta:if:4:6:2660d8a7",
             "read": "src/flow.ts:4:6",
-            "argv": [
-              "ts-harness",
-              "query",
-              "--from-hook",
-              "direct-source-read",
-              "--selector",
-              "src/flow.ts:4:6",
-              "."
-            ],
             "reason": "expand if node before editing"
           },
           {
             "kind": "exact-read",
-            "target": "beta:4",
+            "target": "beta:continue:5:5:b1727e44",
             "read": "src/flow.ts:5:5",
-            "argv": [
-              "ts-harness",
-              "query",
-              "--from-hook",
-              "direct-source-read",
-              "--selector",
-              "src/flow.ts:5:5",
-              "."
-            ],
             "reason": "expand continue node before editing"
           },
           {
             "kind": "exact-read",
-            "target": "beta:5",
+            "target": "beta:call:7:7:876fffdd",
             "read": "src/flow.ts:7:7",
-            "argv": [
-              "ts-harness",
-              "query",
-              "--from-hook",
-              "direct-source-read",
-              "--selector",
-              "src/flow.ts:7:7",
-              "."
-            ],
             "reason": "expand call node before editing"
           },
           {
             "kind": "exact-read",
-            "target": "beta:8",
+            "target": "beta:return:9:9:1f7d21bc",
             "read": "src/flow.ts:9:9",
-            "argv": [
-              "ts-harness",
-              "query",
-              "--from-hook",
-              "direct-source-read",
-              "--selector",
-              "src/flow.ts:9:9",
-              "."
-            ],
             "reason": "expand return node before editing"
-          },
-          {
-            "kind": "owner-names",
-            "target": "src/flow.ts",
-            "argv": [
-              "ts-harness",
-              "query",
-              "--from-hook",
-              "direct-source-read",
-              "--selector",
-              "src/flow.ts",
-              "."
-            ],
-            "reason": "return owner-local item names without code windows"
           }
         ]
       }

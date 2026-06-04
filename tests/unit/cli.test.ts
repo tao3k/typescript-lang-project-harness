@@ -209,20 +209,17 @@ test("fzf query-set explains fixture paths and synthesizes real owners", () => {
     root,
   );
   assert.equal(fixtureSeeds.exitCode, 0, fixtureSeeds.stderr);
+  assert.match(fixtureSeeds.stdout, /querySet=2/u);
+  assert.match(fixtureSeeds.stdout, /selector=fuzzy-set/u);
   assert.match(
     fixtureSeeds.stdout,
-    new RegExp(`\\|query ${missingHookEvent} status=miss hit=0`, "u"),
+    new RegExp(`S=symbol:symbol\\(${protocolRunner}\\)!symbol`, "u"),
   );
   assert.match(
     fixtureSeeds.stdout,
-    new RegExp(`\\|query ${codexHookFunction} .*surface=test-fixture-string`, "u"),
+    new RegExp(`S2=symbol:symbol\\(${protocolParser}\\)!symbol`, "u"),
   );
-  assert.match(fixtureSeeds.stdout, new RegExp(`\\|seed symbol:.*${protocolRunner}`, "u"));
-  assert.match(fixtureSeeds.stdout, new RegExp(`\\|seed symbol:.*${protocolParser}`, "u"));
-  assert.match(
-    fixtureSeeds.stdout,
-    /\|avoid owner:src\/cli\/agent-hooks\.ts reason=fixture-path-not-workspace-owner/u,
-  );
+  assert.doesNotMatch(fixtureSeeds.stdout, /\|query |\|seed |\|avoid /u);
 });
 
 test("fzf search prefilter scopes parser input and keeps requested owner", () => {
@@ -345,14 +342,14 @@ test("CLI ranks workspace packages before test fixtures", () => {
   );
 });
 
-test("CLI reports root semantic-agent-hook owner for hook install and runtime", () => {
+test("CLI reports root asp owner for hook install and runtime", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-agent-hooks-cli-"));
 
   const install = runCliCapture(["agent", "install", "--client", "codex", "."], root);
   assert.equal(install.exitCode, 2);
   assert.equal(install.stdout, "");
-  assert.match(install.stderr, /ts-harness agent install moved to semantic-agent-hook/u);
-  assert.match(install.stderr, /semantic-agent-hook install --client codex/u);
+  assert.match(install.stderr, /ts-harness agent install moved to asp/u);
+  assert.match(install.stderr, /asp hook install --client codex/u);
 
   const hook = runCliCapture(
     ["agent", "hook", "--client", "codex", "pre-tool", "."],
@@ -361,15 +358,15 @@ test("CLI reports root semantic-agent-hook owner for hook install and runtime", 
   );
   assert.equal(hook.exitCode, 2);
   assert.equal(hook.stdout, "");
-  assert.match(hook.stderr, /ts-harness agent hook moved to semantic-agent-hook/u);
-  assert.match(hook.stderr, /semantic-agent-hook hook --client codex/u);
+  assert.match(hook.stderr, /ts-harness agent hook moved to asp/u);
+  assert.match(hook.stderr, /asp hook <event> --client codex/u);
 
   const guide = runCliCapture(["agent", "guide", "."], root);
   assert.equal(guide.exitCode, 0);
   assert.match(guide.stdout, /^\[ts-harness-guide\] project=/u);
-  assert.match(guide.stdout, /ts-harness search fzf <query> owner tests --view seeds/u);
-  assert.match(guide.stdout, /ts-harness search fzf <query> owner tests --view seeds/u);
-  assert.match(guide.stdout, /agent hook install\/runtime is owned by semantic-agent-hook/u);
+  assert.match(guide.stdout, /asp typescript search fzf <query> owner tests --view seeds/u);
+  assert.match(guide.stdout, /asp typescript search fzf <query> owner tests --view seeds/u);
+  assert.match(guide.stdout, /agent hook install\/runtime is owned by asp/u);
   assert.doesNotMatch(guide.stdout, /README|SKILL|docs\/|src\/cli\/agent-hooks/u);
 
   const guideWithClient = runCliCapture(["agent", "guide", "--client", "claude", "."], root);

@@ -119,10 +119,11 @@ test("CLI exposes semantic-search protocol commands", () => {
   const primeSeeds = runCliCapture(["search", "prime", "--view", "seeds", "."], root);
   assert.equal(primeSeeds.exitCode, 0);
   assert.match(primeSeeds.stdout, /^\[search-prime\] /u);
-  assert.match(primeSeeds.stdout, /\|flow prime->owner\|deps\|symbol\|tests/u);
-  assert.match(primeSeeds.stdout, /\|synthesis .*algorithm=owner-rank-frontier/u);
-  assert.match(primeSeeds.stdout, /\|seed owner:src\/index\.ts,/u);
-  assert.match(primeSeeds.stdout, /\|seed symbol:findOrderStatus,/u);
+  assert.match(primeSeeds.stdout, /alg=owner-rank-frontier/u);
+  assert.match(primeSeeds.stdout, /O=owner:path\(src\/index\.ts\)!owner/u);
+  assert.match(primeSeeds.stdout, /Q=query:term\(findOrderStatus\)!fzf/u);
+  assert.match(primeSeeds.stdout, /frontier=/u);
+  assert.doesNotMatch(primeSeeds.stdout, /\|flow |\|synthesis |\|seed /u);
   assert.doesNotMatch(primeSeeds.stdout, /\|owner /u);
 
   const workspace = runCliCapture(["search", "workspace", "."], root);
@@ -278,10 +279,14 @@ test("CLI exposes semantic-search protocol commands", () => {
   );
   assert.equal(textOwnerTestsPipeSeeds.exitCode, 0);
   assert.match(textOwnerTestsPipeSeeds.stdout, /^\[search-fzf\] /u);
-  assert.match(textOwnerTestsPipeSeeds.stdout, /\bpipes=owner,tests\b/u);
-  assert.match(textOwnerTestsPipeSeeds.stdout, /\|seed owner:.*src\/index\.ts/u);
-  assert.match(textOwnerTestsPipeSeeds.stdout, /\|seed owner:.*tests\/index\.test\.ts/u);
-  assert.match(textOwnerTestsPipeSeeds.stdout, /\|seed tests:tests\/index\.test\.ts/u);
+  assert.match(textOwnerTestsPipeSeeds.stdout, /O\d*=owner:path\(src\/index\.ts\)!owner/u);
+  assert.match(textOwnerTestsPipeSeeds.stdout, /O\d*=owner:path\(tests\/index\.test\.ts\)!owner/u);
+  assert.doesNotMatch(
+    textOwnerTestsPipeSeeds.stdout,
+    /T=test:path\(tests\/index\.test\.ts\)!tests/u,
+  );
+  assert.match(textOwnerTestsPipeSeeds.stdout, /frontier=.*O\d*\.owner/u);
+  assert.doesNotMatch(textOwnerTestsPipeSeeds.stdout, /\|seed /u);
   assert.doesNotMatch(textOwnerTestsPipeSeeds.stdout, /\|hit /u);
 
   const textQuerySetSeeds = runCliCapture(
@@ -304,12 +309,12 @@ test("CLI exposes semantic-search protocol commands", () => {
   assert.match(textQuerySetSeeds.stdout, /^\[search-fzf\] /u);
   assert.match(textQuerySetSeeds.stdout, /\bquerySet=2\b/u);
   assert.match(textQuerySetSeeds.stdout, /\bselector=fuzzy-set\b/u);
-  assert.match(textQuerySetSeeds.stdout, /\|seed owner:.*src\/index\.ts/u);
-  assert.match(textQuerySetSeeds.stdout, /\|seed owner:.*src\/consumer\.ts/u);
-  assert.match(textQuerySetSeeds.stdout, /\|seed tests:tests\/index\.test\.ts/u);
-  assert.match(textQuerySetSeeds.stdout, /\bwindowSet=[^\n]*owner:src\/index\.ts/u);
-  assert.match(textQuerySetSeeds.stdout, /\bwindowSet=[^\n]*owner:src\/consumer\.ts/u);
-  assert.match(textQuerySetSeeds.stdout, /\bwindowSet=[^\n]*tests:tests\/index\.test\.ts/u);
+  assert.match(textQuerySetSeeds.stdout, /O\d*=owner:path\(src\/index\.ts\)!owner/u);
+  assert.match(textQuerySetSeeds.stdout, /O\d*=owner:path\(src\/consumer\.ts\)!owner/u);
+  assert.match(textQuerySetSeeds.stdout, /T=test:path\(tests\/index\.test\.ts\)!tests/u);
+  assert.match(textQuerySetSeeds.stdout, /frontier=.*O\d*\.owner/u);
+  assert.match(textQuerySetSeeds.stdout, /frontier=.*T\.tests/u);
+  assert.doesNotMatch(textQuerySetSeeds.stdout, /\|seed /u);
 
   const scopedTextQuerySetJson = runCliCapture(
     [
@@ -374,7 +379,9 @@ test("CLI exposes semantic-search protocol commands", () => {
   );
   assert.equal(flagLikeTextQuery.exitCode, 0);
   assert.match(flagLikeTextQuery.stdout, /^\[search-fzf\] q=--json\b/u);
-  assert.match(flagLikeTextQuery.stdout, /\|seed ingest:--json/u);
+  assert.match(flagLikeTextQuery.stdout, /O=owner:path\(--json\)!owner/u);
+  assert.match(flagLikeTextQuery.stdout, /rank=Q,O frontier=Q\.fzf,O\.owner/u);
+  assert.doesNotMatch(flagLikeTextQuery.stdout, /\|seed /u);
   assert.doesNotMatch(flagLikeTextQuery.stdout, /^\{/u);
 
   const testOnlyTextPipe = runCliCapture(
@@ -513,8 +520,11 @@ test("CLI exposes semantic-search protocol commands", () => {
   );
   assert.equal(ownerSeeds.exitCode, 0);
   assert.match(ownerSeeds.stdout, /^\[search-owner\] /u);
-  assert.match(ownerSeeds.stdout, /\|seed owner:src\/index\.ts/u);
-  assert.match(ownerSeeds.stdout, /\|seed symbol:findOrderStatus/u);
+  assert.match(ownerSeeds.stdout, /O=owner:path\(src\/index\.ts\)!owner/u);
+  assert.match(ownerSeeds.stdout, /Q=query:term\(findOrderStatus\)!fzf/u);
+  assert.match(ownerSeeds.stdout, /frontier=.*O\.owner/u);
+  assert.match(ownerSeeds.stdout, /frontier=.*Q\.fzf/u);
+  assert.doesNotMatch(ownerSeeds.stdout, /\|seed /u);
   assert.doesNotMatch(ownerSeeds.stdout, /\|edge /u);
 
   fs.writeFileSync(
@@ -738,6 +748,7 @@ test("CLI exposes semantic-search protocol commands", () => {
     "query/direct-source-read",
     "check/changed",
     "check/full",
+    "ast-patch/dry-run",
     "agent/doctor",
     "agent/guide",
   ];
@@ -859,6 +870,16 @@ test("CLI exposes semantic-search protocol commands", () => {
           supportsCompact: true,
         })),
       {
+        method: "ast-patch/dry-run",
+        command: "ast-patch",
+        input: "semantic-ast-patch packet",
+        requiredOptions: ["--packet"],
+        outputSchemaIds: ["agent.semantic-protocols.semantic-ast-patch-receipt"],
+        mutationAvailable: false,
+        supportsJson: true,
+        supportsCompact: false,
+      },
+      {
         method: "agent/doctor",
         command: "agent",
         outputSchemaIds: ["agent.semantic-protocols.semantic-language-registry"],
@@ -932,6 +953,16 @@ test("CLI exposes semantic-search protocol commands", () => {
         schemaId: "agent.semantic-protocols.semantic-assurance-case",
         schemaVersion: "1",
         path: "schemas/semantic-assurance-case.v1.schema.json",
+      },
+      {
+        schemaId: "agent.semantic-protocols.semantic-ast-patch",
+        schemaVersion: "1",
+        path: "schemas/semantic-ast-patch.v1.schema.json",
+      },
+      {
+        schemaId: "agent.semantic-protocols.semantic-ast-patch-receipt",
+        schemaVersion: "1",
+        path: "schemas/semantic-ast-patch-receipt.v1.schema.json",
       },
       {
         schemaId: "agent.semantic-protocols.semantic-type-surface",

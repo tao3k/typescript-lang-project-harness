@@ -74,6 +74,8 @@ export interface SemanticSearchPacket {
   readonly items?: readonly SemanticSearchItem[];
   readonly typeSurfaces?: readonly SemanticSearchTypeSurface[];
   readonly semanticHandles?: readonly SemanticSearchHandle[];
+  readonly reasoningProfiles?: readonly SemanticSearchReasoningProfile[];
+
   readonly hits: readonly SemanticSearchHit[];
   readonly findings: readonly SemanticSearchFinding[];
   readonly nextActions: readonly SemanticSearchNextAction[];
@@ -435,6 +437,31 @@ export interface SemanticSearchHandle {
   readonly testPaths?: readonly SemanticSearchHandlePath[];
   readonly locations?: readonly SemanticSearchLocation[];
   readonly queryTerms?: readonly string[];
+  readonly fields?: SemanticSearchFields;
+}
+export interface SemanticSearchReasoningProfileSelector {
+  readonly kind:
+    | "owner"
+    | "query"
+    | "dependency"
+    | "test"
+    | "finding"
+    | "import"
+    | "feature"
+    | "custom";
+  readonly alias: string;
+  readonly target?: string;
+  readonly targetRole?: string;
+  readonly required?: boolean;
+  readonly fields?: SemanticSearchFields;
+}
+
+export interface SemanticSearchReasoningProfile {
+  readonly profile: string;
+  readonly description?: string;
+  readonly selectors: readonly SemanticSearchReasoningProfileSelector[];
+  readonly returns: readonly string[];
+  readonly frontier?: readonly string[];
   readonly fields?: SemanticSearchFields;
 }
 

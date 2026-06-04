@@ -110,6 +110,10 @@ export function renderSemanticSearchPacket(packet: SemanticSearchPacket): string
 }
 
 function renderSemanticSearchSeedPacket(packet: SemanticSearchPacket): string {
+  return renderCompactGraphSeedPacket(packet, renderFields);
+}
+
+function renderLegacySemanticSearchSeedPacket(packet: SemanticSearchPacket): string {
   if ((packet.items?.length ?? 0) > 0) {
     return renderSemanticSearchItemPacket(packet);
   }
@@ -307,7 +311,8 @@ function renderSemanticHandleLine(
 function renderSearchSynthesis(
   synthesis: NonNullable<SemanticSearchPacket["searchSynthesis"]>,
 ): string {
-  const seedFragments = (synthesis.seeds ?? []).map((action) => renderNextActionFragment(action));
+  const displayFields: Record<string, SemanticSearchFieldValue> = { ...synthesis.fields };
+  delete displayFields.seeds;
   const fields: SemanticSearchFields = {
     ...(synthesis.summary === undefined ? {} : { summary: synthesis.summary }),
     algorithm: synthesis.algorithm,
@@ -327,8 +332,7 @@ function renderSearchSynthesis(
       ? {}
       : { windowSet: synthesis.windowSet.map((target) => renderNextActionFragment(target)) }),
     ...(synthesis.findingOwners === undefined ? {} : { findingOwners: synthesis.findingOwners }),
-    ...synthesis.fields,
-    ...(seedFragments.length === 0 ? {} : { seeds: seedFragments }),
+    ...displayFields,
   };
   return renderFields(fields);
 }
@@ -458,3 +462,4 @@ interface RenderableActionFragment {
   readonly scope?: string;
   readonly ownerPath?: string;
 }
+import { renderCompactGraphSeedPacket } from "./compact-graph-render.js";

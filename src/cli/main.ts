@@ -11,6 +11,7 @@ export const HELP_TEXT = `ts-harness — TypeScript semantic search and project 
 Usage:
   ts-harness search <view> ... [--json] [--code] [--package <path>] [project-root]
   ts-harness query <owner-path> --term <symbol> [--term <symbol>] [--names-only | --code] [project-root]
+  ts-harness ast-patch dry-run --packet <semantic-ast-patch.json|-> [project-root]
   ts-harness check [--changed | --full] [--json] [project-root]
   ts-harness agent doctor [--json] [project-root]
   ts-harness agent guide [project-root]
@@ -47,7 +48,11 @@ QUERY
   query <owner-path> --term <a> --term <b> --names-only
                              Owner-local item discovery without code windows
   query <owner-path> --term <symbol> --code
-                             Pure compact parser-owned code output
+                              Pure compact parser-owned code output
+
+AST PATCH
+  ast-patch dry-run --packet <path|->
+                             Provider-native TypeScript AST dry-run receipt; never mutates files
 
 CHECK
   check --changed           Fast lane alias; currently delegates to project check
@@ -59,7 +64,7 @@ AGENT
   agent doctor --json       Semantic language registry document
   agent guide
                             Print command-line search flow guide
-  Hook install/runtime is owned by semantic-agent-hook in the root toolchain.
+  Hook install/runtime is owned by asp in the root toolchain.
 
 GENERAL
   --help             This help
@@ -81,6 +86,7 @@ EXAMPLES
   ts-harness search fzf --query-set OrderStatus --query-set findOrderStatus owner tests .
   ts-harness query src/domain/order.ts --term findOrderStatus --names-only .
   ts-harness query src/domain/order.ts --term findOrderStatus --code .
+  ts-harness ast-patch dry-run --packet semantic-ast-patch.json .
   rg -n "OrderStatus" src tests | ts-harness search ingest .
   ts-harness check --changed .
   ts-harness agent guide .

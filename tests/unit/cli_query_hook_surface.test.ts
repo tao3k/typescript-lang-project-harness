@@ -35,5 +35,8 @@ test("query --from-hook broad selector accepts shared surfaces", () => {
   );
 
   assert.equal(status, 0);
-  assert.match(stdout, /pipes=owner,tests/);
+  assert.match(stdout, /querySet=1/);
+  assert.match(stdout, /selector=fuzzy-set/);
+  assert.match(stdout, /rank=Q,O,T frontier=Q\.fzf,O\.owner,T\.tests/);
+  assert.doesNotMatch(stdout, /\|seed /);
 });

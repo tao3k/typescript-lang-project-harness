@@ -20,9 +20,11 @@ import {
   fzfQueryCoverage,
   fzfSearchSynthesis,
 } from "./fzf-query-synthesis.js";
+import { MAX_FZF_HITS } from "./types.js";
 import type {
   SemanticSearchBuildOptions,
   SemanticSearchEdge,
+  SemanticSearchHit,
   SemanticSearchOwner,
   SemanticSearchPacket,
 } from "./types.js";
@@ -116,7 +118,11 @@ function buildTextQuerySetPacket(
   const pipes = options.pipes ?? [];
   const hitsByTerm = fuzzyFzfQueryHitsByTerm(report, queryTerms, ownerScope);
   const hits = fzfQuerySetHitsFromHitsByTerm(report, hitsByTerm);
-  const fzfOwners = ownersForHits(report, hits);
+  const querySetOwnerHits = querySetOwnerFrontierHits(hitsByTerm, queryTerms);
+  const fzfOwners = uniqueOwners([
+    ...ownersForHits(report, querySetOwnerHits),
+    ...ownersForHits(report, hits),
+  ]);
   const testEdgesForFzf = pipes.includes("tests") ? testEdgesForOwners(report, fzfOwners) : [];
   const testHitsForFzf = testEdgesForFzf.length > 0 ? testHits(report, testEdgesForFzf, query) : [];
   const owners = uniqueOwners([
@@ -176,6 +182,121 @@ function buildTextQuerySetPacket(
         : [{ kind: "ingest" as const, target: query }],
     notes,
   });
+}
+
+function querySetOwnerFrontierHits(
+  hitsByTerm: ReadonlyMap<string, readonly SemanticSearchHit[]>,
+  queryTerms: readonly string[],
+): readonly SemanticSearchHit[] {
+  const normalizedTerms = queryTerms.map((term) => term.trim().toLowerCase()).filter(Boolean);
+  const byOwner = new Map<string, { hit: SemanticSearchHit; readonly queryTerms: Set<string> }>();
+  for (const [queryTerm, hits] of hitsByTerm) {
+    for (const hit of hits) {
+      const ownerPath = hit.ownerPath || hit.location.path;
+      if (ownerPath === "") {
+        continue;
+      }
+      const current = byOwner.get(ownerPath);
+      const normalizedHit = hit.ownerPath === "" ? { ...hit, ownerPath } : hit;
+      if (current === undefined) {
+        byOwner.set(ownerPath, { hit: normalizedHit, queryTerms: new Set([queryTerm]) });
+        continue;
+      }
+      current.queryTerms.add(queryTerm);
+      if (compareQuerySetOwnerFrontierHit(normalizedHit, current.hit, normalizedTerms) < 0) {
+        current.hit = normalizedHit;
+      }
+    }
+  }
+  const entries = [...byOwner.entries()].filter(([ownerPath, entry]) => {
+    if (querySetOwnerSurfaceRank(ownerPath, entry.hit) <= 0) {
+      return false;
+    }
+    const foldedOwner = ownerPath.toLowerCase();
+    return (
+      normalizedTerms.some((term) => foldedOwner.includes(term)) ||
+      (entry.queryTerms.size >= normalizedTerms.length && querySetHitKindRank(entry.hit) >= 2)
+    );
+  });
+  return entries
+    .sort((left, right) => {
+      const leftRank = querySetOwnerFrontierRank(left[0], left[1], normalizedTerms);
+      const rightRank = querySetOwnerFrontierRank(right[0], right[1], normalizedTerms);
+      return compareQuerySetOwnerFrontierRank(leftRank, rightRank);
+    })
+    .map(([, entry]) => entry.hit)
+    .slice(0, MAX_FZF_HITS);
+}
+
+function querySetOwnerFrontierRank(
+  ownerPath: string,
+  entry: { readonly hit: SemanticSearchHit; readonly queryTerms: ReadonlySet<string> },
+  normalizedTerms: readonly string[],
+): readonly [number, number, number, number, number, string] {
+  const foldedOwner = ownerPath.toLowerCase();
+  return [
+    -querySetOwnerSurfaceRank(ownerPath, entry.hit),
+    normalizedTerms.some((term) => foldedOwner.includes(term)) ? 0 : 1,
+    -entry.queryTerms.size,
+    -querySetHitKindRank(entry.hit),
+    -entry.hit.score,
+    ownerPath,
+  ];
+}
+
+function compareQuerySetOwnerFrontierHit(
+  left: SemanticSearchHit,
+  right: SemanticSearchHit,
+  normalizedTerms: readonly string[],
+): number {
+  return compareQuerySetOwnerFrontierRank(
+    querySetOwnerFrontierRank(
+      left.ownerPath || left.location.path,
+      { hit: left, queryTerms: new Set() },
+      normalizedTerms,
+    ),
+    querySetOwnerFrontierRank(
+      right.ownerPath || right.location.path,
+      { hit: right, queryTerms: new Set() },
+      normalizedTerms,
+    ),
+  );
+}
+
+function compareQuerySetOwnerFrontierRank(
+  left: readonly [number, number, number, number, number, string],
+  right: readonly [number, number, number, number, number, string],
+): number {
+  return (
+    left[0] - right[0] ||
+    left[1] - right[1] ||
+    left[2] - right[2] ||
+    left[3] - right[3] ||
+    left[4] - right[4] ||
+    left[5].localeCompare(right[5])
+  );
+}
+
+function querySetOwnerSurfaceRank(ownerPath: string, hit: SemanticSearchHit): number {
+  if (hit.surface === "test-source" || isTestOwnerPath(ownerPath)) {
+    return 0;
+  }
+  if (ownerPath.endsWith(".d.ts")) {
+    return 1;
+  }
+  return 2;
+}
+
+function querySetHitKindRank(hit: SemanticSearchHit): number {
+  switch (hit.kind) {
+    case "export":
+    case "path":
+      return 2;
+    case "text":
+      return 1;
+    default:
+      return 0;
+  }
 }
 
 function testEdgesForOwners(

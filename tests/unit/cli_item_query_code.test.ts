@@ -11,10 +11,10 @@ test("agent guide advertises --code as pure item output", () => {
   const result = runCliCapture(["agent", "guide", packageRoot], packageRoot);
 
   assert.equal(result.exitCode, 0);
-  assert.match(result.stdout, /ts-harness query <owner-path> --term <symbol> --code/);
+  assert.match(result.stdout, /asp typescript query <owner-path> --term <symbol> --code/);
   assert.match(
     result.stdout,
-    /ts-harness search owner <owner-path> items --query <symbol-or-a\|b\|c> --code/,
+    /asp typescript search owner <owner-path> items --query <symbol-or-a\|b\|c> --code/,
   );
 });
 
@@ -55,7 +55,7 @@ test("owner item query --code emits compact code without line protocol metadata"
   );
 
   assert.equal(result.exitCode, 0, result.stderr);
-  assert.match(result.stdout, /^export interface SemanticSearchPacket/u);
+  assert.match(result.stdout, /^interface SemanticSearchPacket/u);
   assert.match(
     result.stdout,
     /readonly schemaId: "agent\.semantic-protocols\.semantic-search-packet"/u,

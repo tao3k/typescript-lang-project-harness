@@ -6,7 +6,7 @@ import test from "node:test";
 
 import { parseProtocolArgs, runProtocolCli } from "../../src/cli/protocol.js";
 
-test("query --from-hook line range --code uses parser projection", () => {
+test("query --from-hook line range --code emits exact source window", () => {
   const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-query-code-"));
   fs.mkdirSync(path.join(projectRoot, "src"));
   fs.writeFileSync(
@@ -48,8 +48,11 @@ function second(): void {
   );
 
   assert.equal(status, 0);
-  assert.match(stdout, /function first\(\): void/u);
-  assert.match(stdout, /function second\(\): void/u);
-  assert.doesNotMatch(stdout, /^"--selector",$/mu);
-  assert.doesNotMatch(stdout, /\]\n\s*\);\n\s*\}/u);
+  assert.match(stdout, /mode=exact-source/u);
+  assert.match(stdout, /syntax=exact-source/u);
+  assert.match(stdout, /lineRange=7:14/u);
+  assert.match(stdout, /function second/u);
+  assert.match(stdout, /\\"--selector\\"/u);
+  assert.doesNotMatch(stdout, /function first/u);
+  assert.doesNotMatch(stdout, /const decision = classifyHook/u);
 });
