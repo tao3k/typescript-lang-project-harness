@@ -1,3 +1,9 @@
+/**
+ * Extension policy pack for TypeScript framework and library facts.
+ *
+ * This module evaluates parser-owned React, Effect, and shadcn signals into
+ * agent-facing findings without requiring provider-private heuristics.
+ */
 import type {
   TypeScriptHarnessFinding,
   TypeScriptHarnessRule,

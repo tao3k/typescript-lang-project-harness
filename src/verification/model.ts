@@ -1,3 +1,9 @@
+/**
+ * Verification policy and receipt model for TypeScript harness checks.
+ *
+ * This module defines task kinds, evidence, receipts, waivers, and report
+ * artifacts used to keep verification obligations parser-owned.
+ */
 export type TypeScriptVerificationTaskKind =
   | "stress"
   | "performance"

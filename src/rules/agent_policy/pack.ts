@@ -5,6 +5,7 @@ import type {
   TypeScriptPublicFunctionControlFlowFact,
   TypeScriptPublicFunctionParamFact,
   TypeScriptReasoningModule,
+  TypeScriptReasoningOwnerBranchFact,
   TypeScriptReasoningTree,
 } from "../../model.js";
 import {
@@ -466,13 +467,9 @@ function evaluateMissingModuleDoc(
   reasoningTree: TypeScriptReasoningTree,
 ): TypeScriptHarnessFinding[] {
   return reasoningTree.ownerBranches
-    .filter(
-      (b) =>
-        b.exportNames.length >= 3 &&
-        !b.hasIntentDoc &&
-        (b.roles.includes("source") || b.roles.includes("facade")),
-    )
-    .slice(0, 30) // cap to avoid flooding
+    .filter((branch) => moduleNeedsIntentDoc(branch))
+    .sort(moduleDocFindingSort)
+    .slice(0, 8)
     .map((b) => ({
       ruleId: TS_AGENT_R013.ruleId,
       packId: TS_AGENT_R013.packId,
@@ -484,6 +481,31 @@ function evaluateMissingModuleDoc(
       label: "missing module doc",
       labels: TS_AGENT_R013.labels,
     }));
+}
+
+function moduleNeedsIntentDoc(branch: TypeScriptReasoningOwnerBranchFact): boolean {
+  if (branch.hasIntentDoc) {
+    return false;
+  }
+  if (branch.roles.includes("facade")) {
+    return branch.exportNames.length >= 3;
+  }
+  return branch.roles.includes("source") && branch.exportNames.length >= 8;
+}
+
+function moduleDocFindingSort(
+  left: TypeScriptReasoningOwnerBranchFact,
+  right: TypeScriptReasoningOwnerBranchFact,
+): number {
+  const leftFacade = left.roles.includes("facade") ? 0 : 1;
+  const rightFacade = right.roles.includes("facade") ? 0 : 1;
+  if (leftFacade !== rightFacade) {
+    return leftFacade - rightFacade;
+  }
+  if (left.exportNames.length !== right.exportNames.length) {
+    return right.exportNames.length - left.exportNames.length;
+  }
+  return left.path.localeCompare(right.path);
 }
 
 /** R014: Files importing many symbols from the same dependency. */

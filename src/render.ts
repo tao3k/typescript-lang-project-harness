@@ -1,3 +1,9 @@
+/**
+ * Public rendering facade for TypeScript harness output.
+ *
+ * This module re-exports compact text, agent snapshot, and verification
+ * renderers used by the CLI and library consumers.
+ */
 export {
   renderTypeScriptProjectHarnessAdvice,
   renderTypeScriptProjectHarnessAgentCompactText,

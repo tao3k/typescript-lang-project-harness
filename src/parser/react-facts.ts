@@ -1,3 +1,9 @@
+/**
+ * React parser fact facade for native syntax projections.
+ *
+ * This module re-exports React render, hook, and static definition facts owned
+ * by the TypeScript parser layer.
+ */
 export type {
   TypeScriptReactHookCallSignalFact,
   TypeScriptReactHookCallViolationKind,

@@ -455,13 +455,21 @@ function bindingNames(name: ts.BindingName): string[] {
 }
 
 function hasLeadingIntentDoc(sourceFile: ts.SourceFile, sourceText: string): boolean {
-  const firstStatement = sourceFile.statements[0];
-  if (firstStatement === undefined) {
+  if (sourceFile.statements[0] === undefined) {
     return false;
   }
-  const commentRanges = ts.getLeadingCommentRanges(sourceText, firstStatement.pos) ?? [];
-  return commentRanges.some((commentRange) => {
-    const commentText = sourceText.slice(commentRange.pos, commentRange.end);
-    return commentText.startsWith("/**") || commentText.startsWith("//!");
-  });
+  const start = moduleLeadingTriviaStart(sourceText);
+  return sourceText.startsWith("/**", start) || sourceText.startsWith("//!", start);
+}
+
+function moduleLeadingTriviaStart(sourceText: string): number {
+  let index = sourceText.charCodeAt(0) === 0xfeff ? 1 : 0;
+  if (sourceText.startsWith("#!", index)) {
+    const lineEnd = sourceText.indexOf("\n", index);
+    index = lineEnd === -1 ? sourceText.length : lineEnd + 1;
+  }
+  while (index < sourceText.length && /\s/u.test(sourceText[index] ?? "")) {
+    index += 1;
+  }
+  return index;
 }

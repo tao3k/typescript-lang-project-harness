@@ -1,3 +1,9 @@
+/**
+ * Syntax verification task model.
+ *
+ * This module defines verification task, receipt, waiver, and authority types
+ * used by the syntax verification planner.
+ */
 // ── Verification Task Kinds ────────────────────────────────
 //
 // Authority order:

@@ -1,3 +1,9 @@
+/**
+ * Extension activation model for TypeScript project analysis.
+ *
+ * This module describes framework and library extension facts that enable
+ * optional parser-owned policy packs.
+ */
 import type { SourceLocation } from "../model.js";
 import type { TypeScriptPackageDependencySource } from "./package_dependencies.js";
 

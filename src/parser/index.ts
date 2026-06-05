@@ -1,3 +1,9 @@
+/**
+ * Project parser implementation for TypeScript harness runs.
+ *
+ * This module coordinates project scope discovery, TypeScript compiler inputs,
+ * source parsing, and native parser fact assembly.
+ */
 import fs from "node:fs";
 import path from "node:path";
 

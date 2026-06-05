@@ -1,3 +1,9 @@
+/**
+ * Effect parser fact facade for TypeScript native syntax projections.
+ *
+ * This module re-exports Effect-specific fact types and collectors used by the
+ * extension policy pack.
+ */
 export type {
   TypeScriptEffectConcurrencySignalFact,
   TypeScriptEffectConcurrencySignalKind,

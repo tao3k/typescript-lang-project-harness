@@ -1,3 +1,9 @@
+/**
+ * React purity policy implementation.
+ *
+ * This module evaluates parser-owned React render and hook facts into extension
+ * policy findings about component purity and static definitions.
+ */
 import type {
   TypeScriptHarnessFinding,
   TypeScriptHarnessRule,

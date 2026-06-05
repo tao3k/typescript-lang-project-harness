@@ -209,6 +209,48 @@ test("agent policy reports multi-owner facades without intent docs", () => {
   assert.match(rendered, /Facade re-exports 2 owners without a local intent doc/u);
 });
 
+test("agent policy reports missing module docs for broad public surfaces only", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-module-doc-agent-"));
+  fs.mkdirSync(path.join(root, "src", "domain"), { recursive: true });
+  fs.writeFileSync(path.join(root, "tsconfig.json"), JSON.stringify({ include: ["src/**/*.ts"] }));
+  fs.writeFileSync(
+    path.join(root, "src", "small.ts"),
+    ["export const one = 1;", "export const two = 2;", "export const three = 3;"].join("\n"),
+  );
+  fs.writeFileSync(
+    path.join(root, "src", "broad.ts"),
+    Array.from({ length: 8 }, (_, index) => `export const broad${index} = ${index};`).join("\n"),
+  );
+  fs.writeFileSync(
+    path.join(root, "src", "documented.ts"),
+    [
+      "/** Documents the broad module responsibility before exports. */",
+      ...Array.from({ length: 8 }, (_, index) => `export const documented${index} = ${index};`),
+    ].join("\n"),
+  );
+  for (const owner of ["alpha", "beta", "gamma"]) {
+    fs.writeFileSync(path.join(root, "src", "domain", `${owner}.ts`), `export const ${owner} = 1;`);
+  }
+  fs.writeFileSync(
+    path.join(root, "src", "index.ts"),
+    [
+      'export { alpha } from "./domain/alpha.js";',
+      'export { beta } from "./domain/beta.js";',
+      'export { gamma } from "./domain/gamma.js";',
+    ].join("\n"),
+  );
+
+  const report = runTypeScriptProjectHarness(root);
+  const missingDocPaths = report.findings
+    .filter((finding) => finding.ruleId === "TS-AGENT-R013")
+    .flatMap((finding) =>
+      finding.location.path === undefined ? [] : [path.relative(root, finding.location.path)],
+    )
+    .sort();
+
+  assert.deepEqual(missingDocPaths, ["src/broad.ts", "src/index.ts"]);
+});
+
 test("agent policy reports parser-native public API shape advice without blocking", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-api-shape-agent-"));
   fs.mkdirSync(path.join(root, "src"));

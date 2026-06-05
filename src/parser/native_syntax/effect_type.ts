@@ -1,3 +1,9 @@
+/**
+ * Effect type projection helpers for native syntax facts.
+ *
+ * This module recognizes Effect type carriers and error channels from the
+ * TypeScript compiler AST.
+ */
 import ts from "typescript";
 
 import type { TypeScriptEffectErrorChannelKind } from "../../model.js";

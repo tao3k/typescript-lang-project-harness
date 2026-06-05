@@ -1,3 +1,9 @@
+/**
+ * PI agent cache adapter for TypeScript harness reports.
+ *
+ * This module projects parser-owned reports into cache-aware context blocks
+ * consumed by agent prompt assembly.
+ */
 import { buildCacheContext } from "./cache_context.js";
 import { renderCacheBlocks, renderFullPrompt } from "./render_cache_context.js";
 

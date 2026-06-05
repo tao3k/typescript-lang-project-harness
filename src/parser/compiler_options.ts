@@ -1,3 +1,9 @@
+/**
+ * Compiler option fact extraction for TypeScript projects.
+ *
+ * This module normalizes native compiler options into compact parser-owned
+ * facts used by policy and search surfaces.
+ */
 import path from "node:path";
 
 import ts from "typescript";

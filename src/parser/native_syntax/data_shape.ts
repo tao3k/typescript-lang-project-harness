@@ -1,3 +1,9 @@
+/**
+ * Native data shape projection for TypeScript declarations.
+ *
+ * This module extracts interface, type, and object member facts used by public
+ * data-shape policy rules.
+ */
 import ts from "typescript";
 
 import type {

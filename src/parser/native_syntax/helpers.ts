@@ -1,3 +1,9 @@
+/**
+ * Shared native syntax helper functions.
+ *
+ * This module owns TypeScript AST classification and location helpers reused by
+ * syntax fact projectors.
+ */
 import ts from "typescript";
 
 import { locationForNode, sourceLineAt } from "../diagnostics.js";

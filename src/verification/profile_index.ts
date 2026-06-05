@@ -1,3 +1,9 @@
+/**
+ * Public verification profile index facade.
+ *
+ * This module re-exports profile-index builders and renderers that summarize
+ * parser-owned verification responsibility hints.
+ */
 export {
   buildTypeScriptVerificationProfileIndex,
   buildTypeScriptVerificationProfileIndexForReport,

@@ -1,3 +1,9 @@
+/**
+ * Public rule catalog facade for TypeScript harness policy packs.
+ *
+ * This module re-exports built-in rule packs and descriptors so CLI and library
+ * callers share the same policy catalog.
+ */
 export { typeScriptSyntaxRules } from "./rules/syntax.js";
 export { typeScriptSemanticRules } from "./rules/semantic/pack.js";
 export { typeScriptProjectPolicyRules } from "./rules/project-policy.js";

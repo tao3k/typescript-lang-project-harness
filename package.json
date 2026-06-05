@@ -31,8 +31,8 @@
     "format:check": "oxfmt --check .",
     "lint": "oxlint .",
     "test": "npm run test:implementation && npm run test:policy",
-    "test:implementation": "npm run build && find dist/tests -name \"*.test.js\" ! -name \"self_policy.test.js\" -print | xargs node --test",
-    "test:policy": "npm run build && node --test \"dist/tests/unit/self_policy.test.js\"",
+    "test:implementation": "npm run build && SEMANTIC_AGENT_PROTOCOL_BIN=\"$PWD/tests/fixtures/bin/asp\" sh -c 'find dist/tests -name \"*.test.js\" ! -name \"self_policy.test.js\" -print | xargs node --test'",
+    "test:policy": "npm run build && SEMANTIC_AGENT_PROTOCOL_BIN=\"$PWD/tests/fixtures/bin/asp\" node --test \"dist/tests/unit/self_policy.test.js\"",
     "harness": "npm run build && node dist/src/cli/main.js check --full ."
   },
   "dependencies": {

@@ -1,3 +1,9 @@
+/**
+ * Prompt cache context assembly for TypeScript harness runs.
+ *
+ * This module groups parser and repair facts into reusable prompt cache
+ * classes without changing the underlying parser-owned facts.
+ */
 import {
   type TypeScriptHarnessPrefixAtom,
   type PartitionedAtoms,

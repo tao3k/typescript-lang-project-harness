@@ -1,3 +1,9 @@
+/**
+ * Configuration facade for TypeScript harness defaults and policy helpers.
+ *
+ * This module re-exports the public configuration API from the root config
+ * implementation while keeping model imports stable.
+ */
 export {
   defaultTypeScriptHarnessConfig,
   defaultTypeScriptVerificationPolicy,

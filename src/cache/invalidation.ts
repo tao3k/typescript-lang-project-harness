@@ -1,3 +1,9 @@
+/**
+ * Cache invalidation helpers for parsed TypeScript modules.
+ *
+ * This module compares stored file fingerprints with current filesystem state
+ * and records which parser facts must be refreshed.
+ */
 import path from "node:path";
 import type { TsParsedModule } from "../syntax/model.js";
 import { changedFiles, hashFile, loadHashes, saveHashes } from "./file-hash.js";

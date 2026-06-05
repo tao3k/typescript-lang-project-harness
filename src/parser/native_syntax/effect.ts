@@ -1,3 +1,9 @@
+/**
+ * Effect native syntax projection helpers.
+ *
+ * This module extracts Effect service and layer syntax facts for extension
+ * policies without relying on text heuristics.
+ */
 import ts from "typescript";
 
 import type {

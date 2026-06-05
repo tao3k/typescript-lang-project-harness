@@ -1,3 +1,9 @@
+/**
+ * Function shape parser facade.
+ *
+ * This module re-exports public function parameter, tuple, and control-flow
+ * fact collectors used by agent policy rules.
+ */
 export type {
   TypeScriptPublicFunctionControlFlowFact,
   TypeScriptPublicFunctionParamFact,

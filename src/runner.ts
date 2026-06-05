@@ -1,3 +1,9 @@
+/**
+ * Public runner facade for TypeScript harness execution.
+ *
+ * This module re-exports project run, assertion, and verification entrypoints
+ * while keeping parser and policy internals behind stable APIs.
+ */
 export {
   runTypeScriptProjectHarness,
   runTypeScriptProjectHarnessAgentSnapshot,

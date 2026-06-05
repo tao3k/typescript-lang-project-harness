@@ -1,3 +1,9 @@
+/**
+ * Public configuration builders for the TypeScript harness.
+ *
+ * This module owns default policy configuration and immutable helper functions
+ * for callers that tune rule or verification behavior.
+ */
 import { DEFAULT_IGNORED_DIR_NAMES } from "./parser.js";
 import type {
   TypeScriptDiagnosticSeverity,

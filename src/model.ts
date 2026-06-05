@@ -1,3 +1,9 @@
+/**
+ * Public data model for TypeScript harness reports.
+ *
+ * This module defines the DTO boundary shared by parser facts, policy
+ * findings, compact renderers, and external consumers.
+ */
 import type { TypeScriptPackageBuildToolFact } from "./model/build_tools.js";
 import type { TypeScriptPackageExtensionFact } from "./model/extensions.js";
 import type {

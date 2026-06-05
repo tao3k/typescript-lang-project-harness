@@ -1,3 +1,9 @@
+/**
+ * Prefix cache atom model for agent prompt reuse.
+ *
+ * This module defines cache classes, atom metadata, and partition helpers used
+ * to keep immutable facts separate from run-local repair context.
+ */
 import { atomFingerprint, groupFingerprint } from "./fingerprint.js";
 
 // ── Cache classification ──────────────────────────────────

@@ -1,3 +1,9 @@
+/**
+ * Build tool fact model for TypeScript projects.
+ *
+ * This module defines parser-owned build tool descriptors extracted from
+ * manifests and configuration files.
+ */
 import type {
   SourceLocation,
   TypeScriptPackageDependencySource,

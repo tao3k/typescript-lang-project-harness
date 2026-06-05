@@ -1,3 +1,9 @@
+/**
+ * Stable fingerprint helpers for cache atoms.
+ *
+ * This module turns ordered parser and prompt cache inputs into deterministic
+ * digests so cache reuse decisions remain explicit.
+ */
 import crypto from "node:crypto";
 
 /** Compute a stable content hash for a PrefixAtom. */

@@ -1,3 +1,9 @@
+/**
+ * Project file discovery for TypeScript harness runs.
+ *
+ * This module selects parser-visible TypeScript and JavaScript files while
+ * respecting ignored directories and generated artifact boundaries.
+ */
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";

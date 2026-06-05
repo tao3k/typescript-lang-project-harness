@@ -1,3 +1,9 @@
+/**
+ * Native syntax fact model for TypeScript compiler projections.
+ *
+ * This module captures parser-owned syntax facts used by semantic search,
+ * item queries, and policy rules.
+ */
 import type { SourceLocation } from "../model.js";
 
 export interface TypeScriptPublicFunctionParamFact {

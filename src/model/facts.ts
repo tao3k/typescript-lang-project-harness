@@ -1,3 +1,9 @@
+/**
+ * Core parser fact facade for TypeScript modules.
+ *
+ * This module re-exports module, package, syntax, and dependency fact types
+ * used by downstream rules and renderers.
+ */
 export type {
   TypeScriptDiagnosticSeverity,
   TypeScriptHarnessRunMode,

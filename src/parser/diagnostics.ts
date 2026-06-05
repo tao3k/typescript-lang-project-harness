@@ -1,3 +1,9 @@
+/**
+ * Native diagnostic conversion for TypeScript compiler output.
+ *
+ * This module maps TypeScript diagnostics into harness locations and severities
+ * without losing related diagnostic information.
+ */
 import ts from "typescript";
 
 import type {

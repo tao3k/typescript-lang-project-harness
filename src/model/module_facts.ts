@@ -1,3 +1,9 @@
+/**
+ * Module-level semantic facts for TypeScript source files.
+ *
+ * This module describes ownership, role, and dependency summaries used by the
+ * reasoning tree and policy rule packs.
+ */
 import type {
   TypeScriptExportFact,
   TypeScriptImportFact,

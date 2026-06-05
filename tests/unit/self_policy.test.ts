@@ -8,7 +8,6 @@ import {
   advisoryFindings,
   isTypeScriptHarnessClean,
   runTypeScriptProjectHarness,
-  renderTypeScriptProjectHarness,
 } from "../../src/index.js";
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
@@ -31,11 +30,15 @@ test("repository self-applies the default advice surface with minimal findings",
   );
 
   const advice = advisoryFindings(report);
-  // Allow a small number of info-level findings from renderer code structure.
-  // The harness is expected to be nearly clean — but renderer functions may
-  // naturally have some nesting that TS-AGENT-R007 detects as advisory.
   assert.ok(
-    advice.length <= 50, // R013 + R016 flag undocumented modules and error types
-    `expected <=50 advisory findings, got ${advice.length}: ${advice.map((f) => f.ruleId).join(", ")}`,
+    advice.every((finding) => finding.ruleId !== "TS-AGENT-R013"),
+    "repository broad public surfaces should carry module-level intent docs",
+  );
+  // Allow a small number of info-level findings from public API and renderer
+  // structure. The harness is expected to be nearly clean, but some compact
+  // renderer and DTO surfaces intentionally remain advisory for now.
+  assert.ok(
+    advice.length <= 20,
+    `expected <=20 advisory findings, got ${advice.length}: ${advice.map((f) => f.ruleId).join(", ")}`,
   );
 });
