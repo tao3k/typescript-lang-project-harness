@@ -43,6 +43,11 @@ import {
 import { renderTypeScriptTreeSitterQuery } from "../parser/native_syntax/tree-sitter-query.js";
 import { renderTypeScriptAstPatchDryRunReceiptJson } from "./ast-patch.js";
 import {
+  isTreeSitterQueryArgs,
+  parseTreeSitterQueryArgs,
+  type TreeSitterQueryArgs,
+} from "./protocol-tree-sitter-query.js";
+import {
   checkConfig,
   searchRunPlan,
   SEARCH_VIEWS_REQUIRING_FULL_NATIVE_SYNTAX_FACTS,
@@ -95,18 +100,6 @@ interface QueryArgs {
   readonly codeOnly: boolean;
   readonly namesOnly: boolean;
   readonly renderMode: "read-packet" | undefined;
-}
-
-interface TreeSitterQueryArgs {
-  readonly kind: "tree-sitter-query";
-  readonly catalogId: string | undefined;
-  readonly treeSitterQuery: string | undefined;
-  readonly terms: readonly string[];
-  readonly selector: string | undefined;
-  readonly projectRoot: string | undefined;
-  readonly packagePath: string | undefined;
-  readonly json: boolean;
-  readonly codeOnly: boolean;
 }
 
 export interface CheckArgs {
@@ -370,97 +363,6 @@ function parseAstPatchArgs(argv: readonly string[]): ProtocolArgs {
     packetPath,
     projectRoot: positionals[0],
   };
-}
-
-function parseTreeSitterQueryArgs(argv: readonly string[]): ProtocolArgs {
-  if (argv[0] === "--help" || argv[0] === "-h") return { kind: "help" };
-  let catalogId: string | undefined;
-  let treeSitterQuery: string | undefined;
-  let selector: string | undefined;
-  let packagePath: string | undefined;
-  let json = false;
-  let codeOnly = false;
-  const terms: string[] = [];
-  const positionals: string[] = [];
-  for (let index = 0; index < argv.length; index++) {
-    const arg = argv[index]!;
-    if (arg === "--catalog") {
-      const value = argv[index + 1];
-      if (value === undefined || value.startsWith("-")) {
-        return { kind: "error", message: "--catalog requires a catalog id" };
-      }
-      catalogId = value;
-      index += 1;
-    } else if (arg === "--treesitter-query") {
-      const value = argv[index + 1];
-      if (value === undefined || value.startsWith("-")) {
-        return { kind: "error", message: "--treesitter-query requires a query expression" };
-      }
-      treeSitterQuery = value;
-      index += 1;
-    } else if (arg === "--term" || arg === "--query") {
-      const value = argv[index + 1];
-      if (value === undefined) return { kind: "error", message: `${arg} requires a value` };
-      terms.push(
-        ...(arg === "--query"
-          ? value
-              .split("|")
-              .map((term) => term.trim())
-              .filter((term) => term.length > 0)
-          : [value]),
-      );
-      index += 1;
-    } else if (arg === "--selector") {
-      const value = argv[index + 1];
-      if (value === undefined || value.startsWith("-")) {
-        return { kind: "error", message: "--selector requires a selector" };
-      }
-      selector = value;
-      index += 1;
-    } else if (arg === "--package") {
-      const value = argv[index + 1];
-      if (value === undefined || value.startsWith("-")) {
-        return { kind: "error", message: "--package requires a package path" };
-      }
-      packagePath = value;
-      index += 1;
-    } else if (arg === "--json") {
-      json = true;
-    } else if (arg === "--code") {
-      codeOnly = true;
-    } else if (arg.startsWith("-")) {
-      return { kind: "error", message: `unknown tree-sitter query option: ${arg}` };
-    } else {
-      positionals.push(arg);
-    }
-  }
-  if ((catalogId === undefined) === (treeSitterQuery === undefined)) {
-    return {
-      kind: "error",
-      message: "query requires exactly one of --catalog or --treesitter-query",
-    };
-  }
-  if (json && codeOnly) {
-    return { kind: "error", message: "--code cannot be combined with --json" };
-  }
-  if (positionals.length > 1) {
-    return { kind: "error", message: "expected at most one PROJECT_ROOT argument" };
-  }
-  return {
-    kind: "tree-sitter-query",
-    catalogId,
-    treeSitterQuery,
-    terms,
-    selector,
-    projectRoot: positionals[0],
-    packagePath,
-    json,
-    codeOnly,
-  };
-}
-
-function isTreeSitterQueryArgs(argv: readonly string[]): boolean {
-  return argv.includes("--treesitter-query") || argv.includes("--catalog");
 }
 
 function parseQueryArgs(argv: readonly string[]): ProtocolArgs {

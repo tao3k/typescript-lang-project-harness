@@ -71,6 +71,15 @@ test("owner items --json emits parser nodes and node expand actions", () => {
 
   assert.equal(result.exitCode, 0, result.stderr);
   const packet = JSON.parse(result.stdout) as {
+    readonly syntaxQueryRef: string;
+    readonly syntaxMatchRefs: readonly string[];
+    readonly syntaxCaptureRefs: readonly string[];
+    readonly syntaxAnchor: {
+      readonly nodeType: string;
+      readonly field: string;
+      readonly capture: string;
+      readonly location: { readonly path: string; readonly lineRange: string };
+    };
     readonly matches: readonly {
       readonly code: string;
       readonly projection: {
@@ -90,6 +99,18 @@ test("owner items --json emits parser nodes and node expand actions", () => {
       };
     }[];
   };
+  assert.equal(
+    packet.syntaxQueryRef,
+    "semantic-tree-sitter-query/typescript-owner-items:src_demo.ts:alpha",
+  );
+  assert.deepEqual(packet.syntaxMatchRefs, ["match:1"]);
+  assert.deepEqual(packet.syntaxCaptureRefs, ["capture:1"]);
+  assert.deepEqual(packet.syntaxAnchor, {
+    nodeType: "function_declaration",
+    field: "name",
+    capture: "function.name",
+    location: { path: "src/demo.ts", lineRange: "1:7" },
+  });
   const match = packet.matches[0]!;
   const projection = match.projection;
 

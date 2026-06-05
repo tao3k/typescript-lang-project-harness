@@ -10,35 +10,16 @@ type JsonObject = Record<string, unknown>;
 
 test("query --treesitter-query renders compact syntax capture locators", () => {
   const root = treeSitterQueryFixture();
-  const result = runCliCapture(
-    [
-      "query",
-      "--treesitter-query",
-      "(function_declaration name: (identifier) @function.name)",
-      ".",
-    ],
-    root,
-  );
+  const result = runCliCapture(functionNameTreeSitterQueryArgs(), root);
   assert.equal(result.exitCode, 0, result.stderr);
-  assert.match(
-    result.stdout,
-    /^\|syntax-capture capture=function\.name node=function_declaration name=alpha captureAt=src\/demo\.ts:1:3 read=src\/demo\.ts:1:3 frontier=code$/mu,
-  );
+  assert.equal(result.stdout, "src/demo.ts:1:3\nalpha");
+  assert.doesNotMatch(result.stdout, /\|syntax-capture/u);
   assert.doesNotMatch(result.stdout, /artifactId|sqlite|cacheRoot/u);
 });
 
 test("query --treesitter-query --json emits semantic tree-sitter query packet", () => {
   const root = treeSitterQueryFixture();
-  const result = runCliCapture(
-    [
-      "query",
-      "--treesitter-query",
-      "(function_declaration name: (identifier) @function.name)",
-      "--json",
-      ".",
-    ],
-    root,
-  );
+  const result = runCliCapture(functionNameTreeSitterQueryArgs(["--json"]), root);
   assert.equal(result.exitCode, 0, result.stderr);
   const packet = JSON.parse(result.stdout) as JsonObject;
   assert.equal(packet.schemaId, "agent.semantic-protocols.semantic-tree-sitter-query");
@@ -69,15 +50,7 @@ test("query --treesitter-query --json emits semantic tree-sitter query packet", 
 test("query --treesitter-query --selector --code prints pure code", () => {
   const root = treeSitterQueryFixture();
   const result = runCliCapture(
-    [
-      "query",
-      "--treesitter-query",
-      "(function_declaration name: (identifier) @function.name)",
-      "--selector",
-      "src/demo.ts:1:3",
-      "--code",
-      ".",
-    ],
+    functionNameTreeSitterQueryArgs(["--selector", "src/demo.ts:1:3", "--code"]),
     root,
   );
   assert.equal(result.exitCode, 0, result.stderr);
@@ -87,6 +60,21 @@ test("query --treesitter-query --selector --code prints pure code", () => {
       "\n",
     ),
   );
+});
+
+test("direct provider inline tree-sitter query requires ASP compiled plan", () => {
+  const root = treeSitterQueryFixture();
+  const result = runCliCapture(
+    [
+      "query",
+      "--treesitter-query",
+      "(function_declaration name: (identifier) @function.name)",
+      ".",
+    ],
+    root,
+  );
+  assert.equal(result.exitCode, 3);
+  assert.match(result.stderr, /requires ASP-compiled query plan/u);
 });
 
 test("query --catalog declarations uses embedded canonical catalog", () => {
@@ -118,6 +106,22 @@ function treeSitterQueryFixture(): string {
     ].join("\n"),
   );
   return root;
+}
+
+function functionNameTreeSitterQueryArgs(extraArgs: readonly string[] = []): readonly string[] {
+  return [
+    "query",
+    "--treesitter-query",
+    "(function_declaration name: (identifier) @function.name)",
+    ...extraArgs,
+    ".",
+    "--asp-syntax-query-captures",
+    "function.name",
+    "--asp-syntax-query-node-types",
+    "function_declaration,identifier",
+    "--asp-syntax-query-fields",
+    "name",
+  ];
 }
 
 function record(value: unknown, label: string): JsonObject {

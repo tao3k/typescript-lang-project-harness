@@ -42,8 +42,22 @@ export interface SemanticQueryPacket {
   readonly patchSafety: SemanticQueryPatchSafety;
   readonly queryCoverage: readonly SemanticQueryCoverage[];
   readonly matches: readonly SemanticQueryMatch[];
+  readonly syntaxQueryRef?: string;
+  readonly syntaxMatchRefs?: readonly string[];
+  readonly syntaxCaptureRefs?: readonly string[];
+  readonly syntaxAnchor?: SemanticQuerySyntaxAnchor;
   readonly truncated: boolean;
   readonly notes?: readonly SemanticQueryNote[];
+}
+
+interface SemanticQuerySyntaxAnchor {
+  readonly nodeType: string;
+  readonly field?: string;
+  readonly capture?: string;
+  readonly location: {
+    readonly path: string;
+    readonly lineRange: string;
+  };
 }
 
 interface SemanticQueryPatchSafety {
@@ -499,6 +513,79 @@ function directReadArgv(selector: string): readonly string[] {
   return ["ts-harness", "query", "--from-hook", "direct-source-read", "--selector", selector, "."];
 }
 
+function ownerItemSyntaxRefs(
+  ownerPath: string,
+  queryTerms: readonly string[],
+  matches: readonly TypeScriptItemQueryMatch[],
+): Pick<
+  SemanticQueryPacket,
+  "syntaxQueryRef" | "syntaxMatchRefs" | "syntaxCaptureRefs" | "syntaxAnchor"
+> {
+  if (matches.length === 0) return {};
+  const syntaxQueryRef = `semantic-tree-sitter-query/typescript-owner-items:${stableRefSegment(
+    ownerPath,
+  )}:${stableRefSegment(queryTerms.join("|") || "all")}`;
+  const syntaxMatchRefs = matches.map((_, index) => `match:${index + 1}`);
+  const syntaxCaptureRefs = matches.map((_, index) => `capture:${index + 1}`);
+  const first = matches[0]!;
+  return {
+    syntaxQueryRef,
+    syntaxMatchRefs,
+    syntaxCaptureRefs,
+    syntaxAnchor: {
+      nodeType: treeSitterNodeTypeForItem(first.kind),
+      field: "name",
+      capture: treeSitterCaptureForItem(first.kind),
+      location: {
+        path: ownerPath,
+        lineRange: `${first.lineStart}:${first.lineEnd}`,
+      },
+    },
+  };
+}
+
+function treeSitterNodeTypeForItem(kind: string): string {
+  switch (kind) {
+    case "function":
+      return "function_declaration";
+    case "class":
+      return "class_declaration";
+    case "interface":
+      return "interface_declaration";
+    case "type":
+      return "type_alias_declaration";
+    case "enum":
+      return "enum_declaration";
+    case "variable":
+      return "variable_declarator";
+    default:
+      return "identifier";
+  }
+}
+
+function treeSitterCaptureForItem(kind: string): string {
+  switch (kind) {
+    case "function":
+      return "function.name";
+    case "class":
+      return "class.name";
+    case "interface":
+      return "interface.name";
+    case "type":
+      return "type.name";
+    case "enum":
+      return "enum.name";
+    case "variable":
+      return "variable.name";
+    default:
+      return "identifier.name";
+  }
+}
+
+function stableRefSegment(value: string): string {
+  return value.replace(/[^A-Za-z0-9_.:-]+/gu, "_");
+}
+
 function isHotProjectionNode(node: SemanticQueryProjectionNode): boolean {
   return (
     node.role === "control-flow" ||
@@ -555,6 +642,7 @@ export function buildOwnerItemSemanticQueryPacket(
 ): SemanticQueryPacket {
   const result = queryTypeScriptOwnerItems(projectRoot, ownerPath, itemQuery);
   const matchMode = ownerItemQueryMatchMode(result.matches, result.queryTerms, result.fallback);
+  const syntaxRefs = ownerItemSyntaxRefs(result.ownerPath, result.queryTerms, result.matches);
   return {
     schemaId: SEMANTIC_QUERY_PACKET_SCHEMA_ID,
     schemaVersion: "1",
@@ -579,6 +667,7 @@ export function buildOwnerItemSemanticQueryPacket(
     queryCoverage: result.queryTerms.map((term) =>
       ownerItemQueryCoverage(term, result.matches, result.fallback),
     ),
+    ...syntaxRefs,
     matches: result.matches.map((item) => {
       const read = `${result.ownerPath}:${item.lineStart}:${item.lineEnd}`;
       return {

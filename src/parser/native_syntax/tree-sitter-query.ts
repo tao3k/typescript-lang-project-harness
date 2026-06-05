@@ -21,8 +21,15 @@ export interface TypeScriptTreeSitterQueryOptions {
   readonly treeSitterQuery?: string | undefined;
   readonly terms: readonly string[];
   readonly selector?: string | undefined;
+  readonly aspSyntaxQueryPlan?: SyntaxQueryPlan | undefined;
   readonly json: boolean;
   readonly codeOnly: boolean;
+}
+
+export interface SyntaxQueryPlan {
+  readonly captures: readonly string[];
+  readonly nodeTypes: readonly string[];
+  readonly fields: readonly string[];
 }
 
 interface Catalog {
@@ -30,6 +37,8 @@ interface Catalog {
   readonly path: string;
   readonly source: string;
   readonly captures: readonly string[];
+  readonly nodeTypes: readonly string[];
+  readonly fields: readonly string[];
 }
 
 interface SyntaxRow {
@@ -66,6 +75,18 @@ const catalogs: readonly Catalog[] = [
       "import.source",
       "export.declaration",
     ],
+    nodeTypes: [
+      "function_declaration",
+      "class_declaration",
+      "interface_declaration",
+      "type_alias_declaration",
+      "enum_declaration",
+      "lexical_declaration",
+      "variable_declarator",
+      "import_statement",
+      "export_statement",
+    ],
+    fields: ["name", "source"],
     source: [
       "(function_declaration name: (identifier) @function.name) @function.definition",
       "(class_declaration name: (type_identifier) @class.name) @class.definition",
@@ -81,6 +102,8 @@ const catalogs: readonly Catalog[] = [
     id: "imports",
     path: "tree-sitter/tree-sitter-typescript/queries/imports.scm",
     captures: ["import.declaration", "import.source", "export.declaration", "export.source"],
+    nodeTypes: ["import_statement", "export_statement"],
+    fields: ["source"],
     source: [
       "(import_statement source: (string) @import.source) @import.declaration",
       "(export_statement source: (string) @export.source) @export.declaration",
@@ -90,6 +113,8 @@ const catalogs: readonly Catalog[] = [
     id: "calls",
     path: "tree-sitter/tree-sitter-typescript/queries/calls.scm",
     captures: ["call.expression", "call.target"],
+    nodeTypes: ["call_expression"],
+    fields: ["function"],
     source: "(call_expression function: (_) @call.target) @call.expression",
   },
 ];
@@ -112,7 +137,7 @@ export function renderTypeScriptTreeSitterQuery(
   options: TypeScriptTreeSitterQueryOptions,
 ): string {
   const query = resolveQuery(options);
-  const rows = collectSyntaxRows(projectRoot, query.source, options);
+  const rows = collectSyntaxRows(projectRoot, query, options);
   if (options.json) return `${JSON.stringify(packet(projectRoot, query, rows, options))}\n`;
   if (options.codeOnly) {
     return rows
@@ -126,7 +151,7 @@ export function renderTypeScriptTreeSitterQuery(
       `|syntax-query-unsupported nodes=${query.unsupportedNodes.join(",") || "-"} supported=${query.supportedNodes.join(",") || "-"}`,
     ].join("\n");
   }
-  return rows.map(renderSyntaxRow).join("\n");
+  return rows.map(renderSyntaxRow).join("\n\n");
 }
 
 function resolveQuery(options: TypeScriptTreeSitterQueryOptions): {
@@ -134,6 +159,7 @@ function resolveQuery(options: TypeScriptTreeSitterQueryOptions): {
   readonly input: string;
   readonly source: string;
   readonly captures: readonly string[];
+  readonly fields: readonly string[];
   readonly supportedNodes: readonly string[];
   readonly unsupportedNodes: readonly string[];
   readonly catalog?: Catalog;
@@ -142,16 +168,27 @@ function resolveQuery(options: TypeScriptTreeSitterQueryOptions): {
     const catalog = catalogs.find((candidate) => candidate.id === options.catalogId);
     if (catalog === undefined)
       throw new Error(`unknown TypeScript tree-sitter query catalog: ${options.catalogId}`);
-    return queryShape("catalog-id", catalog.id, catalog.source, catalog.captures, catalog);
+    return queryShape(
+      "catalog-id",
+      catalog.id,
+      catalog.source,
+      options.aspSyntaxQueryPlan ?? catalog,
+      catalog,
+    );
   }
   if (options.treeSitterQuery === undefined) {
     throw new Error("query requires --catalog <id> or --treesitter-query <s-expression>");
+  }
+  if (options.aspSyntaxQueryPlan === undefined) {
+    throw new Error(
+      "tree-sitter query projection requires ASP-compiled query plan; use `asp typescript query --treesitter-query ...` so ASP owns query ABI compilation",
+    );
   }
   return queryShape(
     "s-expression",
     options.treeSitterQuery,
     options.treeSitterQuery,
-    capturesFromQuery(options.treeSitterQuery),
+    options.aspSyntaxQueryPlan,
   );
 }
 
@@ -159,29 +196,32 @@ function queryShape(
   inputForm: "catalog-id" | "s-expression",
   input: string,
   source: string,
-  catalogCaptures: readonly string[],
+  plan: SyntaxQueryPlan,
   catalog?: Catalog,
 ): ReturnType<typeof resolveQuery> {
-  const nodes = nodesFromQuery(source);
-  const supported = nodes.filter((node) => supportedNodes.has(node));
+  const supported = plan.nodeTypes.filter((node) => supportedNodes.has(node));
   return {
     inputForm,
     input,
     source,
-    captures: catalogCaptures.length > 0 ? catalogCaptures : capturesFromQuery(source),
+    captures: unique(plan.captures),
+    fields: unique(plan.fields),
     supportedNodes: unique(supported),
-    unsupportedNodes: unique(nodes.filter((node) => !supportedNodes.has(node))),
+    unsupportedNodes:
+      supported.length === 0
+        ? unique(plan.nodeTypes.filter((node) => !supportedNodes.has(node)))
+        : [],
     ...(catalog === undefined ? {} : { catalog }),
   };
 }
 
 function collectSyntaxRows(
   projectRoot: string,
-  querySource: string,
+  query: ReturnType<typeof resolveQuery>,
   options: TypeScriptTreeSitterQueryOptions,
 ): readonly SyntaxRow[] {
-  const queryNodes = nodesFromQuery(querySource).filter((node) => supportedNodes.has(node));
-  const captures = new Set(capturesFromQuery(querySource));
+  const queryNodes = query.supportedNodes;
+  const captures = new Set(query.captures);
   const selector = parseSelector(options.selector);
   const rows: SyntaxRow[] = [];
   for (const filePath of discoverTypeScriptFiles([projectRoot])) {
@@ -351,6 +391,7 @@ function packet(
           }),
       fields: {
         captures: query.captures,
+        fields: query.fields,
         supportedNodes: query.supportedNodes,
         unsupportedNodes: query.unsupportedNodes,
         terms: [...options.terms],
@@ -407,14 +448,7 @@ function rangeForRow(row: SyntaxRow): Record<string, unknown> {
 }
 
 function renderSyntaxRow(row: SyntaxRow): string {
-  return [
-    `|syntax-capture capture=${row.capture}`,
-    `node=${row.node}`,
-    `name=${shellToken(row.name)}`,
-    `captureAt=${row.path}:${row.startLine}:${row.endLine}`,
-    `read=${row.path}:${row.itemStartLine}:${row.itemEndLine}`,
-    "frontier=code",
-  ].join(" ");
+  return `${syntaxLineLocator(row.path, row.startLine, row.endLine)}\n${captureTextForRow(row)}`;
 }
 
 function captureForNode(nodeType: string, captures: ReadonlySet<string>): string | undefined {
@@ -487,16 +521,6 @@ function bindingNameText(name: ts.BindingName): string | undefined {
   return text.length > 0 ? text : undefined;
 }
 
-function capturesFromQuery(query: string): readonly string[] {
-  const captures = query.match(/@[A-Za-z][A-Za-z0-9_.-]*/gu) ?? [];
-  return unique(captures.map((capture) => capture.slice(1)));
-}
-
-function nodesFromQuery(query: string): readonly string[] {
-  const tokens = query.match(/[A-Za-z_][A-Za-z0-9_]*/gu) ?? [];
-  return unique(tokens.filter((token) => token.includes("_") || supportedNodes.has(token)));
-}
-
 function parseSelector(
   selector: string | undefined,
 ): { readonly path: string; readonly start?: number; readonly end?: number } | undefined {
@@ -541,6 +565,30 @@ function sourceCompactCode(sourceText: string, lineStart: number, lineEnd: numbe
     .slice(lineStart - 1, lineEnd)
     .join("\n")
     .trimEnd();
+}
+
+function syntaxLineLocator(filePath: string, startLine: number, endLine: number): string {
+  return startLine === endLine ? `${filePath}:${startLine}` : `${filePath}:${startLine}:${endLine}`;
+}
+
+function captureTextForRow(row: SyntaxRow): string {
+  if (
+    row.capture.endsWith(".name") ||
+    row.capture.endsWith(".target") ||
+    row.capture.endsWith(".method") ||
+    row.capture.endsWith(".source")
+  ) {
+    return row.name;
+  }
+  if (row.capture.endsWith(".definition")) {
+    return row.itemCode;
+  }
+  return (
+    row.itemCode
+      .split(/\r?\n/u)
+      .find((line) => line.trim() !== "")
+      ?.trim() ?? row.name
+  );
 }
 
 function scriptKindForPath(filePath: string): ts.ScriptKind {

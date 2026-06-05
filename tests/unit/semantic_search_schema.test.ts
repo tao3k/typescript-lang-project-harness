@@ -287,6 +287,18 @@ test("semantic language registry JSON documents the TypeScript provider identity
             ? ["items"]
             : [],
       );
+      assert.deepEqual(
+        descriptor.packetSchemas === undefined
+          ? []
+          : stringArray(descriptor.packetSchemas, `${String(descriptor.method)} packetSchemas`),
+        String(descriptor.method) === "search/owner"
+          ? ["semantic-search-packet.v1", "semantic-tree-sitter-query.v1"]
+          : [],
+      );
+      assert.equal(
+        descriptor.grammarId,
+        String(descriptor.method) === "search/owner" ? "tree-sitter-typescript" : undefined,
+      );
       assert.equal(
         descriptor.supportsQuerySet,
         String(descriptor.method) === "search/fzf" ||
@@ -419,6 +431,17 @@ test("semantic language registry JSON documents the TypeScript provider identity
           ? ["compact", "json", "names", "read-packet"]
           : ["compact", "json", "code", "names"],
       );
+      assert.deepEqual(
+        descriptor.packetSchemas,
+        method === "query/direct-source-read"
+          ? ["semantic-query-packet.v1", "semantic-read-packet.v1", "semantic-tree-sitter-query.v1"]
+          : ["semantic-query-packet.v1", "semantic-tree-sitter-query.v1"],
+      );
+      assert.equal(descriptor.grammarId, "tree-sitter-typescript");
+      assert.deepEqual(
+        descriptor.queryInputForms === undefined ? [] : descriptor.queryInputForms,
+        method === "query/direct-source-read" ? ["selector"] : [],
+      );
       assert.equal(descriptor.supportsQuerySet, method === "query/owner-items" ? true : undefined);
       assert.deepEqual(
         descriptor.acceptedQuerySetSelectors === undefined
@@ -486,6 +509,10 @@ test("semantic language registry JSON documents the TypeScript provider identity
     "schemas/semantic-read-packet.v1.schema.json",
   );
   assertRegisteredSchema(
+    "agent.semantic-protocols.semantic-tree-sitter-provenance",
+    "schemas/semantic-tree-sitter-provenance.v1.schema.json",
+  );
+  assertRegisteredSchema(
     "agent.semantic-protocols.semantic-tree-sitter-query",
     "schemas/semantic-tree-sitter-query.v1.schema.json",
   );
@@ -534,6 +561,10 @@ test("semantic language registry JSON documents the TypeScript provider identity
     "schemas/semantic-type-surface.v1.schema.json",
   );
   assertRegisteredSchema(
+    "agent.semantic-protocols.semantic-source-location",
+    "schemas/semantic-source-location.v1.schema.json",
+  );
+  assertRegisteredSchema(
     "agent.semantic-protocols.semantic-language-registry",
     "schemas/semantic-language-registry.v1.schema.json",
   );
@@ -548,6 +579,8 @@ test("package-local semantic schemas stay synchronized with the protocol reposit
     "semantic-search-packet.v1.schema.json",
     "semantic-query-packet.v1.schema.json",
     "semantic-read-packet.v1.schema.json",
+    "semantic-source-location.v1.schema.json",
+    "semantic-tree-sitter-provenance.v1.schema.json",
     "semantic-tree-sitter-query.v1.schema.json",
     "semantic-tree-sitter-grammar-profile.v1.schema.json",
     "semantic-graph.v1.schema.json",

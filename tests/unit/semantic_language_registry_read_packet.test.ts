@@ -5,6 +5,8 @@ import {
   SEMANTIC_DEV_COMMAND_LOG_SCHEMA_ID,
   SEMANTIC_QUERY_PACKET_SCHEMA_ID,
   SEMANTIC_READ_PACKET_SCHEMA_ID,
+  SEMANTIC_SOURCE_LOCATION_SCHEMA_ID,
+  SEMANTIC_TREE_SITTER_PROVENANCE_SCHEMA_ID,
   SEMANTIC_TREE_SITTER_GRAMMAR_PROFILE_SCHEMA_ID,
   SEMANTIC_TREE_SITTER_QUERY_SCHEMA_ID,
   semanticLanguageRegistryDocument,
@@ -26,6 +28,13 @@ test("registry declares TypeScript direct-source-read read packet output", () =>
     SEMANTIC_QUERY_PACKET_SCHEMA_ID,
     SEMANTIC_READ_PACKET_SCHEMA_ID,
   ]);
+  assert.deepEqual(descriptor.packetSchemas, [
+    "semantic-query-packet.v1",
+    "semantic-read-packet.v1",
+    "semantic-tree-sitter-query.v1",
+  ]);
+  assert.deepEqual(descriptor.queryInputForms, ["selector"]);
+  assert.equal(descriptor.grammarId, "tree-sitter-typescript");
   assert.ok(descriptor.outputModes?.includes("read-packet"));
   assert.equal(descriptor.supportsJson, true);
 });
@@ -39,6 +48,22 @@ test("registry advertises dev command log schema", () => {
   );
   assert.ok(schema, "dev command log schema should be advertised");
   assert.equal(schema.path, "schemas/semantic-dev-command-log.v1.schema.json");
+});
+
+test("registry advertises shared tree-sitter provenance schema", () => {
+  const registry = semanticLanguageRegistryDocument();
+  const language = registry.languages.find((candidate) => candidate.languageId === "typescript");
+  assert.ok(language, "typescript language registration should exist");
+  const sourceLocation = language.schemas.find(
+    (candidate) => candidate.schemaId === SEMANTIC_SOURCE_LOCATION_SCHEMA_ID,
+  );
+  assert.ok(sourceLocation, "shared source-location schema should be advertised");
+  assert.equal(sourceLocation.path, "schemas/semantic-source-location.v1.schema.json");
+  const schema = language.schemas.find(
+    (candidate) => candidate.schemaId === SEMANTIC_TREE_SITTER_PROVENANCE_SCHEMA_ID,
+  );
+  assert.ok(schema, "shared tree-sitter provenance schema should be advertised");
+  assert.equal(schema.path, "schemas/semantic-tree-sitter-provenance.v1.schema.json");
 });
 
 test("registry declares TypeScript tree-sitter query ABI", () => {

@@ -43,8 +43,22 @@ export interface SemanticReadPacket {
   readonly outputMode: "read-packet";
   readonly sourceWindows?: readonly SemanticReadWindow[];
   readonly readPlan?: SemanticReadPlan;
+  readonly syntaxQueryRef?: string;
+  readonly syntaxMatchRefs?: readonly string[];
+  readonly syntaxCaptureRefs?: readonly string[];
+  readonly syntaxAnchor?: SemanticReadSyntaxAnchor;
   readonly truncated: boolean;
   readonly notes?: readonly SemanticReadNote[];
+}
+
+interface SemanticReadSyntaxAnchor {
+  readonly nodeType: string;
+  readonly field?: string;
+  readonly capture?: string;
+  readonly location: {
+    readonly path: string;
+    readonly lineRange: string;
+  };
 }
 
 interface SemanticReadPlan {
@@ -279,6 +293,7 @@ export function buildOwnerItemSemanticReadPacket(
   }
   return {
     ...basePacket,
+    ...ownerItemSyntaxRefs(result.ownerPath, result.queryTerms, matches),
     sourceWindows: matches.map((item) => semanticReadWindowForItem(result.ownerPath, item, range)),
   };
 }
@@ -399,6 +414,79 @@ function sourceWindowText(
     .slice(lineStart - 1, lineEnd)
     .join("\n")
     .trimEnd();
+}
+
+function ownerItemSyntaxRefs(
+  ownerPath: string,
+  queryTerms: readonly string[],
+  matches: readonly TypeScriptItemQueryMatch[],
+): Pick<
+  SemanticReadPacket,
+  "syntaxQueryRef" | "syntaxMatchRefs" | "syntaxCaptureRefs" | "syntaxAnchor"
+> {
+  if (matches.length === 0) return {};
+  const syntaxQueryRef = `semantic-tree-sitter-query/typescript-owner-items:${stableRefSegment(
+    ownerPath,
+  )}:${stableRefSegment(queryTerms.join("|") || "all")}`;
+  const syntaxMatchRefs = matches.map((_, index) => `match:${index + 1}`);
+  const syntaxCaptureRefs = matches.map((_, index) => `capture:${index + 1}`);
+  const first = matches[0]!;
+  return {
+    syntaxQueryRef,
+    syntaxMatchRefs,
+    syntaxCaptureRefs,
+    syntaxAnchor: {
+      nodeType: treeSitterNodeTypeForItem(first.kind),
+      field: "name",
+      capture: treeSitterCaptureForItem(first.kind),
+      location: {
+        path: ownerPath,
+        lineRange: `${first.lineStart}:${first.lineEnd}`,
+      },
+    },
+  };
+}
+
+function treeSitterNodeTypeForItem(kind: string): string {
+  switch (kind) {
+    case "function":
+      return "function_declaration";
+    case "class":
+      return "class_declaration";
+    case "interface":
+      return "interface_declaration";
+    case "type":
+      return "type_alias_declaration";
+    case "enum":
+      return "enum_declaration";
+    case "variable":
+      return "variable_declarator";
+    default:
+      return "identifier";
+  }
+}
+
+function treeSitterCaptureForItem(kind: string): string {
+  switch (kind) {
+    case "function":
+      return "function.name";
+    case "class":
+      return "class.name";
+    case "interface":
+      return "interface.name";
+    case "type":
+      return "type.name";
+    case "enum":
+      return "enum.name";
+    case "variable":
+      return "variable.name";
+    default:
+      return "identifier.name";
+  }
+}
+
+function stableRefSegment(value: string): string {
+  return value.replace(/[^A-Za-z0-9_.:-]+/gu, "_");
 }
 function sourceRangeLineCount(range: {
   readonly lineStart: number;
