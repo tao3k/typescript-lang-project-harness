@@ -30,6 +30,27 @@ export interface SyntaxQueryPlan {
   readonly captures: readonly string[];
   readonly nodeTypes: readonly string[];
   readonly fields: readonly string[];
+  readonly predicates: readonly SyntaxQueryPredicate[];
+}
+
+export type SyntaxQueryPredicateOp =
+  | "eq"
+  | "any-eq"
+  | "any-of"
+  | "match"
+  | "any-match"
+  | "not-eq"
+  | "not-match";
+
+export interface SyntaxQueryPredicateValue {
+  readonly kind: "string" | "capture";
+  readonly value: string;
+}
+
+export interface SyntaxQueryPredicate {
+  readonly op: SyntaxQueryPredicateOp;
+  readonly capture: string;
+  readonly values: readonly SyntaxQueryPredicateValue[];
 }
 
 interface Catalog {
@@ -52,6 +73,30 @@ interface SyntaxRow {
   readonly itemEndLine: number;
   readonly itemCode: string;
   readonly nativeFactRef: string;
+}
+
+interface QueryPlanShape {
+  readonly captures: readonly string[];
+  readonly nodeTypes: readonly string[];
+  readonly fields: readonly string[];
+  readonly predicates?: readonly SyntaxQueryPredicate[];
+}
+
+interface ResolvedQuery {
+  readonly inputForm: "catalog-id" | "s-expression";
+  readonly input: string;
+  readonly source: string;
+  readonly captures: readonly string[];
+  readonly fields: readonly string[];
+  readonly predicates: readonly SyntaxQueryPredicate[];
+  readonly supportedNodes: readonly string[];
+  readonly unsupportedNodes: readonly string[];
+  readonly catalog?: Catalog;
+}
+
+interface PreparedSyntaxQueryPredicate {
+  readonly predicate: SyntaxQueryPredicate;
+  readonly regexes: readonly RegExp[];
 }
 
 const catalogs: readonly Catalog[] = [
@@ -154,16 +199,7 @@ export function renderTypeScriptTreeSitterQuery(
   return rows.map(renderSyntaxRow).join("\n\n");
 }
 
-function resolveQuery(options: TypeScriptTreeSitterQueryOptions): {
-  readonly inputForm: "catalog-id" | "s-expression";
-  readonly input: string;
-  readonly source: string;
-  readonly captures: readonly string[];
-  readonly fields: readonly string[];
-  readonly supportedNodes: readonly string[];
-  readonly unsupportedNodes: readonly string[];
-  readonly catalog?: Catalog;
-} {
+function resolveQuery(options: TypeScriptTreeSitterQueryOptions): ResolvedQuery {
   if (options.catalogId !== undefined) {
     const catalog = catalogs.find((candidate) => candidate.id === options.catalogId);
     if (catalog === undefined)
@@ -196,9 +232,9 @@ function queryShape(
   inputForm: "catalog-id" | "s-expression",
   input: string,
   source: string,
-  plan: SyntaxQueryPlan,
+  plan: QueryPlanShape,
   catalog?: Catalog,
-): ReturnType<typeof resolveQuery> {
+): ResolvedQuery {
   const supported = plan.nodeTypes.filter((node) => supportedNodes.has(node));
   return {
     inputForm,
@@ -206,6 +242,7 @@ function queryShape(
     source,
     captures: unique(plan.captures),
     fields: unique(plan.fields),
+    predicates: plan.predicates ?? [],
     supportedNodes: unique(supported),
     unsupportedNodes:
       supported.length === 0
@@ -217,12 +254,13 @@ function queryShape(
 
 function collectSyntaxRows(
   projectRoot: string,
-  query: ReturnType<typeof resolveQuery>,
+  query: ResolvedQuery,
   options: TypeScriptTreeSitterQueryOptions,
 ): readonly SyntaxRow[] {
   const queryNodes = query.supportedNodes;
   const captures = new Set(query.captures);
   const selector = parseSelector(options.selector);
+  const predicates = query.predicates.map(prepareSyntaxPredicate);
   const rows: SyntaxRow[] = [];
   for (const filePath of discoverTypeScriptFiles([projectRoot])) {
     const normalizedPath = path.relative(projectRoot, filePath).replace(/\\/gu, "/");
@@ -240,6 +278,7 @@ function collectSyntaxRows(
   return rows
     .filter((row) => selector === undefined || selectorOverlapsRow(selector, row))
     .filter((row) => termMatches(row, options.terms))
+    .filter((row) => syntaxPredicatesMatch(row, predicates))
     .sort((left, right) => left.path.localeCompare(right.path) || left.startLine - right.startLine);
 }
 
@@ -355,7 +394,7 @@ function rowForNode(
 
 function packet(
   projectRoot: string,
-  query: ReturnType<typeof resolveQuery>,
+  query: ResolvedQuery,
   rows: readonly SyntaxRow[],
   options: TypeScriptTreeSitterQueryOptions,
 ): Record<string, unknown> {
@@ -392,6 +431,8 @@ function packet(
       fields: {
         captures: query.captures,
         fields: query.fields,
+        predicates: query.predicates,
+        unsupportedPredicates: [],
         supportedNodes: query.supportedNodes,
         unsupportedNodes: query.unsupportedNodes,
         terms: [...options.terms],
@@ -557,6 +598,66 @@ function termMatches(row: SyntaxRow, terms: readonly string[]): boolean {
   if (terms.length === 0) return true;
   const haystack = `${row.name}\n${row.node}\n${row.capture}\n${row.itemCode}`.toLowerCase();
   return terms.every((term) => haystack.includes(term.toLowerCase()));
+}
+
+function prepareSyntaxPredicate(predicate: SyntaxQueryPredicate): PreparedSyntaxQueryPredicate {
+  if (predicate.op !== "match" && predicate.op !== "any-match" && predicate.op !== "not-match") {
+    return { predicate, regexes: [] };
+  }
+  return {
+    predicate,
+    regexes: predicate.values.map((value) => {
+      if (value.kind !== "string") {
+        throw new Error(`tree-sitter ${predicate.op} predicate requires string operands`);
+      }
+      return new RegExp(value.value, "u");
+    }),
+  };
+}
+
+function syntaxPredicatesMatch(
+  row: SyntaxRow,
+  predicates: readonly PreparedSyntaxQueryPredicate[],
+): boolean {
+  return predicates.every((predicate) => syntaxPredicateMatches(row, predicate));
+}
+
+function syntaxPredicateMatches(row: SyntaxRow, prepared: PreparedSyntaxQueryPredicate): boolean {
+  const captureText = predicateCaptureText(row, prepared.predicate.capture);
+  const values = prepared.predicate.values.map((value) => predicateValueText(row, value));
+  switch (prepared.predicate.op) {
+    case "eq":
+    case "any-eq":
+    case "any-of":
+      return values.some((value) => captureText === value);
+    case "match":
+    case "any-match":
+      return prepared.regexes.some((regex) => regex.test(captureText));
+    case "not-eq":
+      return values.every((value) => captureText !== value);
+    case "not-match":
+      return prepared.regexes.every((regex) => !regex.test(captureText));
+  }
+}
+
+function predicateValueText(row: SyntaxRow, value: SyntaxQueryPredicateValue): string {
+  return value.kind === "string" ? value.value : predicateCaptureText(row, value.value);
+}
+
+function predicateCaptureText(row: SyntaxRow, capture: string): string {
+  if (capture === row.capture) return captureTextForRow(row);
+  if (
+    capture.endsWith(".name") ||
+    capture.endsWith(".target") ||
+    capture.endsWith(".method") ||
+    capture.endsWith(".source")
+  ) {
+    return row.name;
+  }
+  if (capture.endsWith(".definition") || capture.endsWith(".expression")) {
+    return row.itemCode;
+  }
+  return captureTextForRow(row);
 }
 
 function sourceCompactCode(sourceText: string, lineStart: number, lineEnd: number): string {

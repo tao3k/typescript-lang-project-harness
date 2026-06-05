@@ -41,6 +41,7 @@ function commandGuide(input: {
     "|rule agent hook install/runtime is owned by asp",
     "|rule run guide commands from project root; trailing . is the project root",
     "|rule syntax query ABI is compiled by asp; provider projects native parser facts into tree-sitter-compatible captures",
+    "|rule syntax predicates supported=#eq?,#any-eq?,#any-of?,#match?,#any-match?,#not-eq?,#not-match? unsupported=none unsupportedReported=true",
     "|rule query --code is pure code; search/read-plan returns locators/frontier, not inline code",
     "|rule use the asp typescript facade; run one command at a time; no raw TS/JS source reads",
     "|subagent give one |cmd or |pipe line; require evidence/missing/next/risk",

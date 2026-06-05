@@ -294,6 +294,8 @@ export interface SemanticLanguageMethodDescriptor {
   readonly grammarProfileVersion?: string;
   readonly grammarProfileSchema?: string;
   readonly grammarProfilePath?: string;
+  readonly supportedPredicates?: readonly string[];
+  readonly unsupportedPredicates?: readonly string[];
   readonly cacheReplay?: boolean;
   readonly requiresQuery?: boolean;
   readonly acceptsStdin?: boolean;
@@ -595,6 +597,16 @@ function typeScriptSemanticLanguageMethodDescriptors(): readonly SemanticLanguag
       grammarProfileVersion: "2026-06-05.v1",
       grammarProfileSchema: "semantic-tree-sitter-grammar-profile.v1",
       grammarProfilePath: "tree-sitter/tree-sitter-typescript/grammar-profile.json",
+      supportedPredicates: [
+        "#eq?",
+        "#any-eq?",
+        "#any-of?",
+        "#match?",
+        "#any-match?",
+        "#not-eq?",
+        "#not-match?",
+      ],
+      unsupportedPredicates: [],
       cacheReplay: true,
       supportsCompact: true,
       supportsJson: true,

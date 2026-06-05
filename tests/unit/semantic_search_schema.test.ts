@@ -393,6 +393,16 @@ test("semantic language registry JSON documents the TypeScript provider identity
         descriptor.grammarProfilePath,
         "tree-sitter/tree-sitter-typescript/grammar-profile.json",
       );
+      assert.deepEqual(descriptor.supportedPredicates, [
+        "#eq?",
+        "#any-eq?",
+        "#any-of?",
+        "#match?",
+        "#any-match?",
+        "#not-eq?",
+        "#not-match?",
+      ]);
+      assert.deepEqual(descriptor.unsupportedPredicates, []);
       assert.equal(descriptor.cacheReplay, true);
       assert.deepEqual(descriptor.outputModes, ["compact", "json", "code"]);
       const queryCatalogs = array(descriptor.queryCatalogs, "query queryCatalogs").map(

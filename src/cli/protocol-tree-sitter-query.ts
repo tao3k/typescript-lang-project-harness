@@ -2,7 +2,12 @@
  * Tree-sitter query argument parsing for the ts-harness CLI.
  */
 
-import type { SyntaxQueryPlan } from "../parser/native_syntax/tree-sitter-query.js";
+import type {
+  SyntaxQueryPlan,
+  SyntaxQueryPredicate,
+  SyntaxQueryPredicateOp,
+  SyntaxQueryPredicateValue,
+} from "../parser/native_syntax/tree-sitter-query.js";
 
 export interface TreeSitterQueryArgs {
   readonly kind: "tree-sitter-query";
@@ -26,6 +31,7 @@ interface MutableSyntaxQueryPlan {
   captures: readonly string[];
   nodeTypes: readonly string[];
   fields: readonly string[];
+  predicates: readonly SyntaxQueryPredicate[];
 }
 
 interface TreeSitterQueryParseState {
@@ -104,7 +110,9 @@ function parseTreeSitterQueryOptions(argv: readonly string[]): TreeSitterQueryOp
       if (value === undefined) {
         return { kind: "error", message: `${arg} requires an ASP query plan value` };
       }
-      state.aspSyntaxQueryPlan = updateAspSyntaxQueryPlan(state.aspSyntaxQueryPlan, arg, value);
+      const updated = updateAspSyntaxQueryPlan(state.aspSyntaxQueryPlan, arg, value);
+      if ("kind" in updated) return updated;
+      state.aspSyntaxQueryPlan = updated;
       index += 1;
     } else if (arg === "--json") {
       state.json = true;
@@ -175,7 +183,8 @@ function isAspSyntaxQueryPlanOption(arg: string): boolean {
   return (
     arg === "--asp-syntax-query-captures" ||
     arg === "--asp-syntax-query-node-types" ||
-    arg === "--asp-syntax-query-fields"
+    arg === "--asp-syntax-query-fields" ||
+    arg === "--asp-syntax-query-predicates-json"
   );
 }
 
@@ -183,15 +192,23 @@ function updateAspSyntaxQueryPlan(
   current: MutableSyntaxQueryPlan | undefined,
   arg: string,
   value: string,
-): MutableSyntaxQueryPlan {
-  const plan = current ?? { captures: [], nodeTypes: [], fields: [] };
+): MutableSyntaxQueryPlan | { readonly kind: "error"; readonly message: string } {
+  const plan = current ?? { captures: [], nodeTypes: [], fields: [], predicates: [] };
   if (arg === "--asp-syntax-query-captures") {
     return { ...plan, captures: splitAspSyntaxQueryPlanList(value) };
   }
   if (arg === "--asp-syntax-query-node-types") {
     return { ...plan, nodeTypes: splitAspSyntaxQueryPlanList(value) };
   }
-  return { ...plan, fields: splitAspSyntaxQueryPlanList(value) };
+  if (arg === "--asp-syntax-query-fields") {
+    return { ...plan, fields: splitAspSyntaxQueryPlanList(value) };
+  }
+  try {
+    return { ...plan, predicates: parseAspSyntaxQueryPredicatesJson(value) };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return { kind: "error", message: `invalid ASP syntax query predicates: ${message}` };
+  }
 }
 
 function splitAspSyntaxQueryPlanList(value: string): readonly string[] {
@@ -203,4 +220,76 @@ function splitAspSyntaxQueryPlanList(value: string): readonly string[] {
         .filter(Boolean),
     ),
   ].sort();
+}
+
+function parseAspSyntaxQueryPredicatesJson(value: string): readonly SyntaxQueryPredicate[] {
+  const parsed = JSON.parse(value) as unknown;
+  if (!Array.isArray(parsed)) {
+    throw new Error("expected predicate array");
+  }
+  return parsed.map((predicate, index) => parseAspSyntaxQueryPredicate(predicate, index));
+}
+
+function parseAspSyntaxQueryPredicate(value: unknown, index: number): SyntaxQueryPredicate {
+  if (!isRecord(value)) {
+    throw new Error(`predicate ${index} must be an object`);
+  }
+  const op = syntaxPredicateOp(value.op, index);
+  const capture = stringField(value.capture, `predicate ${index}.capture`);
+  const values = value.values;
+  if (!Array.isArray(values)) {
+    throw new Error(`predicate ${index}.values must be an array`);
+  }
+  return {
+    op,
+    capture,
+    values: values.map((operand, operandIndex) =>
+      parseAspSyntaxQueryPredicateValue(operand, index, operandIndex),
+    ),
+  };
+}
+
+function parseAspSyntaxQueryPredicateValue(
+  value: unknown,
+  predicateIndex: number,
+  operandIndex: number,
+): SyntaxQueryPredicateValue {
+  if (!isRecord(value)) {
+    throw new Error(`predicate ${predicateIndex}.values[${operandIndex}] must be an object`);
+  }
+  const kind = stringField(value.kind, `predicate ${predicateIndex}.values[${operandIndex}].kind`);
+  if (kind !== "string" && kind !== "capture") {
+    throw new Error(`predicate ${predicateIndex}.values[${operandIndex}].kind is unsupported`);
+  }
+  return {
+    kind,
+    value: stringField(value.value, `predicate ${predicateIndex}.values[${operandIndex}].value`),
+  };
+}
+
+function syntaxPredicateOp(value: unknown, index: number): SyntaxQueryPredicateOp {
+  const op = stringField(value, `predicate ${index}.op`);
+  if (
+    op === "eq" ||
+    op === "any-eq" ||
+    op === "any-of" ||
+    op === "match" ||
+    op === "any-match" ||
+    op === "not-eq" ||
+    op === "not-match"
+  ) {
+    return op;
+  }
+  throw new Error(`predicate ${index}.op is unsupported`);
+}
+
+function stringField(value: unknown, label: string): string {
+  if (typeof value !== "string") {
+    throw new Error(`${label} must be a string`);
+  }
+  return value;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

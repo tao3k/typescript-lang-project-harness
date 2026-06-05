@@ -47,6 +47,59 @@ test("query --treesitter-query --json emits semantic tree-sitter query packet", 
   assert.equal(record(packet.cache, "packet.cache").rawSourceStored, false);
 });
 
+test("query --treesitter-query applies ASP typed match predicates", () => {
+  const root = treeSitterPredicateFixture();
+  const query =
+    '(function_declaration name: (identifier) @function.name (#match? @function.name "^alp"))';
+  const result = runCliCapture(
+    functionNameTreeSitterQueryArgs([], predicatePlanArgs("match", "^alp"), query),
+    root,
+  );
+
+  assert.equal(result.exitCode, 0, result.stderr);
+  assert.equal(result.stdout, "src/demo.ts:1\nalpha");
+});
+
+test("query --treesitter-query applies ASP typed any predicates", () => {
+  const root = treeSitterPredicateFixture();
+  const query =
+    '(function_declaration name: (identifier) @function.name (#any-match? @function.name "^bet"))';
+  const result = runCliCapture(
+    functionNameTreeSitterQueryArgs([], predicatePlanArgs("any-match", "^bet"), query),
+    root,
+  );
+
+  assert.equal(result.exitCode, 0, result.stderr);
+  assert.equal(result.stdout, "src/demo.ts:2\nbeta");
+});
+
+test("query --treesitter-query --json reports ASP typed predicates", () => {
+  const root = treeSitterPredicateFixture();
+  const query =
+    '(function_declaration name: (identifier) @function.name (#not-eq? @function.name "alpha"))';
+  const result = runCliCapture(
+    functionNameTreeSitterQueryArgs(["--json"], predicatePlanArgs("not-eq", "alpha"), query),
+    root,
+  );
+
+  assert.equal(result.exitCode, 0, result.stderr);
+  const packet = JSON.parse(result.stdout) as JsonObject;
+  const fields = record(record(packet.query, "packet.query").fields, "packet.query.fields");
+  assert.deepEqual(fields.predicates, [
+    {
+      op: "not-eq",
+      capture: "function.name",
+      values: [{ kind: "string", value: "alpha" }],
+    },
+  ]);
+  assert.deepEqual(fields.unsupportedPredicates, []);
+  const matches = array(packet.matches, "packet.matches");
+  assert.equal(matches.length, 1);
+  assert.deepEqual(record(matches[0], "packet.matches[0]").nativeFactRefs, [
+    "typescript:item:src/demo.ts:2:2:beta",
+  ]);
+});
+
 test("query --treesitter-query --selector --code prints pure code", () => {
   const root = treeSitterQueryFixture();
   const result = runCliCapture(
@@ -108,11 +161,28 @@ function treeSitterQueryFixture(): string {
   return root;
 }
 
-function functionNameTreeSitterQueryArgs(extraArgs: readonly string[] = []): readonly string[] {
+function treeSitterPredicateFixture(): string {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-tree-sitter-predicate-"));
+  fs.mkdirSync(path.join(root, "src"));
+  fs.writeFileSync(
+    path.join(root, "src", "demo.ts"),
+    [
+      "export function alpha(): string { return 'alpha'; }",
+      "export function beta(): string { return 'beta'; }",
+    ].join("\n"),
+  );
+  return root;
+}
+
+function functionNameTreeSitterQueryArgs(
+  extraArgs: readonly string[] = [],
+  planArgs: readonly string[] = [],
+  query = "(function_declaration name: (identifier) @function.name)",
+): readonly string[] {
   return [
     "query",
     "--treesitter-query",
-    "(function_declaration name: (identifier) @function.name)",
+    query,
     ...extraArgs,
     ".",
     "--asp-syntax-query-captures",
@@ -121,6 +191,20 @@ function functionNameTreeSitterQueryArgs(extraArgs: readonly string[] = []): rea
     "function_declaration,identifier",
     "--asp-syntax-query-fields",
     "name",
+    ...planArgs,
+  ];
+}
+
+function predicatePlanArgs(op: string, value: string): readonly string[] {
+  return [
+    "--asp-syntax-query-predicates-json",
+    JSON.stringify([
+      {
+        op,
+        capture: "function.name",
+        values: [{ kind: "string", value }],
+      },
+    ]),
   ];
 }
 

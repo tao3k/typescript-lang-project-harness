@@ -79,6 +79,16 @@ test("registry declares TypeScript tree-sitter query ABI", () => {
   assert.deepEqual(descriptor.queryInputForms, ["catalog-id", "s-expression"]);
   assert.equal(descriptor.grammarId, "tree-sitter-typescript");
   assert.equal(descriptor.grammarProfileVersion, "2026-06-05.v1");
+  assert.deepEqual(descriptor.supportedPredicates, [
+    "#eq?",
+    "#any-eq?",
+    "#any-of?",
+    "#match?",
+    "#any-match?",
+    "#not-eq?",
+    "#not-match?",
+  ]);
+  assert.deepEqual(descriptor.unsupportedPredicates, []);
   assert.equal(descriptor.cacheReplay, true);
   assert.equal(descriptor.queryCatalogs?.length, 3);
 
