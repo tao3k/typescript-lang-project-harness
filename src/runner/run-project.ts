@@ -7,7 +7,7 @@ import {
   readProjectScope,
   parseTypeScriptProjectFiles,
 } from "../parser.js";
-import { defaultTypeScriptHarnessConfig } from "../config.js";
+import { defaultTypeScriptHarnessConfig, typeScriptHarnessConfigForProject } from "../config.js";
 import { buildTypeScriptReasoningTree } from "../reasoning.js";
 import { evaluateDefaultRulePacks } from "../rules.js";
 import type {
@@ -33,14 +33,15 @@ interface TypeScriptProjectHarnessRunOptions {
 
 export function runTypeScriptProjectHarness(
   projectRootInput: string | URL,
-  config: TypeScriptHarnessConfig = defaultTypeScriptHarnessConfig(),
+  config?: TypeScriptHarnessConfig,
   options: TypeScriptProjectHarnessRunOptions = {},
 ): TypeScriptHarnessReport {
   const projectRoot = pathFromInput(projectRootInput);
   if (!fs.existsSync(projectRoot)) {
     throw new Error(`project root does not exist: ${projectRoot}`);
   }
-  const scope = readProjectScope(projectRoot, config);
+  const selectedConfig = config ?? typeScriptHarnessConfigForProject(projectRoot);
+  const scope = readProjectScope(projectRoot, selectedConfig);
   const parseOptions = {
     ...(options.collectSemanticDiagnostics === undefined
       ? {}
@@ -51,19 +52,19 @@ export function runTypeScriptProjectHarness(
   };
   const modules = parseTypeScriptProjectFiles(
     scope,
-    options.fileNames ?? projectFileNames(scope, config),
+    options.fileNames ?? projectFileNames(scope, selectedConfig),
     parseOptions,
   );
   const reasoningTree = buildTypeScriptReasoningTree(scope, modules);
   const findings =
-    options.evaluateRules === false ? [] : evaluateDefaultRulePacks(reasoningTree, config);
+    options.evaluateRules === false ? [] : evaluateDefaultRulePacks(reasoningTree, selectedConfig);
   return {
     runMode: reasoningTree.runMode,
     modules,
     findings,
     rootPaths: [scope.projectRoot],
-    blockingSeverities: config.blockingSeverities,
-    blockingRuleIds: config.blockingRuleIds,
+    blockingSeverities: selectedConfig.blockingSeverities,
+    blockingRuleIds: selectedConfig.blockingRuleIds,
     projectScope: scope,
     reasoningTree,
   };

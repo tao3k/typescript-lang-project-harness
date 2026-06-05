@@ -1,3 +1,10 @@
+/**
+ * Native TypeScript projection for ASP-compiled tree-sitter-compatible queries.
+ *
+ * ASP owns query compilation and predicate ABI validation; this module projects
+ * TypeScript Compiler API facts into the shared semantic-tree-sitter-query
+ * packet shape without linking a tree-sitter runtime or grammar package.
+ */
 import * as crypto from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
@@ -64,9 +71,12 @@ interface Catalog {
 
 interface SyntaxRow {
   readonly capture: string;
+  readonly captureNode: string;
+  readonly captureField: string;
   readonly node: string;
   readonly name: string;
   readonly path: string;
+  readonly absolutePath: string;
   readonly startLine: number;
   readonly endLine: number;
   readonly itemStartLine: number;
@@ -87,6 +97,7 @@ interface ResolvedQuery {
   readonly input: string;
   readonly source: string;
   readonly captures: readonly string[];
+  readonly nodeTypes: readonly string[];
   readonly fields: readonly string[];
   readonly predicates: readonly SyntaxQueryPredicate[];
   readonly supportedNodes: readonly string[];
@@ -97,6 +108,17 @@ interface ResolvedQuery {
 interface PreparedSyntaxQueryPredicate {
   readonly predicate: SyntaxQueryPredicate;
   readonly regexes: readonly RegExp[];
+}
+
+interface ParsedSelector {
+  readonly path: string;
+  readonly start?: number;
+  readonly end?: number;
+}
+
+interface ResolvedSelector extends ParsedSelector {
+  readonly resolvedPath?: string;
+  readonly resolvedKind?: "file" | "directory";
 }
 
 const catalogs: readonly Catalog[] = [
@@ -241,6 +263,7 @@ function queryShape(
     input,
     source,
     captures: unique(plan.captures),
+    nodeTypes: unique(plan.nodeTypes),
     fields: unique(plan.fields),
     predicates: plan.predicates ?? [],
     supportedNodes: unique(supported),
@@ -259,12 +282,15 @@ function collectSyntaxRows(
 ): readonly SyntaxRow[] {
   const queryNodes = query.supportedNodes;
   const captures = new Set(query.captures);
-  const selector = parseSelector(options.selector);
+  const selector = resolveSelector(projectRoot, parseSelector(options.selector));
   const predicates = query.predicates.map(prepareSyntaxPredicate);
   const rows: SyntaxRow[] = [];
-  for (const filePath of discoverTypeScriptFiles([projectRoot])) {
+  for (const filePath of syntaxQuerySourceFiles(projectRoot, selector)) {
+    const absolutePath = realPath(filePath);
     const normalizedPath = path.relative(projectRoot, filePath).replace(/\\/gu, "/");
-    if (selector !== undefined && !selectorMatchesPath(selector.path, normalizedPath)) continue;
+    if (selector !== undefined && !selectorMatchesFile(selector, normalizedPath, absolutePath)) {
+      continue;
+    }
     const sourceText = fs.readFileSync(filePath, "utf8");
     const sourceFile = ts.createSourceFile(
       normalizedPath,
@@ -273,7 +299,16 @@ function collectSyntaxRows(
       true,
       scriptKindForPath(normalizedPath),
     );
-    rows.push(...rowsForSourceFile(sourceFile, sourceText, normalizedPath, queryNodes, captures));
+    rows.push(
+      ...rowsForSourceFile(
+        sourceFile,
+        sourceText,
+        normalizedPath,
+        absolutePath,
+        queryNodes,
+        captures,
+      ),
+    );
   }
   return rows
     .filter((row) => selector === undefined || selectorOverlapsRow(selector, row))
@@ -286,6 +321,7 @@ function rowsForSourceFile(
   sourceFile: ts.SourceFile,
   sourceText: string,
   relativePath: string,
+  absolutePath: string,
   queryNodes: readonly string[],
   captures: ReadonlySet<string>,
 ): readonly SyntaxRow[] {
@@ -295,12 +331,20 @@ function rowsForSourceFile(
     const nodeType = nodeTypeForStatement(statement);
     if (nodeType !== undefined && wants(nodeType)) {
       rows.push(
-        ...declarationRows(sourceFile, sourceText, relativePath, statement, nodeType, captures),
+        ...declarationRows(
+          sourceFile,
+          sourceText,
+          relativePath,
+          absolutePath,
+          statement,
+          nodeType,
+          captures,
+        ),
       );
     }
   }
   if (wants("call_expression")) {
-    collectCallRows(sourceFile, sourceFile, sourceText, relativePath, captures, rows);
+    collectCallRows(sourceFile, sourceFile, sourceText, relativePath, absolutePath, captures, rows);
   }
   return rows;
 }
@@ -309,6 +353,7 @@ function declarationRows(
   sourceFile: ts.SourceFile,
   sourceText: string,
   relativePath: string,
+  absolutePath: string,
   node: ts.Statement,
   nodeType: string,
   captures: ReadonlySet<string>,
@@ -322,6 +367,7 @@ function declarationRows(
             sourceFile,
             sourceText,
             relativePath,
+            absolutePath,
             node,
             "variable_declarator",
             name,
@@ -331,7 +377,16 @@ function declarationRows(
   }
   const name = declarationName(node);
   if (name === undefined) return [];
-  return rowForNode(sourceFile, sourceText, relativePath, node, nodeType, name, captures);
+  return rowForNode(
+    sourceFile,
+    sourceText,
+    relativePath,
+    absolutePath,
+    node,
+    nodeType,
+    name,
+    captures,
+  );
 }
 
 function collectCallRows(
@@ -339,6 +394,7 @@ function collectCallRows(
   node: ts.Node,
   sourceText: string,
   relativePath: string,
+  absolutePath: string,
   captures: ReadonlySet<string>,
   rows: SyntaxRow[],
 ): void {
@@ -348,6 +404,7 @@ function collectCallRows(
         sourceFile,
         sourceText,
         relativePath,
+        absolutePath,
         node,
         "call_expression",
         callName(node),
@@ -356,7 +413,7 @@ function collectCallRows(
     );
   }
   node.forEachChild((child) =>
-    collectCallRows(sourceFile, child, sourceText, relativePath, captures, rows),
+    collectCallRows(sourceFile, child, sourceText, relativePath, absolutePath, captures, rows),
   );
 }
 
@@ -364,6 +421,7 @@ function rowForNode(
   sourceFile: ts.SourceFile,
   sourceText: string,
   relativePath: string,
+  absolutePath: string,
   node: ts.Node,
   nodeType: string,
   name: string,
@@ -371,23 +429,33 @@ function rowForNode(
 ): readonly SyntaxRow[] {
   const capture = captureForNode(nodeType, captures);
   if (capture === undefined) return [];
-  const start = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile));
-  const end = sourceFile.getLineAndCharacterOfPosition(node.getEnd());
-  const startLine = start.line + 1;
-  const endLine = end.line + 1;
-  const itemCode = sourceCompactCode(sourceText, startLine, endLine);
+  const itemStart = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile));
+  const itemEnd = sourceFile.getLineAndCharacterOfPosition(node.getEnd());
+  const itemStartLine = itemStart.line + 1;
+  const itemEndLine = itemEnd.line + 1;
+  const captureNode = captureNodeForQuery(node, capture);
+  const captureStart = sourceFile.getLineAndCharacterOfPosition(captureNode.getStart(sourceFile));
+  const captureEnd = sourceFile.getLineAndCharacterOfPosition(captureNode.getEnd());
+  const captureField = captureFieldForQuery(capture);
+  const captureNodeType = captureNodeTypeForQuery(captureNode, capture, name);
+  const startLine = captureStart.line + 1;
+  const endLine = captureEnd.line + 1;
+  const itemCode = sourceCompactCode(sourceText, itemStartLine, itemEndLine);
   return [
     {
       capture,
+      captureNode: captureNodeType,
+      captureField,
       node: nodeType,
       name,
       path: relativePath,
+      absolutePath,
       startLine,
       endLine,
-      itemStartLine: startLine,
-      itemEndLine: endLine,
+      itemStartLine,
+      itemEndLine,
       itemCode,
-      nativeFactRef: `typescript:item:${relativePath}:${startLine}:${endLine}:${name}`,
+      nativeFactRef: `typescript:item:${relativePath}:${itemStartLine}:${itemEndLine}:${name}`,
     },
   ];
 }
@@ -430,10 +498,10 @@ function packet(
           }),
       fields: {
         captures: query.captures,
+        nodeTypes: query.nodeTypes,
         fields: query.fields,
         predicates: query.predicates,
         unsupportedPredicates: [],
-        supportedNodes: query.supportedNodes,
         unsupportedNodes: query.unsupportedNodes,
         terms: [...options.terms],
         ...(options.selector === undefined ? {} : { selector: options.selector }),
@@ -442,10 +510,15 @@ function packet(
     matches: rows.map((row, index) => ({
       id: `match:${index + 1}`,
       patternIndex: 0,
-      range: rangeForRow(row),
+      range: itemRangeForRow(row),
       captures: [captureForRow(row, index)],
       nativeFactRefs: [row.nativeFactRef],
-      fields: { name: row.name, node: row.node },
+      fields: {
+        name: row.name,
+        read: `${row.path}:${row.startLine}:${row.endLine}`,
+        itemRead: `${row.path}:${row.itemStartLine}:${row.itemEndLine}`,
+        node: row.node,
+      },
     })),
     nativeFactRefs,
     truncated: false,
@@ -468,15 +541,18 @@ function captureForRow(row: SyntaxRow, index: number): Record<string, unknown> {
   return {
     id: `capture:${index + 1}`,
     name: row.capture,
-    nodeType: row.node,
+    nodeType: row.captureNode,
+    field: row.captureField,
     named: true,
     range: rangeForRow(row),
     nativeFactRefs: [row.nativeFactRef],
     fields: {
       name: row.name,
       locator: `${row.path}:${row.startLine}:${row.endLine}`,
-      read: `${row.path}:${row.itemStartLine}:${row.itemEndLine}`,
+      read: `${row.path}:${row.startLine}:${row.endLine}`,
+      itemRead: `${row.path}:${row.itemStartLine}:${row.itemEndLine}`,
       frontier: "code",
+      nativeNodeType: row.node,
     },
   };
 }
@@ -485,6 +561,13 @@ function rangeForRow(row: SyntaxRow): Record<string, unknown> {
   return {
     path: row.path,
     lineRange: { start: row.startLine, end: row.endLine },
+  };
+}
+
+function itemRangeForRow(row: SyntaxRow): Record<string, unknown> {
+  return {
+    path: row.path,
+    lineRange: { start: row.itemStartLine, end: row.itemEndLine },
   };
 }
 
@@ -562,9 +645,7 @@ function bindingNameText(name: ts.BindingName): string | undefined {
   return text.length > 0 ? text : undefined;
 }
 
-function parseSelector(
-  selector: string | undefined,
-): { readonly path: string; readonly start?: number; readonly end?: number } | undefined {
+function parseSelector(selector: string | undefined): ParsedSelector | undefined {
   if (selector === undefined) return undefined;
   const match = /^(.*?)(?::(\d+)(?::(\d+))?)?$/u.exec(selector);
   if (match === null) return { path: selector };
@@ -575,23 +656,144 @@ function parseSelector(
   };
 }
 
-function selectorMatchesPath(selectorPath: string, rowPath: string): boolean {
-  const normalized = selectorPath.replace(/\\/gu, "/");
+function syntaxQuerySourceFiles(
+  projectRoot: string,
+  selector: ResolvedSelector | undefined,
+): readonly string[] {
+  if (selector?.resolvedPath !== undefined) {
+    if (selector.resolvedKind === "file") {
+      return discoverTypeScriptFiles([selector.resolvedPath]);
+    }
+    if (selector.resolvedKind === "directory") {
+      const files = discoverTypeScriptFiles([selector.resolvedPath]);
+      if (files.length > 0) return files;
+    }
+  }
+  return discoverTypeScriptFiles([projectRoot]);
+}
+
+function resolveSelector(
+  projectRoot: string,
+  selector: ParsedSelector | undefined,
+): ResolvedSelector | undefined {
+  if (selector === undefined || selectorContainsGlob(selector.path)) return selector;
+  const candidate = path.isAbsolute(selector.path)
+    ? selector.path
+    : path.join(projectRoot, selector.path);
+  if (!fs.existsSync(candidate)) return selector;
+  const stat = fs.statSync(candidate);
+  if (stat.isFile()) {
+    return { ...selector, resolvedPath: realPath(candidate), resolvedKind: "file" };
+  }
+  if (stat.isDirectory()) {
+    return { ...selector, resolvedPath: realPath(candidate), resolvedKind: "directory" };
+  }
+  return selector;
+}
+
+function selectorContainsGlob(selectorPath: string): boolean {
+  return /[*?[\]{}]/u.test(selectorPath);
+}
+
+function selectorMatchesFile(
+  selector: ResolvedSelector,
+  rowPath: string,
+  absolutePath: string,
+): boolean {
+  if (selector.resolvedPath !== undefined) {
+    if (selector.resolvedKind === "file") return absolutePath === selector.resolvedPath;
+    return isPathWithinDirectory(absolutePath, selector.resolvedPath);
+  }
+  return rowPath === selector.path.replace(/\\/gu, "/").replace(/^\.\//u, "");
+}
+
+function isPathWithinDirectory(filePath: string, directoryPath: string): boolean {
+  const relative = path.relative(directoryPath, filePath);
+  return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
+}
+
+function selectorOverlapsRow(selector: ResolvedSelector, row: SyntaxRow): boolean {
+  if (!selectorMatchesFile(selector, row.path, row.absolutePath)) return false;
+  if (selector.start === undefined) return true;
+  const selectorEnd = selector.end ?? selector.start;
   return (
-    rowPath === normalized ||
-    rowPath.endsWith(`/${normalized}`) ||
-    normalized.endsWith(`/${rowPath}`)
+    (row.startLine <= selectorEnd && row.endLine >= selector.start) ||
+    (row.itemStartLine <= selectorEnd && row.itemEndLine >= selector.start)
   );
 }
 
-function selectorOverlapsRow(
-  selector: { readonly path: string; readonly start?: number; readonly end?: number },
-  row: SyntaxRow,
-): boolean {
-  if (!selectorMatchesPath(selector.path, row.path)) return false;
-  if (selector.start === undefined) return true;
-  const selectorEnd = selector.end ?? selector.start;
-  return row.startLine <= selectorEnd && row.endLine >= selector.start;
+function realPath(filePath: string): string {
+  return fs.realpathSync(filePath).replace(/\\/gu, "/");
+}
+
+function captureNodeForQuery(node: ts.Node, capture: string): ts.Node {
+  if (capture.endsWith(".name") || capture.endsWith(".target")) {
+    if (
+      (ts.isFunctionDeclaration(node) ||
+        ts.isClassDeclaration(node) ||
+        ts.isInterfaceDeclaration(node) ||
+        ts.isTypeAliasDeclaration(node) ||
+        ts.isEnumDeclaration(node)) &&
+      node.name !== undefined
+    ) {
+      return node.name;
+    }
+    if (ts.isVariableStatement(node)) {
+      return node.declarationList.declarations[0]?.name ?? node;
+    }
+    if (ts.isCallExpression(node)) {
+      return node.expression;
+    }
+  }
+  if ((capture.endsWith(".source") || capture.endsWith(".declaration")) && isModuleEdge(node)) {
+    return node.moduleSpecifier ?? node;
+  }
+  return node;
+}
+
+function captureFieldForQuery(capture: string): string {
+  if (capture.startsWith("call.")) return "function";
+  if (capture.endsWith(".name")) return "name";
+  if (capture.endsWith(".target")) return "target";
+  if (capture.endsWith(".source")) return "source";
+  return "item";
+}
+
+function captureNodeTypeForQuery(node: ts.Node, capture: string, name: string): string {
+  if (capture.endsWith(".name") || capture.endsWith(".target")) {
+    if (isTypeNamedCapture(capture) && ts.isIdentifier(node)) return "type_identifier";
+    if (ts.isIdentifier(node)) return "identifier";
+    if (ts.isPropertyAccessExpression(node)) return "member_expression";
+    if (name.includes(".")) return "member_expression";
+  }
+  if (capture.endsWith(".source") && ts.isStringLiteralLike(node)) return "string";
+  return treeSitterNodeTypeForTsNode(node);
+}
+
+function isTypeNamedCapture(capture: string): boolean {
+  return (
+    capture.startsWith("class.") || capture.startsWith("interface.") || capture.startsWith("type.")
+  );
+}
+
+function isModuleEdge(node: ts.Node): node is ts.ImportDeclaration | ts.ExportDeclaration {
+  return ts.isImportDeclaration(node) || ts.isExportDeclaration(node);
+}
+
+function treeSitterNodeTypeForTsNode(node: ts.Node): string {
+  if (ts.isFunctionDeclaration(node)) return "function_declaration";
+  if (ts.isClassDeclaration(node)) return "class_declaration";
+  if (ts.isInterfaceDeclaration(node)) return "interface_declaration";
+  if (ts.isTypeAliasDeclaration(node)) return "type_alias_declaration";
+  if (ts.isEnumDeclaration(node)) return "enum_declaration";
+  if (ts.isVariableStatement(node)) return "lexical_declaration";
+  if (ts.isVariableDeclaration(node)) return "variable_declarator";
+  if (ts.isImportDeclaration(node)) return "import_statement";
+  if (ts.isExportDeclaration(node)) return "export_statement";
+  if (ts.isCallExpression(node)) return "call_expression";
+  if (ts.isIdentifier(node)) return "identifier";
+  if (ts.isStringLiteralLike(node)) return "string";
+  return "node";
 }
 
 function termMatches(row: SyntaxRow, terms: readonly string[]): boolean {

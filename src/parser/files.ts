@@ -40,11 +40,13 @@ function isGeneratedParserCompactExpectedOutputPath(filePath: string): boolean {
 export function discoverTypeScriptFiles(
   roots: readonly string[],
   ignoredDirNames: readonly string[] = DEFAULT_IGNORED_DIR_NAMES,
+  includeHiddenDirNames: readonly string[] = [],
 ): string[] {
   const ignored = new Set(ignoredDirNames);
+  const includedHidden = new Set(includeHiddenDirNames);
   const discovered: string[] = [];
   for (const root of roots) {
-    collectTypeScriptFiles(path.resolve(root), ignored, discovered);
+    collectTypeScriptFiles(path.resolve(root), ignored, includedHidden, discovered);
   }
   return [...new Set(discovered)].sort();
 }
@@ -72,6 +74,7 @@ export function existingChildPaths(projectRoot: string, names: readonly string[]
 function collectTypeScriptFiles(
   currentPath: string,
   ignoredDirNames: ReadonlySet<string>,
+  includeHiddenDirNames: ReadonlySet<string>,
   discovered: string[],
 ): void {
   if (!fs.existsSync(currentPath)) {
@@ -90,12 +93,28 @@ function collectTypeScriptFiles(
   if (!stat.isDirectory()) {
     return;
   }
-  if (ignoredDirNames.has(path.basename(currentPath))) {
+  if (shouldIgnoreDirectory(path.basename(currentPath), ignoredDirNames, includeHiddenDirNames)) {
     return;
   }
   for (const entry of fs.readdirSync(currentPath, { withFileTypes: true })) {
-    collectTypeScriptFiles(path.join(currentPath, entry.name), ignoredDirNames, discovered);
+    collectTypeScriptFiles(
+      path.join(currentPath, entry.name),
+      ignoredDirNames,
+      includeHiddenDirNames,
+      discovered,
+    );
   }
+}
+
+function shouldIgnoreDirectory(
+  name: string,
+  ignoredDirNames: ReadonlySet<string>,
+  includeHiddenDirNames: ReadonlySet<string>,
+): boolean {
+  return (
+    ignoredDirNames.has(name) ||
+    (name.startsWith(".") && name !== "." && name !== ".." && !includeHiddenDirNames.has(name))
+  );
 }
 
 function nearestPackageRoot(startPath: string): string | undefined {

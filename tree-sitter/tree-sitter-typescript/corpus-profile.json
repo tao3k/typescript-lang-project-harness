@@ -17,7 +17,7 @@
       "path": "test/corpus/declarations.txt",
       "caseCount": 1,
       "lineCount": 40,
-      "sha256": "26c8541e22db8e71b329a493d47c366e5d0bfd5cce33422b9610bb3b029457ac"
+      "sha256": "a9a6fda97411a6f457dd2a89207d7701d41fdfcf66160db0e82ec118c82017ae"
     },
     {
       "path": "test/corpus/imports.txt",

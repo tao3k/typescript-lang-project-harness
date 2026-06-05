@@ -285,7 +285,9 @@ test("semantic language registry JSON documents the TypeScript provider identity
           ? ["owner", "tests"]
           : String(descriptor.method) === "search/owner"
             ? ["items"]
-            : [],
+            : String(descriptor.method) === "search/ingest"
+              ? ["items", "tests"]
+              : [],
       );
       assert.deepEqual(
         descriptor.packetSchemas === undefined
@@ -571,6 +573,10 @@ test("semantic language registry JSON documents the TypeScript provider identity
     "schemas/semantic-type-surface.v1.schema.json",
   );
   assertRegisteredSchema(
+    "agent.semantic-protocols.semantic-handle",
+    "schemas/semantic-handle.v1.schema.json",
+  );
+  assertRegisteredSchema(
     "agent.semantic-protocols.semantic-source-location",
     "schemas/semantic-source-location.v1.schema.json",
   );
@@ -595,8 +601,8 @@ test("package-local semantic schemas stay synchronized with the protocol reposit
     "semantic-tree-sitter-grammar-profile.v1.schema.json",
     "semantic-graph.v1.schema.json",
     "semantic-type-surface.v1.schema.json",
+    "semantic-handle.v1.schema.json",
     "semantic-dev-command-log.v1.schema.json",
-    "semantic-dev-active-context.v1.schema.json",
     "semantic-review-packet.v1.schema.json",
     "semantic-evidence-graph.v1.schema.json",
     "semantic-assurance-case.v1.schema.json",

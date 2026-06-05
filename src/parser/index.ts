@@ -44,7 +44,7 @@ export function readProjectScope(
   projectRootInput: string | URL,
   config: Pick<
     TypeScriptHarnessConfig,
-    "ignoredDirNames" | "includeTests" | "sourceDirNames" | "testDirNames"
+    "ignoredDirNames" | "includeHiddenDirNames" | "includeTests" | "sourceDirNames" | "testDirNames"
   >,
 ): TypeScriptProjectHarnessScope {
   const projectRoot = packageProjectRoot(pathFromInput(projectRootInput));
@@ -100,7 +100,7 @@ function dedupeSorted(items: string[]): string[] {
 
 export function projectFileNames(
   scope: TypeScriptProjectHarnessScope,
-  config: Pick<TypeScriptHarnessConfig, "ignoredDirNames">,
+  config: Pick<TypeScriptHarnessConfig, "ignoredDirNames" | "includeHiddenDirNames">,
 ): string[] {
   if (scope.config.fileNames.length > 0) {
     return [...scope.config.fileNames].sort();
@@ -109,7 +109,11 @@ export function projectFileNames(
     scope.sourcePaths.length > 0 || scope.testPaths.length > 0
       ? [...scope.sourcePaths, ...scope.testPaths]
       : [scope.projectRoot];
-  return discoverTypeScriptFiles(fallbackRoots, config.ignoredDirNames);
+  return discoverTypeScriptFiles(
+    fallbackRoots,
+    config.ignoredDirNames,
+    config.includeHiddenDirNames,
+  );
 }
 
 export function parseTypeScriptProjectFiles(

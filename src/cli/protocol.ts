@@ -247,7 +247,7 @@ export function runProtocolCli(
     }
     if (args.kind === "check") {
       const projectRoot = path.resolve(cwd, args.projectRoot ?? ".");
-      const report = runTypeScriptProjectHarness(projectRoot, checkConfig(args.mode));
+      const report = runTypeScriptProjectHarness(projectRoot, checkConfig(projectRoot, args.mode));
       if (args.json) {
         streams.stdout.write(renderTypeScriptProjectHarnessJson(report));
       } else {
@@ -598,9 +598,6 @@ function parseSearchArgs(argv: readonly string[]): ProtocolArgs {
     if (error !== undefined) {
       return { kind: "error", message: error };
     }
-    if (querySet.length === 0 && positionals.length > 2 && pipes.length === 0) {
-      return { kind: "error", message: "expected at most one PROJECT_ROOT argument" };
-    }
     return {
       kind: "search",
       view: searchView.view,
@@ -618,17 +615,21 @@ function parseSearchArgs(argv: readonly string[]): ProtocolArgs {
     };
   }
 
-  if (positionals.length > 1) {
-    return { kind: "error", message: "expected at most one PROJECT_ROOT argument" };
+  const { pipes, projectRoot, error } = parseSearchPipePositionals(
+    positionals,
+    searchView.acceptedPipes ?? [],
+  );
+  if (error !== undefined) {
+    return { kind: "error", message: error };
   }
   return {
     kind: "search",
     view: searchView.view,
     query: undefined,
-    projectRoot: positionals[0],
+    projectRoot,
     packagePath,
     ownerPath: undefined,
-    pipes: [],
+    pipes,
     querySet: [],
     json,
     ...(codeOnly ? { codeOnly } : {}),
@@ -814,11 +815,14 @@ function parseSearchPipePositionals(
   }
   const remaining = positionals.slice(index);
   if (remaining.length > 1) {
+    const looksLikeOutOfOrderPipe =
+      index < acceptedPipes.length &&
+      acceptedPipes.includes(remaining[0] as TypeScriptSemanticSearchPipe);
     return {
       pipes,
       projectRoot: remaining[0],
       error:
-        acceptedPipes.length === 0
+        acceptedPipes.length === 0 || !looksLikeOutOfOrderPipe
           ? "expected at most one PROJECT_ROOT argument"
           : `expected pipes (${acceptedPipes.join(",")}) before PROJECT_ROOT`,
     };

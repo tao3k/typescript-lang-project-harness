@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { describe, it } from "node:test";
 
+import { typeScriptHarnessConfigForProject } from "../../src/config.js";
 import { discoverTypeScriptFiles } from "../../src/parser.js";
 
 function writeFile(root: string, relativePath: string, content: string): string {
@@ -33,5 +34,41 @@ describe("TypeScript file discovery", () => {
     assert.ok(files.includes(source));
     assert.equal(files.includes(generated), false);
     assert.equal(files.includes(realOutput), false);
+  });
+
+  it("skips hidden directories by default", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-hidden-"));
+    const source = writeFile(root, "src/index.ts", "export const value = 1;\n");
+    const hidden = writeFile(root, ".devenv/generated.ts", "export const generated = 1;\n");
+
+    const files = discoverTypeScriptFiles([root]);
+
+    assert.ok(files.includes(source));
+    assert.equal(files.includes(hidden), false);
+  });
+
+  it("allows configured hidden directories from asp.toml", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-asp-config-"));
+    fs.writeFileSync(
+      path.join(root, "asp.toml"),
+      '[discovery]\nincludeHiddenDirNames = [".agent-fixtures"]\n',
+      "utf8",
+    );
+    const source = writeFile(root, "src/index.ts", "export const value = 1;\n");
+    const fixture = writeFile(
+      root,
+      ".agent-fixtures/generated.ts",
+      "export const generated = 1;\n",
+    );
+    const config = typeScriptHarnessConfigForProject(root);
+
+    const files = discoverTypeScriptFiles(
+      [root],
+      config.ignoredDirNames,
+      config.includeHiddenDirNames,
+    );
+
+    assert.ok(files.includes(source));
+    assert.ok(files.includes(fixture));
   });
 });

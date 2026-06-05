@@ -215,6 +215,7 @@ export const TYPE_SCRIPT_SEARCH_VIEW_DESCRIPTORS = [
   searchView("ingest", {
     requiresQuery: false,
     acceptsStdin: true,
+    acceptedPipes: ["items", "tests"],
     capabilities: [
       semanticCapability("external-candidate-ingest"),
       semanticCapability("stdin-shape-detection"),
@@ -503,6 +504,11 @@ export function typeScriptSemanticLanguageRegistration(): SemanticLanguageRegist
         schemaId: SEMANTIC_TYPE_SURFACE_SCHEMA_ID,
         schemaVersion: "1",
         path: "schemas/semantic-type-surface.v1.schema.json",
+      },
+      {
+        schemaId: SEMANTIC_HANDLE_SCHEMA_ID,
+        schemaVersion: "1",
+        path: "schemas/semantic-handle.v1.schema.json",
       },
       {
         schemaId: SEMANTIC_LANGUAGE_REGISTRY_ID,

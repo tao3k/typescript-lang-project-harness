@@ -295,6 +295,7 @@ export interface TypeScriptProjectHarnessScope {
 
 export interface TypeScriptHarnessConfig {
   readonly ignoredDirNames: readonly string[];
+  readonly includeHiddenDirNames: readonly string[];
   readonly includeTests: boolean;
   readonly sourceDirNames: readonly string[];
   readonly testDirNames: readonly string[];

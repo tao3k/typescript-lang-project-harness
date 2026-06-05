@@ -189,6 +189,35 @@ export function buildIngestPacket(
   report: TypeScriptHarnessReport,
   options: SemanticSearchBuildOptions,
 ): SemanticSearchPacket {
+  if ((options.pipes?.length ?? 0) > 0 && options.renderMode === "seeds") {
+    return basePacket(report, options, {
+      header: {
+        kind: "search-ingest",
+        fields: {
+          root: ".",
+        },
+      },
+      nodes: [],
+      edges: [],
+      owners: [],
+      hits: [],
+      findings: [],
+      searchSynthesis: {
+        algorithm: "seed-frontier",
+        scope: "ingest",
+        summary: "ingest pipes selected seed frontier without stdin candidates",
+        seeds:
+          options.pipes?.includes("tests") === true
+            ? [{ kind: "tests" as const, target: "." }]
+            : [],
+        fields: {
+          pipes: options.pipes ?? [],
+        },
+      },
+      nextActions: [],
+      notes: [],
+    });
+  }
   const stdin = options.stdin ?? "";
   const detection = detectInput(stdin, report.reasoningTree.projectRoot);
   const hits = ingestHits(report, stdin, detection.source);

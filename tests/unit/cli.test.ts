@@ -381,8 +381,14 @@ test("CLI reports root asp owner for hook install and runtime", () => {
     guide.stdout,
     /\|catalog reasoningProfiles=owner-query,query-deps,owner-tests,finding-frontier,feature-cfg entries=owner-query,query-deps,owner-tests routes=read-frontier,syntax-locate,syntax-code,query-code/u,
   );
-  assert.match(guide.stdout, /\|route syntax-locate selectors=S:tree-sitter-query,R:range/u);
-  assert.match(guide.stdout, /\|route syntax-code selectors=S:tree-sitter-query,R:exact-selector/u);
+  assert.match(
+    guide.stdout,
+    /\|route syntax-locate selectors=S:tree-sitter-query,R:range returns=locator,capture,frontier code=false/u,
+  );
+  assert.match(
+    guide.stdout,
+    /\|route syntax-code selectors=S:tree-sitter-query,R:exact-selector returns=code code=pure/u,
+  );
   assert.match(guide.stdout, /\|route query-code selectors=O:owner,Q:symbol/u);
   assert.match(guide.stdout, /\|cmd prime=asp typescript search prime --view seeds \./u);
   assert.match(guide.stdout, /asp typescript search fzf <query> owner tests --view seeds/u);

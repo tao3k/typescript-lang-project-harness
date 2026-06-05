@@ -4,7 +4,10 @@
  * This module owns default policy configuration and immutable helper functions
  * for callers that tune rule or verification behavior.
  */
-import { DEFAULT_IGNORED_DIR_NAMES } from "./parser.js";
+import fs from "node:fs";
+import path from "node:path";
+
+import { DEFAULT_IGNORED_DIR_NAMES, pathFromInput } from "./parser.js";
 import type {
   TypeScriptDiagnosticSeverity,
   TypeScriptHarnessConfig,
@@ -25,6 +28,7 @@ import type {
 export function defaultTypeScriptHarnessConfig(): TypeScriptHarnessConfig {
   return {
     ignoredDirNames: [...DEFAULT_IGNORED_DIR_NAMES],
+    includeHiddenDirNames: [],
     includeTests: true,
     sourceDirNames: ["src"],
     testDirNames: ["tests"],
@@ -36,6 +40,12 @@ export function defaultTypeScriptHarnessConfig(): TypeScriptHarnessConfig {
     blockingRuleIds: [],
     verificationPolicy: defaultTypeScriptVerificationPolicy(),
   };
+}
+
+export function typeScriptHarnessConfigForProject(
+  projectRootInput: string | URL,
+): TypeScriptHarnessConfig {
+  return applyAspProjectConfig(pathFromInput(projectRootInput), defaultTypeScriptHarnessConfig());
 }
 
 export function defaultTypeScriptVerificationPolicy(): TypeScriptHarnessConfig["verificationPolicy"] {
@@ -249,6 +259,7 @@ function cloneTypeScriptHarnessConfig(
 ): TypeScriptHarnessConfig {
   return {
     ignoredDirNames: [...(overrides.ignoredDirNames ?? config.ignoredDirNames)],
+    includeHiddenDirNames: [...(overrides.includeHiddenDirNames ?? config.includeHiddenDirNames)],
     includeTests: overrides.includeTests ?? config.includeTests,
     sourceDirNames: [...(overrides.sourceDirNames ?? config.sourceDirNames)],
     testDirNames: [...(overrides.testDirNames ?? config.testDirNames)],
@@ -266,6 +277,83 @@ function cloneTypeScriptHarnessConfig(
       overrides.verificationPolicy ?? config.verificationPolicy,
     ),
   };
+}
+
+interface AspDiscoveryConfig {
+  readonly ignoredDirNames: readonly string[];
+  readonly includeHiddenDirNames: readonly string[];
+}
+
+function applyAspProjectConfig(
+  projectRoot: string,
+  config: TypeScriptHarnessConfig,
+): TypeScriptHarnessConfig {
+  const configPath = nearestAspToml(projectRoot);
+  if (configPath === undefined) return config;
+  const discovery = readAspDiscoveryConfig(configPath);
+  if (discovery === undefined) return config;
+  return cloneTypeScriptHarnessConfig(config, {
+    ignoredDirNames: appendUniqueMany(config.ignoredDirNames, discovery.ignoredDirNames),
+    includeHiddenDirNames: appendUniqueMany(
+      config.includeHiddenDirNames,
+      discovery.includeHiddenDirNames,
+    ),
+  });
+}
+
+function nearestAspToml(projectRoot: string): string | undefined {
+  let current = path.resolve(projectRoot);
+  while (true) {
+    const candidate = path.join(current, "asp.toml");
+    if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) return candidate;
+    const parent = path.dirname(current);
+    if (parent === current) return undefined;
+    current = parent;
+  }
+}
+
+function readAspDiscoveryConfig(configPath: string): AspDiscoveryConfig | undefined {
+  let text: string;
+  try {
+    text = fs.readFileSync(configPath, "utf8");
+  } catch {
+    return undefined;
+  }
+  const section = discoverySectionLines(text);
+  if (section.length === 0) return undefined;
+  return {
+    ignoredDirNames: stringArrayValue(section, "ignoredDirNames"),
+    includeHiddenDirNames: stringArrayValue(section, "includeHiddenDirNames"),
+  };
+}
+
+function discoverySectionLines(text: string): string[] {
+  const lines: string[] = [];
+  let inDiscovery = false;
+  for (const rawLine of text.split(/\r?\n/u)) {
+    const line = rawLine.replace(/#.*/u, "").trim();
+    if (line.length === 0) continue;
+    const section = line.match(/^\[([^\]]+)\]$/u)?.[1];
+    if (section !== undefined) {
+      inDiscovery = section === "discovery";
+      continue;
+    }
+    if (inDiscovery) lines.push(line);
+  }
+  return lines;
+}
+
+function stringArrayValue(lines: readonly string[], key: string): string[] {
+  const prefix = `${key} =`;
+  const line = lines.find((candidate) => candidate.startsWith(prefix));
+  if (line === undefined) return [];
+  const value = line.slice(prefix.length).trim();
+  if (!value.startsWith("[") || !value.endsWith("]")) return [];
+  const values: string[] = [];
+  for (const match of value.matchAll(/"([^"]+)"/gu)) {
+    if (!values.includes(match[1]!)) values.push(match[1]!);
+  }
+  return values;
 }
 
 function appendUnique<T>(values: readonly T[], value: T): readonly T[] {

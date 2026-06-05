@@ -18,7 +18,11 @@ export function runTypeScriptLangHarness(
       throw new Error(`harness path does not exist: ${root}`);
     }
   }
-  const files = discoverTypeScriptFiles(roots, config.ignoredDirNames);
+  const files = discoverTypeScriptFiles(
+    roots,
+    config.ignoredDirNames,
+    config.includeHiddenDirNames,
+  );
   const modules = files.map((filePath) => parseTypeScriptSourceFile(filePath));
   const reasoningTree = buildExplicitTypeScriptReasoningTree(roots, modules);
   const findings = evaluateDefaultRulePacks(reasoningTree, config);

@@ -799,7 +799,9 @@ test("CLI exposes semantic-search protocol commands", () => {
             ? { acceptedPipes: ["owner", "tests"] }
             : method === "search/owner"
               ? { acceptedPipes: ["items"] }
-              : {}),
+              : method === "search/ingest"
+                ? { acceptedPipes: ["items", "tests"] }
+                : {}),
           ...(method === "search/owner"
             ? {
                 fallbacks: [
@@ -1084,6 +1086,11 @@ test("CLI exposes semantic-search protocol commands", () => {
         schemaId: "agent.semantic-protocols.semantic-type-surface",
         schemaVersion: "1",
         path: "schemas/semantic-type-surface.v1.schema.json",
+      },
+      {
+        schemaId: "agent.semantic-protocols.semantic-handle",
+        schemaVersion: "1",
+        path: "schemas/semantic-handle.v1.schema.json",
       },
       {
         schemaId: "agent.semantic-protocols.semantic-language-registry",

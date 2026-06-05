@@ -8,11 +8,13 @@ import { runCliCapture } from "./cli_helpers.js";
 
 type JsonObject = Record<string, unknown>;
 
+type PredicatePlanValue = { readonly kind: "string" | "capture"; readonly value: string };
+
 test("query --treesitter-query renders compact syntax capture locators", () => {
   const root = treeSitterQueryFixture();
   const result = runCliCapture(functionNameTreeSitterQueryArgs(), root);
   assert.equal(result.exitCode, 0, result.stderr);
-  assert.equal(result.stdout, "src/demo.ts:1:3\nalpha");
+  assert.equal(result.stdout, "src/demo.ts:1\nalpha");
   assert.doesNotMatch(result.stdout, /\|syntax-capture/u);
   assert.doesNotMatch(result.stdout, /artifactId|sqlite|cacheRoot/u);
 });
@@ -33,18 +35,50 @@ test("query --treesitter-query --json emits semantic tree-sitter query packet", 
   assert.equal(packet.compatibilityLevel, "native-only");
   const query = record(packet.query, "packet.query");
   assert.equal(query.inputForm, "s-expression");
-  assert.deepEqual(record(query.fields, "packet.query.fields").captures, ["function.name"]);
+  const queryFields = record(query.fields, "packet.query.fields");
+  assert.deepEqual(queryFields.captures, ["function.name"]);
+  assert.deepEqual(queryFields.nodeTypes, ["function_declaration", "identifier"]);
+  assert.deepEqual(queryFields.fields, ["name"]);
   const matches = array(packet.matches, "packet.matches");
   assert.equal(matches.length, 1);
   const firstMatch = record(matches[0], "packet.matches[0]");
   assert.deepEqual(firstMatch.nativeFactRefs, ["typescript:item:src/demo.ts:1:3:alpha"]);
+  assert.deepEqual(record(firstMatch.range, "match.range").lineRange, { start: 1, end: 3 });
   const firstCapture = record(
     array(firstMatch.captures, "packet.matches[0].captures")[0],
     "capture",
   );
   assert.equal(firstCapture.name, "function.name");
-  assert.equal(firstCapture.nodeType, "function_declaration");
+  assert.equal(firstCapture.nodeType, "identifier");
+  assert.equal(firstCapture.field, "name");
+  assert.deepEqual(record(firstCapture.range, "capture.range").lineRange, { start: 1, end: 1 });
+  const captureFields = record(firstCapture.fields, "capture.fields");
+  assert.equal(captureFields.read, "src/demo.ts:1:1");
+  assert.equal(captureFields.itemRead, "src/demo.ts:1:3");
+  assert.equal(captureFields.nativeNodeType, "function_declaration");
   assert.equal(record(packet.cache, "packet.cache").rawSourceStored, false);
+});
+
+test("query --treesitter-query --json keeps capture line separate from declaration range", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-tree-sitter-split-name-"));
+  fs.mkdirSync(path.join(root, "src"));
+  fs.writeFileSync(
+    path.join(root, "src", "demo.ts"),
+    ["export function", "splitName(): number {", "  return 1;", "}"].join("\n"),
+  );
+
+  const result = runCliCapture(functionNameTreeSitterQueryArgs(["--json"]), root);
+  assert.equal(result.exitCode, 0, result.stderr);
+  const packet = JSON.parse(result.stdout) as JsonObject;
+  const firstMatch = record(array(packet.matches, "packet.matches")[0], "match");
+  assert.deepEqual(record(firstMatch.range, "match.range").lineRange, { start: 1, end: 4 });
+  const firstCapture = record(array(firstMatch.captures, "match.captures")[0], "capture");
+  assert.equal(firstCapture.nodeType, "identifier");
+  assert.equal(firstCapture.field, "name");
+  assert.deepEqual(record(firstCapture.range, "capture.range").lineRange, { start: 2, end: 2 });
+  const fields = record(firstCapture.fields, "capture.fields");
+  assert.equal(fields.read, "src/demo.ts:2:2");
+  assert.equal(fields.itemRead, "src/demo.ts:1:4");
 });
 
 test("query --treesitter-query applies ASP typed match predicates", () => {
@@ -73,6 +107,100 @@ test("query --treesitter-query applies ASP typed any predicates", () => {
   assert.equal(result.stdout, "src/demo.ts:2\nbeta");
 });
 
+test("query --treesitter-query renders multi-path corpus locators", () => {
+  const root = treeSitterMultiPathFixture();
+  const result = runCliCapture(functionNameTreeSitterQueryArgs(), root);
+
+  assert.equal(result.exitCode, 0, result.stderr);
+  assert.equal(result.stdout, "src/a.ts:1\nalpha\n\nsrc/b.ts:1\nbeta");
+  assert.doesNotMatch(result.stdout, /\|syntax-capture|artifactId|sqlite|cacheRoot/u);
+});
+
+const predicateMatrixCases: readonly {
+  readonly name: string;
+  readonly queryOperator: string;
+  readonly planOperator: string;
+  readonly values: readonly PredicatePlanValue[];
+  readonly expected: string;
+}[] = [
+  {
+    name: "eq",
+    queryOperator: "#eq?",
+    planOperator: "eq",
+    values: [{ kind: "string", value: "alpha" }],
+    expected: "src/demo.ts:1\nalpha",
+  },
+  {
+    name: "any-eq",
+    queryOperator: "#any-eq?",
+    planOperator: "any-eq",
+    values: [{ kind: "string", value: "beta" }],
+    expected: "src/demo.ts:2\nbeta",
+  },
+  {
+    name: "any-of",
+    queryOperator: "#any-of?",
+    planOperator: "any-of",
+    values: [
+      { kind: "string", value: "missing" },
+      { kind: "string", value: "beta" },
+    ],
+    expected: "src/demo.ts:2\nbeta",
+  },
+  {
+    name: "match",
+    queryOperator: "#match?",
+    planOperator: "match",
+    values: [{ kind: "string", value: "^alp" }],
+    expected: "src/demo.ts:1\nalpha",
+  },
+  {
+    name: "any-match",
+    queryOperator: "#any-match?",
+    planOperator: "any-match",
+    values: [{ kind: "string", value: "^bet" }],
+    expected: "src/demo.ts:2\nbeta",
+  },
+  {
+    name: "not-eq",
+    queryOperator: "#not-eq?",
+    planOperator: "not-eq",
+    values: [{ kind: "string", value: "alpha" }],
+    expected: "src/demo.ts:2\nbeta",
+  },
+  {
+    name: "not-match",
+    queryOperator: "#not-match?",
+    planOperator: "not-match",
+    values: [{ kind: "string", value: "^alp" }],
+    expected: "src/demo.ts:2\nbeta",
+  },
+  {
+    name: "capture operand",
+    queryOperator: "#eq?",
+    planOperator: "eq",
+    values: [{ kind: "capture", value: "function.name" }],
+    expected: "src/demo.ts:1\nalpha\n\nsrc/demo.ts:2\nbeta",
+  },
+];
+
+for (const scenario of predicateMatrixCases) {
+  test(`query --treesitter-query predicate matrix applies ${scenario.name}`, () => {
+    const root = treeSitterPredicateFixture();
+    const result = runCliCapture(
+      functionNameTreeSitterQueryArgs(
+        [],
+        predicatePlanArgs(scenario.planOperator, scenario.values),
+        functionNamePredicateQuery(scenario.queryOperator, scenario.values),
+      ),
+      root,
+    );
+
+    assert.equal(result.exitCode, 0, result.stderr);
+    assert.equal(result.stdout, scenario.expected);
+  });
+}
+
 test("query --treesitter-query --json reports ASP typed predicates", () => {
   const root = treeSitterPredicateFixture();
   const query =
@@ -85,6 +213,7 @@ test("query --treesitter-query --json reports ASP typed predicates", () => {
   assert.equal(result.exitCode, 0, result.stderr);
   const packet = JSON.parse(result.stdout) as JsonObject;
   const fields = record(record(packet.query, "packet.query").fields, "packet.query.fields");
+  assert.deepEqual(fields.nodeTypes, ["function_declaration", "identifier"]);
   assert.deepEqual(fields.predicates, [
     {
       op: "not-eq",
@@ -109,6 +238,53 @@ test("query --treesitter-query --selector --code prints pure code", () => {
   assert.equal(result.exitCode, 0, result.stderr);
   assert.equal(
     result.stdout,
+    ["export function alpha(input: string): string {", "  return input.toUpperCase();", "}"].join(
+      "\n",
+    ),
+  );
+});
+
+test("query --treesitter-query exact selector scans outside default source roots", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-tree-sitter-selector-"));
+  fs.mkdirSync(path.join(root, "dist"), { recursive: true });
+  fs.writeFileSync(
+    path.join(root, "dist", "member.ts"),
+    ["export function fromDist(): string {", "  return 'dist';", "}"].join("\n"),
+  );
+
+  const result = runCliCapture(
+    functionNameTreeSitterQueryArgs(["--selector", "dist/member.ts:1:3", "--code"]),
+    root,
+  );
+
+  assert.equal(result.exitCode, 0, result.stderr);
+  assert.equal(
+    result.stdout,
+    ["export function fromDist(): string {", "  return 'dist';", "}"].join("\n"),
+  );
+});
+
+test("query --treesitter-query selector uses canonical paths instead of suffix matching", () => {
+  const root = treeSitterQueryFixture();
+
+  const suffixSelector = runCliCapture(
+    functionNameTreeSitterQueryArgs(["--selector", "demo.ts:1:3", "--code"]),
+    root,
+  );
+  assert.equal(suffixSelector.exitCode, 0, suffixSelector.stderr);
+  assert.equal(suffixSelector.stdout, "");
+
+  const absoluteSelector = runCliCapture(
+    functionNameTreeSitterQueryArgs([
+      "--selector",
+      `${path.join(root, "src", "demo.ts")}:1:3`,
+      "--code",
+    ]),
+    root,
+  );
+  assert.equal(absoluteSelector.exitCode, 0, absoluteSelector.stderr);
+  assert.equal(
+    absoluteSelector.stdout,
     ["export function alpha(input: string): string {", "  return input.toUpperCase();", "}"].join(
       "\n",
     ),
@@ -174,6 +350,20 @@ function treeSitterPredicateFixture(): string {
   return root;
 }
 
+function treeSitterMultiPathFixture(): string {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-tree-sitter-multipath-"));
+  fs.mkdirSync(path.join(root, "src"));
+  fs.writeFileSync(
+    path.join(root, "src", "a.ts"),
+    "export function alpha(): string { return 'a'; }\n",
+  );
+  fs.writeFileSync(
+    path.join(root, "src", "b.ts"),
+    "export function beta(): string { return 'b'; }\n",
+  );
+  return root;
+}
+
 function functionNameTreeSitterQueryArgs(
   extraArgs: readonly string[] = [],
   planArgs: readonly string[] = [],
@@ -195,14 +385,29 @@ function functionNameTreeSitterQueryArgs(
   ];
 }
 
-function predicatePlanArgs(op: string, value: string): readonly string[] {
+function functionNamePredicateQuery(
+  queryOperator: string,
+  values: readonly PredicatePlanValue[],
+): string {
+  return `(function_declaration name: (identifier) @function.name (${queryOperator} @function.name ${values.map(predicateQueryOperand).join(" ")}))`;
+}
+
+function predicateQueryOperand(value: PredicatePlanValue): string {
+  return value.kind === "capture" ? `@${value.value}` : JSON.stringify(value.value);
+}
+
+function predicatePlanArgs(
+  op: string,
+  value: string | readonly PredicatePlanValue[],
+): readonly string[] {
+  const values = typeof value === "string" ? [{ kind: "string" as const, value }] : value;
   return [
     "--asp-syntax-query-predicates-json",
     JSON.stringify([
       {
         op,
         capture: "function.name",
-        values: [{ kind: "string", value }],
+        values,
       },
     ]),
   ];

@@ -12,8 +12,9 @@
   "aspWorkspace": {
     "owner": "main-asp",
     "repository": "https://github.com/tao3k/agent-semantic-protocols",
-    "revision": "0e3a21bf16c32c4d3b8f4101fd984b47de07fcbd",
-    "queryCorpusValidator": "tools/validate-tree-sitter-typescript-query-corpus.py"
+    "revision": "4e3417721d576716bcf82b7cbf8b9c2dc9a2b32a",
+    "contractFingerprint": "sha256:db4f478eb186585178715eeb203b0219968eddc17cfe8b04839cb268fb709c01",
+    "queryCorpusValidator": "asp-tree-sitter-validate-typescript-query-corpus"
   },
   "sourceAuthority": "native-parser-adapter",
   "adapterModes": ["native-projection", "cached-replay"],
@@ -97,7 +98,7 @@
   ],
   "queryCorpus": {
     "path": "tree-sitter/tree-sitter-typescript/test/corpus",
-    "validator": "tools/validate-tree-sitter-typescript-query-corpus.py"
+    "validator": "asp-tree-sitter-validate-typescript-query-corpus"
   },
   "corpusProfilePath": "tree-sitter/tree-sitter-typescript/corpus-profile.json"
 }

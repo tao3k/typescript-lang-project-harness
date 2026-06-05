@@ -35,9 +35,10 @@ export interface TypeScriptSearchPrefilterResult {
 export function typeScriptSearchScopeFileNames(
   scopePaths: readonly string[],
   ignoredDirNames: readonly string[] = DEFAULT_IGNORED_DIR_NAMES,
+  includeHiddenDirNames: readonly string[] = [],
 ): readonly string[] {
   if (scopePaths.length === 0) return [];
-  return discoverTypeScriptFiles(scopePaths, ignoredDirNames);
+  return discoverTypeScriptFiles(scopePaths, ignoredDirNames, includeHiddenDirNames);
 }
 
 export function prefilterTypeScriptSearchPaths(
@@ -46,6 +47,7 @@ export function prefilterTypeScriptSearchPaths(
   options: {
     readonly scopePaths?: readonly string[];
     readonly ignoredDirNames?: readonly string[];
+    readonly includeHiddenDirNames?: readonly string[];
     readonly ownerPath?: string;
   } = {},
 ): TypeScriptSearchPrefilterResult | undefined {
@@ -54,9 +56,15 @@ export function prefilterTypeScriptSearchPaths(
   if (rg === undefined || terms.length === 0) return undefined;
 
   const ignoredDirNames = options.ignoredDirNames ?? DEFAULT_IGNORED_DIR_NAMES;
+  const includeHiddenDirNames = options.includeHiddenDirNames ?? [];
   const started = performance.now();
   const scopePaths = options.scopePaths ?? [];
-  const allFiles = listTypeScriptFiles(projectRoot, scopePaths, ignoredDirNames);
+  const allFiles = listTypeScriptFiles(
+    projectRoot,
+    scopePaths,
+    ignoredDirNames,
+    includeHiddenDirNames,
+  );
   if (allFiles.length <= MIN_PREFILTER_FILES) return undefined;
 
   const termCapped = termCappedMatches(
@@ -107,6 +115,7 @@ function listTypeScriptFiles(
   projectRoot: string,
   scopePaths: readonly string[],
   ignoredDirNames: readonly string[],
+  includeHiddenDirNames: readonly string[],
 ): readonly string[] {
   const resolvedScopes =
     scopePaths.length === 0
@@ -151,7 +160,7 @@ function listTypeScriptFiles(
   const discovered =
     fdFiles.length > 0 || dirScopes.length === 0
       ? fdFiles
-      : discoverTypeScriptFiles(dirScopes, ignoredDirNames);
+      : discoverTypeScriptFiles(dirScopes, ignoredDirNames, includeHiddenDirNames);
   return sortedUnique([...directFiles, ...discovered]);
 }
 
