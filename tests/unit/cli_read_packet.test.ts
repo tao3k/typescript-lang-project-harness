@@ -72,6 +72,57 @@ test("query direct-source-read emits semantic read packet", () => {
   assert.equal(alpha.reason, "direct-selector");
   assert.equal(alpha.truncated, false);
   assert.match(String(alpha.text), /export function alpha/);
+  const alphaLines = alpha.lines as JsonObject[];
+  assert.equal(alphaLines[0]?.number, 1);
+  assert.equal(alphaLines[0]?.text, "export function alpha(input: string): string {");
+});
+
+test("query direct-source-read read-packet preserves exact non-item source window", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-read-packet-header-"));
+  fs.mkdirSync(path.join(root, "src"));
+  fs.writeFileSync(
+    path.join(root, "package.json"),
+    JSON.stringify({ name: "read-packet-header", type: "module" }),
+  );
+  fs.writeFileSync(path.join(root, "tsconfig.json"), JSON.stringify({ include: ["src/**/*.ts"] }));
+  fs.writeFileSync(
+    path.join(root, "src", "header.ts"),
+    [
+      "// generated header",
+      "// keep exact spacing",
+      "export function run(): void {",
+      "  return;",
+      "}",
+    ].join("\n"),
+  );
+
+  const result = runCliCapture(
+    [
+      "query",
+      "--from-hook",
+      "direct-source-read",
+      "--selector",
+      "src/header.ts:1:2",
+      "--code",
+      "--view",
+      "read-packet",
+      "--json",
+      ".",
+    ],
+    root,
+  );
+  assert.equal(result.exitCode, 0, result.stderr);
+  const packet = JSON.parse(result.stdout) as JsonObject;
+  assert.equal(packet.readPlan, undefined);
+  const windows = packet.sourceWindows as JsonObject[];
+  assert.equal(windows.length, 1);
+  assert.equal(windows[0]?.read, "src/header.ts:1:2");
+  assert.equal(windows[0]?.itemName, undefined);
+  assert.equal(windows[0]?.itemKind, undefined);
+  assert.equal(windows[0]?.text, "// generated header\n// keep exact spacing");
+  const lines = windows[0]?.lines as JsonObject[];
+  assert.equal(lines[0]?.number, 1);
+  assert.equal(lines[1]?.text, "// keep exact spacing");
 });
 
 test("query direct-source-read line selector emits bounded source window", () => {
@@ -98,7 +149,7 @@ test("query direct-source-read line selector emits bounded source window", () =>
   assert.doesNotMatch(result.stdout, /interface Beta/);
 });
 
-test("query direct-source-read wide selector emits read plan without source windows", () => {
+test("query direct-source-read wide selector emits source windows", () => {
   const root = readPacketFixture();
   const jsonResult = runCliCapture(
     [
@@ -119,30 +170,26 @@ test("query direct-source-read wide selector emits read plan without source wind
   const packet = JSON.parse(jsonResult.stdout) as JsonObject;
   assert.equal(packet.schemaVersion, "1");
   assert.equal(packet.outputMode, "read-packet");
-  assert.equal(packet.sourceWindows, undefined);
-  const readPlan = packet.readPlan as JsonObject;
-  assert.equal(readPlan.mode, "range-frontier");
-  assert.equal(readPlan.code, false);
-  assert.equal(readPlan.reason, "wide-selector");
-  assert.equal(readPlan.algorithm, "symbol-frontier");
-  assert.deepEqual(readPlan.avoid, ["repeat-wide-read", "manual-window-scan", "raw-read"]);
-  const frontier = readPlan.frontier as JsonObject[];
-  assert.equal(frontier[0]?.kind, "symbol");
-  assert.equal(frontier[0]?.action, "code");
-  assert.equal(frontier[0]?.read, "src/demo.ts:1:3");
-  const symbols = readPlan.symbols as JsonObject[];
-  assert.equal(symbols[0]?.itemName, "alpha");
+  assert.equal(packet.readPlan, undefined);
+  const windows = packet.sourceWindows as JsonObject[];
+  assert.equal(windows.length, 2);
+  assert.equal(windows[0]?.read, "src/demo.ts:1:3");
+  assert.equal(windows[0]?.itemName, "alpha");
+  assert.equal(
+    windows[0]?.text,
+    "export function alpha(input: string): string {\n  return input.toUpperCase();\n}",
+  );
+  assert.equal(windows[1]?.read, "src/demo.ts:4:6");
+  assert.equal(windows[1]?.itemName, "Beta");
+  assert.equal(windows[1]?.text, "export interface Beta {\n  readonly value: string;\n}");
 
   const lineResult = runCliCapture(
     ["query", "--from-hook", "direct-source-read", "--selector", "src/demo.ts:1-80", "--code", "."],
     root,
   );
   assert.equal(lineResult.exitCode, 0, lineResult.stderr);
-  assert.match(lineResult.stdout, /^\[read-plan\] /u);
-  assert.match(lineResult.stdout, /mode=range-frontier/u);
-  assert.match(lineResult.stdout, /alg=range-split/u);
-  assert.match(lineResult.stdout, /frontier=W\.code,W2\.code/u);
-  assert.match(lineResult.stdout, /reason=wide-selector/u);
-  assert.doesNotMatch(lineResult.stdout, /export function alpha/u);
+  assert.match(lineResult.stdout, /^export function alpha/u);
+  assert.match(lineResult.stdout, /export interface Beta/u);
+  assert.doesNotMatch(lineResult.stdout, /^\[read-plan\] /u);
   assert.doesNotMatch(lineResult.stdout, /\|code /u);
 });

@@ -25,9 +25,10 @@ function captureStd() {
 describe("CLI protocol help", () => {
   it("documents only search, check, and agent entrypoints", () => {
     assert.ok(HELP_TEXT.includes("ts-harness search <view>"));
+    assert.ok(HELP_TEXT.includes("ts-harness query (--catalog <id> | --treesitter-query"));
     assert.ok(HELP_TEXT.includes("ts-harness check"));
     assert.ok(HELP_TEXT.includes("ts-harness agent doctor"));
-    assert.equal(HELP_TEXT.includes("--tree"), false);
+    assert.doesNotMatch(HELP_TEXT, /--tree(?:\s|$)/u);
     assert.equal(HELP_TEXT.includes("--stats"), false);
     assert.equal(HELP_TEXT.includes("--harness"), false);
     assert.equal(HELP_TEXT.includes("--agent-compact"), false);

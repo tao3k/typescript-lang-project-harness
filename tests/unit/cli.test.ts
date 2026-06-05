@@ -26,6 +26,14 @@ test("CLI exposes only search, check, and agent protocol entrypoints", () => {
   assert.equal(jsonReport.reasoningTree.runMode, "project");
   assert.equal(jsonReport.modules.length, 1);
 
+  const noTsconfig = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-cli-no-config-"));
+  fs.mkdirSync(path.join(noTsconfig, "src"));
+  fs.writeFileSync(path.join(noTsconfig, "src", "index.ts"), "export const ok = 1;\n");
+  const changed = runCliCapture(["check", "--changed", "."], noTsconfig);
+  assert.equal(changed.exitCode, 0);
+  assert.match(changed.stdout, /^\[ok\] typescript/u);
+  assert.doesNotMatch(changed.stdout, /\[TS-PROJ-R001\] Info/u);
+
   for (const legacyArgv of [
     ["."],
     ["--json", "."],
@@ -63,6 +71,11 @@ test("CLI search uses fast syntax reasoning while check keeps semantic diagnosti
   const check = runCliCapture(["check", "--full", "."], root);
   assert.equal(check.exitCode, 0);
   assert.match(check.stdout, /TS-SEM-R001/u);
+
+  const changed = runCliCapture(["check", "--changed", "."], root);
+  assert.equal(changed.exitCode, 0);
+  assert.match(changed.stdout, /^\[ok\] typescript/u);
+  assert.doesNotMatch(changed.stdout, /TS-SEM-R001/u);
 });
 
 test("fzf query-set explains fixture paths and synthesizes real owners", () => {
@@ -364,6 +377,10 @@ test("CLI reports root asp owner for hook install and runtime", () => {
   const guide = runCliCapture(["agent", "guide", "."], root);
   assert.equal(guide.exitCode, 0);
   assert.match(guide.stdout, /^\[ts-harness-guide\] project=/u);
+  assert.match(
+    guide.stdout,
+    /\|catalog reasoningProfiles=owner-query,query-deps,owner-tests,finding-frontier,feature-cfg entries=owner-query,query-deps,owner-tests routes=read-frontier/u,
+  );
   assert.match(guide.stdout, /asp typescript search fzf <query> owner tests --view seeds/u);
   assert.match(guide.stdout, /asp typescript search fzf <query> owner tests --view seeds/u);
   assert.match(guide.stdout, /agent hook install\/runtime is owned by asp/u);

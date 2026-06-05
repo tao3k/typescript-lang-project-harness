@@ -29,6 +29,7 @@ export interface TypeScriptItemProjectionNode {
     | "control-flow"
     | "call"
     | "terminal"
+    | "delimiter"
     | "mutation"
     | "effect"
     | "unknown";
@@ -45,6 +46,8 @@ export interface TypeScriptItemQueryResult {
   readonly matches: readonly TypeScriptItemQueryMatch[];
   readonly fallback?: "owner-top-items";
 }
+
+const projectionNodeLimit = 32;
 
 export function queryTypeScriptOwnerItems(
   projectRoot: string,
@@ -175,7 +178,18 @@ function projectionNodesForItem(
     depth: 1,
     nodes,
   });
-  return uniqueProjectionNodes(nodes).slice(0, 24);
+  if (nodes.length < projectionNodeLimit) {
+    const delimiter = closingDelimiterProjectionNode({
+      sourceFile,
+      astNode: node,
+      parentId: rootId,
+      depth: 0,
+      parentKind: kind,
+      parentLabel: rootLabel,
+    });
+    if (delimiter !== undefined) nodes.push(delimiter);
+  }
+  return uniqueProjectionNodes(nodes).slice(0, projectionNodeLimit);
 }
 
 interface ProjectionNodeContext {
@@ -203,10 +217,21 @@ function collectProjectionChildNodes(
             depth: Math.min(context.depth + 1, 8),
             nodes: context.nodes,
           };
-    if (projection !== undefined && context.nodes.length < 24) {
+    if (projection !== undefined && context.nodes.length < projectionNodeLimit) {
       context.nodes.push(projection);
     }
     collectProjectionChildNodes(sourceFile, child, nextContext);
+    if (projection !== undefined && context.nodes.length < projectionNodeLimit) {
+      const delimiter = closingDelimiterProjectionNode({
+        sourceFile,
+        astNode: child,
+        parentId: projection.id,
+        depth: projection.depth,
+        parentKind: projection.kind,
+        parentLabel: projection.label,
+      });
+      if (delimiter !== undefined) context.nodes.push(delimiter);
+    }
   });
 }
 
@@ -235,6 +260,43 @@ function projectionNodeForAstNode(
     lineEnd: range.lineEnd,
     flags,
   };
+}
+
+interface ClosingDelimiterContext {
+  readonly sourceFile: ts.SourceFile;
+  readonly astNode: ts.Node;
+  readonly parentId: TypeScriptProjectionIdentity;
+  readonly depth: number;
+  readonly parentKind: string;
+  readonly parentLabel: string;
+}
+
+function closingDelimiterProjectionNode(
+  context: ClosingDelimiterContext,
+): TypeScriptItemProjectionNode | undefined {
+  if (!projectionLabelOpensBlock(context.parentLabel)) return undefined;
+  const parentRange = nodeRange(context.sourceFile, context.astNode);
+  const range = { lineStart: parentRange.lineEnd, lineEnd: parentRange.lineEnd };
+  const label = "}";
+  const kind = "delimiter";
+  const flags = ["delimiter"];
+  return {
+    id: `${context.parentId}:end`,
+    parentId: context.parentId,
+    nativeId: projectionNativeId(kind, range, `${context.parentKind}:${context.parentId}:${label}`),
+    structuralFingerprint: projectionStructuralFingerprint(kind, "delimiter", label, range, flags),
+    kind,
+    role: "delimiter",
+    label,
+    depth: context.depth,
+    lineStart: range.lineStart,
+    lineEnd: range.lineEnd,
+    flags,
+  };
+}
+
+function projectionLabelOpensBlock(label: string): boolean {
+  return label.trimEnd().endsWith("{");
 }
 
 function uniqueProjectionNodes(
@@ -411,43 +473,45 @@ function projectionLabelForNode(node: ts.Node, kind: string): string {
   if (ts.isDecorator(node)) return `@${compactNodeText(node.getSourceFile(), node.expression)}`;
   if (ts.isCallExpression(node)) return callExpressionLabel(node);
   if (ts.isVariableStatement(node)) return variableStatementLabel(node);
-  if (ts.isIfStatement(node)) return `if ${compactNodeText(node.getSourceFile(), node.expression)}`;
+  if (ts.isIfStatement(node))
+    return `if (${compactNodeText(node.getSourceFile(), node.expression)}) {`;
   if (ts.isForOfStatement(node))
-    return `for ${forInitializerLabel(node.getSourceFile(), node.initializer)} of ${compactNodeText(node.getSourceFile(), node.expression)}`;
+    return `for (${forInitializerLabel(node.getSourceFile(), node.initializer)} of ${compactNodeText(node.getSourceFile(), node.expression)}) {`;
   if (ts.isForInStatement(node))
-    return `for ${forInitializerLabel(node.getSourceFile(), node.initializer)} in ${compactNodeText(node.getSourceFile(), node.expression)}`;
+    return `for (${forInitializerLabel(node.getSourceFile(), node.initializer)} in ${compactNodeText(node.getSourceFile(), node.expression)}) {`;
   if (ts.isForStatement(node)) return forStatementLabel(node);
   if (ts.isWhileStatement(node))
-    return `while ${compactNodeText(node.getSourceFile(), node.expression)}`;
+    return `while (${compactNodeText(node.getSourceFile(), node.expression)}) {`;
   if (ts.isParameter(node) && kind === "field") return parameterPropertyLabel(node);
   if (ts.isPropertySignature(node) || ts.isPropertyDeclaration(node))
     return propertyLikeLabel(node);
   if (ts.isMethodSignature(node) || ts.isMethodDeclaration(node)) return methodLikeLabel(node);
-  if (ts.isConstructorDeclaration(node)) return "constructor";
-  if (ts.isEnumMember(node)) return compactNodeText(node.getSourceFile(), node.name);
+  if (ts.isConstructorDeclaration(node)) return constructorLabel(node);
+  if (ts.isEnumMember(node)) return `${compactNodeText(node.getSourceFile(), node.name)},`;
   if (ts.isReturnStatement(node))
-    return node.expression ? `return ${expressionProjectionLabel(node.expression)}` : "return";
+    return node.expression ? `return ${expressionProjectionLabel(node.expression)};` : "return;";
   if (ts.isThrowStatement(node))
-    return node.expression ? `throw ${expressionProjectionLabel(node.expression)}` : "throw";
+    return node.expression ? `throw ${expressionProjectionLabel(node.expression)};` : "throw;";
   if (ts.isBinaryExpression(node) && kind === "assign") return assignmentLabel(node);
   return kind;
 }
 
 function callExpressionLabel(node: ts.CallExpression): string {
-  if (ts.isIdentifier(node.expression)) return node.expression.text;
-  if (ts.isPropertyAccessExpression(node.expression)) return node.expression.name.text;
-  return "call";
+  const sourceFile = node.getSourceFile();
+  const callee = compactNodeText(sourceFile, node.expression);
+  const args = node.arguments.map((argument) => expressionProjectionLabel(argument));
+  return `${callee}(${args.join(", ")});`;
 }
 
 function expressionProjectionLabel(node: ts.Expression): string {
-  if (ts.isCallExpression(node)) return callExpressionLabel(node);
+  if (ts.isCallExpression(node)) return compactNodeText(node.getSourceFile(), node);
   if (ts.isFunctionExpression(node)) return node.name ? `function ${node.name.text}` : "function";
   if (ts.isArrowFunction(node)) return "arrow";
   if (ts.isTemplateExpression(node) || ts.isNoSubstitutionTemplateLiteral(node)) return "template";
   if (ts.isStringLiteralLike(node)) return "string";
   if (ts.isNumericLiteral(node)) return "number";
-  if (ts.isObjectLiteralExpression(node)) return "object";
-  if (ts.isArrayLiteralExpression(node)) return "array";
+  if (ts.isObjectLiteralExpression(node)) return objectLiteralSummary(node);
+  if (ts.isArrayLiteralExpression(node)) return arrayLiteralSummary(node);
   if (ts.isNewExpression(node))
     return `new ${compactNodeText(node.getSourceFile(), node.expression)}`;
   if (node.kind === ts.SyntaxKind.TrueKeyword || node.kind === ts.SyntaxKind.FalseKeyword)
@@ -456,6 +520,78 @@ function expressionProjectionLabel(node: ts.Expression): string {
   if (ts.isIdentifier(node)) return node.text;
   if (ts.isPropertyAccessExpression(node)) return node.name.text;
   return compactNodeText(node.getSourceFile(), node);
+}
+
+function arrayLiteralSummary(node: ts.ArrayLiteralExpression): string {
+  const labels = node.elements
+    .slice(0, 3)
+    .map((element) => collectionItemSummary(element))
+    .filter((label) => label.length > 0);
+  if (labels.length === 0) return `array[${node.elements.length}]`;
+  return `array[${node.elements.length}] items=${labels.join(",")}`;
+}
+
+function collectionItemSummary(node: ts.Expression): string {
+  if (ts.isStringLiteralLike(node)) return node.text;
+  if (ts.isNumericLiteral(node)) return node.text;
+  if (ts.isObjectLiteralExpression(node)) return limitSummary(objectLiteralSummary(node), 72);
+  if (ts.isArrayLiteralExpression(node)) return limitSummary(arrayLiteralSummary(node), 72);
+  return expressionProjectionLabel(node);
+}
+
+function objectLiteralSummary(node: ts.ObjectLiteralExpression): string {
+  const entries = node.properties
+    .slice(0, 4)
+    .map((property) => objectPropertySummary(property))
+    .filter((entry) => entry.length > 0);
+  const keys = node.properties
+    .slice(entries.length)
+    .map((property) => objectPropertyName(property));
+  if (keys.length > 0) {
+    entries.push(
+      `keys=${keys
+        .filter((key) => key.length > 0)
+        .slice(0, 6)
+        .join(",")}`,
+    );
+  }
+  if (entries.length === 0) return `object[${node.properties.length}]`;
+  return `object[${node.properties.length}] ${entries.join(" ")}`;
+}
+
+function objectPropertySummary(property: ts.ObjectLiteralElementLike): string {
+  if (ts.isPropertyAssignment(property)) {
+    const name = objectPropertyName(property);
+    if (name.length === 0) return "";
+    return `${name}=${objectPropertyValueSummary(property.initializer)}`;
+  }
+  if (ts.isSpreadAssignment(property))
+    return `...${expressionProjectionLabel(property.expression)}`;
+  if (ts.isShorthandPropertyAssignment(property)) return property.name.text;
+  if (ts.isMethodDeclaration(property)) return `${objectPropertyName(property)}()`;
+  return objectPropertyName(property);
+}
+
+function objectPropertyName(property: ts.ObjectLiteralElementLike): string {
+  const name = property.name;
+  if (name === undefined) return "";
+  if (ts.isIdentifier(name) || ts.isStringLiteralLike(name) || ts.isNumericLiteral(name)) {
+    return name.text;
+  }
+  return limitSummary(compactNodeText(name.getSourceFile(), name), 32);
+}
+
+function objectPropertyValueSummary(node: ts.Expression): string {
+  if (ts.isStringLiteralLike(node)) return node.text;
+  if (ts.isNumericLiteral(node)) return node.text;
+  if (ts.isObjectLiteralExpression(node)) return `object[${node.properties.length}]`;
+  if (ts.isArrayLiteralExpression(node)) return arrayLiteralSummary(node);
+  return expressionProjectionLabel(node);
+}
+
+function limitSummary(text: string, maxLength: number): string {
+  if (text.length <= maxLength) return text;
+  return `${text.slice(0, maxLength - 3).trimEnd()}...`;
 }
 
 function nodeRange(
@@ -523,14 +659,16 @@ function declarationProjectionLabel(
     )
       ? "async "
       : "";
-    return `${decoratorPrefix(node)}${asyncPrefix}function ${name}`;
+    const parameters = node.parameters.map((parameter) => parameterLabel(sourceFile, parameter));
+    const returnType = node.type ? `: ${compactNodeText(sourceFile, node.type)}` : "";
+    return `${decoratorPrefix(node)}${asyncPrefix}function ${name}(${parameters.join(", ")})${returnType} {`;
   }
-  if (ts.isClassDeclaration(node)) return `${decoratorPrefix(node)}class ${name}`;
-  if (ts.isInterfaceDeclaration(node)) return `interface ${name}`;
+  if (ts.isClassDeclaration(node)) return `${decoratorPrefix(node)}class ${name} {`;
+  if (ts.isInterfaceDeclaration(node)) return `interface ${name} {`;
   if (ts.isTypeAliasDeclaration(node)) {
     return `type ${name} = ${compactNodeText(sourceFile, node.type)}`;
   }
-  if (ts.isEnumDeclaration(node)) return `enum ${name}`;
+  if (ts.isEnumDeclaration(node)) return `enum ${name} {`;
   return `${kind} ${name}`;
 }
 
@@ -542,7 +680,13 @@ function variableStatementLabel(node: ts.VariableStatement): string {
         compactNodeText(node.getSourceFile(), declaration.name),
     )
     .join(", ");
-  return `assign ${declarations}`;
+  return `${declarationListKind(node.declarationList)} ${declarations};`;
+}
+
+function declarationListKind(declarationList: ts.VariableDeclarationList): string {
+  if ((declarationList.flags & ts.NodeFlags.Const) !== 0) return "const";
+  if ((declarationList.flags & ts.NodeFlags.Let) !== 0) return "let";
+  return "var";
 }
 
 function forInitializerLabel(sourceFile: ts.SourceFile, initializer: ts.ForInitializer): string {
@@ -564,13 +708,13 @@ function forStatementLabel(node: ts.ForStatement): string {
   const condition = node.condition === undefined ? "" : compactNodeText(sourceFile, node.condition);
   const incrementor =
     node.incrementor === undefined ? "" : compactNodeText(sourceFile, node.incrementor);
-  return `for ${initializer}; ${condition}; ${incrementor}`;
+  return `for (${initializer}; ${condition}; ${incrementor}) {`;
 }
 
 function assignmentLabel(node: ts.BinaryExpression): string {
   const sourceFile = node.getSourceFile();
   const operator = assignmentOperatorText(node.operatorToken.kind) ?? "=";
-  return `${compactNodeText(sourceFile, node.left)} ${operator} ${compactNodeText(sourceFile, node.right)}`;
+  return `${compactNodeText(sourceFile, node.left)} ${operator} ${compactNodeText(sourceFile, node.right)};`;
 }
 
 function assignmentOperatorText(kind: ts.SyntaxKind): string | undefined {
@@ -598,7 +742,7 @@ function propertyLikeLabel(node: ts.PropertySignature | ts.PropertyDeclaration):
   const readonly = hasReadonlyModifier(node) ? "readonly " : "";
   const optional = "questionToken" in node && node.questionToken ? "?" : "";
   const type = node.type ? `: ${compactNodeText(sourceFile, node.type)}` : "";
-  return `field ${readonly}${name}${optional}${type}`;
+  return `${readonly}${name}${optional}${type};`;
 }
 
 function parameterPropertyLabel(node: ts.ParameterDeclaration): string {
@@ -606,7 +750,13 @@ function parameterPropertyLabel(node: ts.ParameterDeclaration): string {
   const name = bindingNameText(node.name) ?? compactNodeText(sourceFile, node.name);
   const readonly = hasReadonlyModifier(node) ? "readonly " : "";
   const type = node.type ? `: ${compactNodeText(sourceFile, node.type)}` : "";
-  return `field ${readonly}${name}${type}`;
+  return `${readonly}${name}${type};`;
+}
+
+function constructorLabel(node: ts.ConstructorDeclaration): string {
+  const sourceFile = node.getSourceFile();
+  const parameters = node.parameters.map((parameter) => parameterLabel(sourceFile, parameter));
+  return `constructor(${parameters.join(", ")}) {`;
 }
 
 function isParameterProperty(node: ts.ParameterDeclaration): boolean {
@@ -628,7 +778,10 @@ function methodLikeLabel(node: ts.MethodSignature | ts.MethodDeclaration): strin
   )
     ? "async "
     : "";
-  return `${decoratorPrefix(node)}${asyncPrefix}method ${name}`;
+  const parameters = node.parameters.map((parameter) => parameterLabel(sourceFile, parameter));
+  const returnType = node.type ? `: ${compactNodeText(sourceFile, node.type)}` : "";
+  const delimiter = ts.isMethodSignature(node) ? ";" : " {";
+  return `${decoratorPrefix(node)}${asyncPrefix}${name}(${parameters.join(", ")})${returnType}${delimiter}`;
 }
 
 function decoratorPrefix(node: ts.Node): string {

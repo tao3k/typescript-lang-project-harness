@@ -102,8 +102,8 @@ interface SemanticReadPlanFrontier {
 
 interface SemanticReadWindow {
   readonly ownerPath: string;
-  readonly itemName: string;
-  readonly itemKind: string;
+  readonly itemName?: string;
+  readonly itemKind?: string;
   readonly location: {
     readonly path: string;
     readonly lineRange: string;
@@ -112,8 +112,9 @@ interface SemanticReadWindow {
   readonly lineCount: number;
   readonly reason: "direct-selector";
   readonly text: string;
+  readonly lines?: readonly { readonly number: number; readonly text: string }[];
   readonly truncated: boolean;
-  readonly fields: {
+  readonly fields?: {
     readonly exported: boolean;
     readonly typeOnly: boolean;
     readonly exportKind: string;
@@ -138,8 +139,12 @@ export function renderOwnerItemSemanticReadPacket(packet: SemanticReadPacket): s
     `[read-owner] q=${packet.ownerPath} selector=${fieldValue(packet.selector)} window=${sourceWindows.length}`,
   ];
   for (const window of sourceWindows) {
+    const itemFields =
+      window.itemName === undefined || window.itemKind === undefined
+        ? ""
+        : ` item=${fieldValue(window.itemName)} kind=${fieldValue(window.itemKind)}`;
     lines.push(
-      `|read path=${window.ownerPath} item=${window.itemName} kind=${window.itemKind} lineRange=${window.location.lineRange} reason=${window.reason} truncated=${window.truncated}`,
+      `|read path=${window.ownerPath}${itemFields} lineRange=${window.location.lineRange} reason=${window.reason} truncated=${window.truncated}`,
     );
     lines.push(
       `|code path=${window.ownerPath} lineRange=${window.location.lineRange} reason=direct-source-read text=${JSON.stringify(window.text)}`,
@@ -204,9 +209,6 @@ export function renderOwnerExactSourceWindowCode(
 ): string {
   const range = sourceSelectorLineRange(selector, ownerPath);
   if (range === undefined) return renderOwnerItemQueryCode(projectRoot, ownerPath, "", selector);
-  if (sourceRangeLineCount(range) > MAX_EXACT_DIRECT_READ_LINES) {
-    return renderSemanticReadPlanLines(ownerPath, selector, "wide-selector", range, [], "unknown");
-  }
   const sourceText = fs.readFileSync(path.resolve(projectRoot, ownerPath), "utf8");
   const sourceLines = sourceText.split(/\r?\n/u);
   if (range.lineStart > sourceLines.length) {
@@ -215,16 +217,10 @@ export function renderOwnerExactSourceWindowCode(
     );
   }
   const lineEnd = Math.min(range.lineEnd, sourceLines.length);
-  const text = sourceLines
+  return sourceLines
     .slice(range.lineStart - 1, lineEnd)
     .join("\n")
     .trimEnd();
-  const read = `${ownerPath}:${range.lineStart}:${lineEnd}`;
-  return [
-    `[read-owner] q=${ownerPath} selector=${fieldValue(selector)} window=1 mode=exact-source`,
-    `|read path=${ownerPath} lineRange=${range.lineStart}:${lineEnd} reason=direct-selector truncated=false exactRead=${read}`,
-    `|code path=${ownerPath} lineRange=${range.lineStart}:${lineEnd} reason=direct-source-read syntax=exact-source text=${JSON.stringify(text)}`,
-  ].join("\n");
 }
 
 export function buildOwnerItemSemanticReadPacket(
@@ -270,29 +266,22 @@ export function buildOwnerItemSemanticReadPacket(
       : result.matches.filter(
           (item) => item.lineEnd >= range.lineStart && item.lineStart <= range.lineEnd,
         );
-  if (range !== undefined && sourceRangeLineCount(range) > MAX_EXACT_DIRECT_READ_LINES) {
+  if (matches.length === 0) {
+    if (range === undefined) {
+      throw new Error(
+        `direct-source-read selector resolved to no parser-owned items: ${result.ownerPath}`,
+      );
+    }
     return {
       ...basePacket,
-      readPlan: semanticReadPlanForRange(
-        result.ownerPath,
-        "wide-selector",
-        range,
-        matches,
-        "unknown",
-      ),
+      sourceWindows: [semanticReadWindowForRange(projectRoot, result.ownerPath, range)],
     };
-  }
-  if (matches.length === 0) {
-    throw new Error(
-      `direct-source-read selector resolved to no parser-owned items: ${result.ownerPath}`,
-    );
   }
   return {
     ...basePacket,
     sourceWindows: matches.map((item) => semanticReadWindowForItem(result.ownerPath, item, range)),
   };
 }
-
 function itemProjectionCode(
   item: TypeScriptItemQueryMatch,
   range: { readonly lineStart: number; readonly lineEnd: number } | undefined,
@@ -345,6 +334,10 @@ function semanticReadWindowForItem(
   const lineStart =
     range === undefined ? item.lineStart : Math.max(item.lineStart, range.lineStart);
   const lineEnd = range === undefined ? item.lineEnd : Math.min(item.lineEnd, range.lineEnd);
+  const lines = item.sourceLines.slice(lineStart - 1, lineEnd).map((text, index) => ({
+    number: lineStart + index,
+    text,
+  }));
   return {
     ownerPath,
     itemName: item.name,
@@ -357,12 +350,43 @@ function semanticReadWindowForItem(
     lineCount: Math.max(1, lineEnd - lineStart + 1),
     reason: "direct-selector",
     text: sourceWindowText(item, lineStart, lineEnd),
+    lines,
     truncated: false,
     fields: {
       exported: item.exported,
       typeOnly: item.typeOnly,
       exportKind: item.kind,
     },
+  };
+}
+
+function semanticReadWindowForRange(
+  projectRoot: string,
+  ownerPath: string,
+  range: { readonly lineStart: number; readonly lineEnd: number },
+): SemanticReadWindow {
+  const sourceText = fs.readFileSync(path.resolve(projectRoot, ownerPath), "utf8");
+  const sourceLines = sourceText.split(/\r?\n/u);
+  if (range.lineStart > sourceLines.length) {
+    throw new Error(
+      `direct-source-read selector starts after end of file: ${ownerPath}:${range.lineStart}`,
+    );
+  }
+  const lineEnd = Math.min(range.lineEnd, sourceLines.length);
+  const selectedLines = sourceLines.slice(range.lineStart - 1, lineEnd);
+  const lineRange = `${range.lineStart}:${lineEnd}`;
+  return {
+    ownerPath,
+    location: {
+      path: ownerPath,
+      lineRange,
+    },
+    read: `${ownerPath}:${lineRange}`,
+    lineCount: Math.max(1, lineEnd - range.lineStart + 1),
+    reason: "direct-selector",
+    text: selectedLines.join("\n").trimEnd(),
+    lines: selectedLines.map((text, index) => ({ number: range.lineStart + index, text })),
+    truncated: false,
   };
 }
 
@@ -376,7 +400,6 @@ function sourceWindowText(
     .join("\n")
     .trimEnd();
 }
-
 function sourceRangeLineCount(range: {
   readonly lineStart: number;
   readonly lineEnd: number;

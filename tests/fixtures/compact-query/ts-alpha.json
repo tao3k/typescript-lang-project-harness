@@ -5,124 +5,160 @@
       "kind": "function",
       "read": "src/demo.ts:1:7",
       "projection": {
-        "mode": "outline",
-        "syntax": "semantic-outline",
+        "mode": "compact",
+        "syntax": "save-token-typescript",
         "sourceAuthority": "native-parser",
+        "compactSafety": {
+          "literalPolicy": "summarize",
+          "whitespacePolicy": "formatter-structural",
+          "normalization": "none",
+          "alignment": "parser-roundtrip",
+          "exactReadRequired": true
+        },
         "sourceFingerprint": "src/demo.ts:1:7:107:e88161f4",
         "losslessStructure": true,
         "exactRead": "src/demo.ts:1:7",
         "nodes": [
           {
             "id": "alpha",
-            "nativeId": "typescript:function:1:7:df823e1d",
-            "structuralFingerprint": "function:declaration:1:7:d02ed374",
+            "nativeId": "typescript:function:1:7:d55e12e9",
+            "structuralFingerprint": "function:declaration:1:7:d8bfc910",
             "kind": "function",
             "role": "declaration",
-            "label": "function alpha",
+            "label": "function alpha(flag: boolean) {",
             "depth": 0,
             "read": "src/demo.ts:1:7",
-            "flags": [
-              "mutation",
-              "branch",
-              "return"
-            ]
+            "flags": ["mutation", "branch", "return"]
           },
           {
-            "id": "alpha:const:2:2:576340dd",
+            "id": "alpha:const:2:2:e54f0eea",
             "parentId": "alpha",
-            "nativeId": "typescript:FirstStatement:2:2:576340dd",
-            "structuralFingerprint": "const:mutation:2:2:5fa1e522",
+            "nativeId": "typescript:FirstStatement:2:2:e54f0eea",
+            "structuralFingerprint": "const:mutation:2:2:5870b7f7",
             "kind": "const",
             "role": "mutation",
-            "label": "assign value",
+            "label": "const value;",
             "depth": 1,
             "read": "src/demo.ts:2:2",
-            "flags": [
-              "mutation"
-            ]
+            "flags": ["mutation"]
           },
           {
-            "id": "alpha:if:3:5:de445b45",
+            "id": "alpha:if:3:5:8d29999",
             "parentId": "alpha",
-            "nativeId": "typescript:IfStatement:3:5:de445b45",
-            "structuralFingerprint": "if:control-flow:3:5:f8b1c8ad",
+            "nativeId": "typescript:IfStatement:3:5:8d29999",
+            "structuralFingerprint": "if:control-flow:3:5:780aa741",
             "kind": "if",
             "role": "control-flow",
-            "label": "if value > 0",
+            "label": "if (value > 0) {",
             "depth": 1,
             "read": "src/demo.ts:3:5",
-            "flags": [
-              "branch"
-            ]
+            "flags": ["branch"]
           },
           {
-            "id": "alpha:return:4:4:1b03c172",
-            "parentId": "alpha:if:3:5:de445b45",
-            "nativeId": "typescript:ReturnStatement:4:4:1b03c172",
-            "structuralFingerprint": "return:terminal:4:4:1041d5ee",
+            "id": "alpha:return:4:4:cfe945eb",
+            "parentId": "alpha:if:3:5:8d29999",
+            "nativeId": "typescript:ReturnStatement:4:4:cfe945eb",
+            "structuralFingerprint": "return:terminal:4:4:c961d961",
             "kind": "return",
             "role": "terminal",
-            "label": "return value",
+            "label": "return value;",
             "depth": 2,
             "read": "src/demo.ts:4:4",
-            "flags": [
-              "return"
-            ]
+            "flags": ["return"]
           },
           {
-            "id": "alpha:return:6:6:5a40f308",
+            "id": "alpha:if:3:5:8d29999:end",
+            "parentId": "alpha:if:3:5:8d29999",
+            "nativeId": "typescript:delimiter:5:5:8c05c022",
+            "structuralFingerprint": "delimiter:delimiter:5:5:fda8076f",
+            "kind": "delimiter",
+            "role": "delimiter",
+            "label": "}",
+            "depth": 1,
+            "read": "src/demo.ts:5:5",
+            "flags": ["delimiter"]
+          },
+          {
+            "id": "alpha:return:6:6:473ed949",
             "parentId": "alpha",
-            "nativeId": "typescript:ReturnStatement:6:6:5a40f308",
-            "structuralFingerprint": "return:terminal:6:6:41ef3820",
+            "nativeId": "typescript:ReturnStatement:6:6:473ed949",
+            "structuralFingerprint": "return:terminal:6:6:12a08ef3",
             "kind": "return",
             "role": "terminal",
-            "label": "return number",
+            "label": "return number;",
             "depth": 1,
             "read": "src/demo.ts:6:6",
-            "flags": [
-              "return"
-            ]
+            "flags": ["return"]
+          },
+          {
+            "id": "alpha:end",
+            "parentId": "alpha",
+            "nativeId": "typescript:delimiter:7:7:ea1934e6",
+            "structuralFingerprint": "delimiter:delimiter:7:7:fda8076f",
+            "kind": "delimiter",
+            "role": "delimiter",
+            "label": "}",
+            "depth": 0,
+            "read": "src/demo.ts:7:7",
+            "flags": ["delimiter"]
           }
         ],
         "renderedNodeIds": [
           "alpha",
-          "alpha:const:2:2:576340dd",
-          "alpha:if:3:5:de445b45",
-          "alpha:return:4:4:1b03c172",
-          "alpha:return:6:6:5a40f308"
+          "alpha:const:2:2:e54f0eea",
+          "alpha:if:3:5:8d29999",
+          "alpha:return:4:4:cfe945eb",
+          "alpha:if:3:5:8d29999:end",
+          "alpha:return:6:6:473ed949",
+          "alpha:end"
         ],
         "renderedRows": [
           {
             "nodeId": "alpha",
             "rowKind": "declaration",
-            "text": "function alpha",
+            "text": "function alpha(flag: boolean) {",
             "semanticWeight": 1
           },
           {
-            "nodeId": "alpha:const:2:2:576340dd",
+            "nodeId": "alpha:const:2:2:e54f0eea",
             "rowKind": "mutation",
-            "text": "  assign value",
+            "text": "  const value;",
             "semanticWeight": 2
           },
           {
-            "nodeId": "alpha:if:3:5:de445b45",
+            "nodeId": "alpha:if:3:5:8d29999",
             "rowKind": "control-flow",
-            "text": "  if value > 0",
+            "text": "  if (value > 0) {",
             "semanticWeight": 2
           },
           {
-            "nodeId": "alpha:return:4:4:1b03c172",
+            "nodeId": "alpha:return:4:4:cfe945eb",
             "rowKind": "terminal",
-            "text": "    return value",
+            "text": "    return value;",
             "semanticWeight": 2
           },
           {
-            "nodeId": "alpha:return:6:6:5a40f308",
+            "nodeId": "alpha:if:3:5:8d29999:end",
+            "rowKind": "delimiter",
+            "text": "  }",
+            "semanticWeight": 1
+          },
+          {
+            "nodeId": "alpha:return:6:6:473ed949",
             "rowKind": "terminal",
-            "text": "  return number",
+            "text": "  return number;",
             "semanticWeight": 2
+          },
+          {
+            "nodeId": "alpha:end",
+            "rowKind": "delimiter",
+            "text": "}",
+            "semanticWeight": 1
           }
         ],
+        "nodeCount": 7,
+        "nodeLimit": 32,
+        "nodesTruncated": false,
         "omitted": [
           {
             "nodeId": "alpha",
@@ -141,25 +177,25 @@
           },
           {
             "kind": "exact-read",
-            "target": "alpha:const:2:2:576340dd",
+            "target": "alpha:const:2:2:e54f0eea",
             "read": "src/demo.ts:2:2",
             "reason": "expand const node before editing"
           },
           {
             "kind": "exact-read",
-            "target": "alpha:if:3:5:de445b45",
+            "target": "alpha:if:3:5:8d29999",
             "read": "src/demo.ts:3:5",
             "reason": "expand if node before editing"
           },
           {
             "kind": "exact-read",
-            "target": "alpha:return:4:4:1b03c172",
+            "target": "alpha:return:4:4:cfe945eb",
             "read": "src/demo.ts:4:4",
             "reason": "expand return node before editing"
           },
           {
             "kind": "exact-read",
-            "target": "alpha:return:6:6:5a40f308",
+            "target": "alpha:return:6:6:473ed949",
             "read": "src/demo.ts:6:6",
             "reason": "expand return node before editing"
           }

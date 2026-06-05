@@ -16,10 +16,12 @@ function commandGuide(input: {
   const root = input.projectRoot === "." ? "." : input.projectRoot;
   return [
     `[ts-harness-guide] project=${root}`,
+    "|catalog reasoningProfiles=owner-query,query-deps,owner-tests,finding-frontier,feature-cfg entries=owner-query,query-deps,owner-tests routes=read-frontier",
     `|cmd asp typescript search prime --view seeds ${root}`,
     `|cmd asp typescript search owner ${input.ownerTarget} --view seeds ${root}`,
     `|cmd asp typescript query ${input.ownerTarget} --term <symbol> --names-only ${root}`,
     `|cmd asp typescript query ${input.ownerTarget} --term <symbol> --code ${root}`,
+    `|cmd asp typescript query --treesitter-query '(function_declaration name: (identifier) @function.name)' --selector <selector> ${root}`,
     `|cmd asp typescript search owner ${input.ownerTarget} items --query <symbol-or-a|b|c> ${root}`,
     `|cmd asp typescript search owner ${input.ownerTarget} items --query <symbol-or-a|b|c> --code ${root}`,
     `|cmd asp typescript search policy <rule-id-or-alias> owner tests --view seeds ${root}`,

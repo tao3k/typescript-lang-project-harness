@@ -11,6 +11,7 @@ export const HELP_TEXT = `ts-harness — TypeScript semantic search and project 
 Usage:
   ts-harness search <view> ... [--json] [--code] [--package <path>] [project-root]
   ts-harness query <owner-path> --term <symbol> [--term <symbol>] [--names-only | --code] [project-root]
+  ts-harness query (--catalog <id> | --treesitter-query <s-expression>) [--selector <path[:start[:end]]>] [--code] [--json] [project-root]
   ts-harness ast-patch dry-run --packet <semantic-ast-patch.json|-> [project-root]
   ts-harness check [--changed | --full] [--json] [project-root]
   ts-harness agent doctor [--json] [project-root]
@@ -49,6 +50,10 @@ QUERY
                              Owner-local item discovery without code windows
   query <owner-path> --term <symbol> --code
                               Pure compact parser-owned code output
+  query --treesitter-query <s-expression> [--selector <selector>] [--code]
+                             Tree-sitter-compatible syntax locate, capture, and pure code extraction
+  query --catalog declarations
+                             Provider-embedded canonical tree-sitter query catalog
 
 AST PATCH
   ast-patch dry-run --packet <path|->
@@ -86,6 +91,8 @@ EXAMPLES
   ts-harness search fzf --query-set OrderStatus --query-set findOrderStatus owner tests .
   ts-harness query src/domain/order.ts --term findOrderStatus --names-only .
   ts-harness query src/domain/order.ts --term findOrderStatus --code .
+  ts-harness query --treesitter-query '(function_declaration name: (identifier) @function.name)' .
+  ts-harness query --catalog declarations --selector src/domain/order.ts --code .
   ts-harness ast-patch dry-run --packet semantic-ast-patch.json .
   rg -n "OrderStatus" src tests | ts-harness search ingest .
   ts-harness check --changed .

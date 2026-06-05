@@ -13,6 +13,10 @@ export const SEMANTIC_QUERY_PACKET_SCHEMA_ID =
   "agent.semantic-protocols.semantic-query-packet" as const;
 export const SEMANTIC_READ_PACKET_SCHEMA_ID =
   "agent.semantic-protocols.semantic-read-packet" as const;
+export const SEMANTIC_TREE_SITTER_QUERY_SCHEMA_ID =
+  "agent.semantic-protocols.semantic-tree-sitter-query" as const;
+export const SEMANTIC_TREE_SITTER_GRAMMAR_PROFILE_SCHEMA_ID =
+  "agent.semantic-protocols.semantic-tree-sitter-grammar-profile" as const;
 export const SEMANTIC_GRAPH_SCHEMA_ID = "agent.semantic-protocols.semantic-graph" as const;
 export const SEMANTIC_VERIFICATION_RECEIPT_SCHEMA_ID =
   "agent.semantic-protocols.semantic-verification-receipt" as const;
@@ -61,7 +65,10 @@ export type TypeScriptSemanticSearchView =
   | "ingest";
 export type TypeScriptSemanticSearchPipe = TypeScriptSemanticSearchView | "items";
 export type TypeScriptSemanticSearchMethod = `search/${TypeScriptSemanticSearchView}`;
-export type TypeScriptSemanticQueryMethod = "query/owner-items" | "query/direct-source-read";
+export type TypeScriptSemanticQueryMethod =
+  | "query"
+  | "query/owner-items"
+  | "query/direct-source-read";
 
 export const TYPE_SCRIPT_SEARCH_VIEW_DESCRIPTORS = [
   searchView("workspace", {
@@ -214,7 +221,11 @@ export const TYPE_SCRIPT_SEARCH_METHODS = TYPE_SCRIPT_SEARCH_VIEW_DESCRIPTORS.ma
 );
 
 export const TYPE_SCRIPT_CHECK_METHODS = ["check/changed", "check/full"] as const;
-export const TYPE_SCRIPT_QUERY_METHODS = ["query/owner-items", "query/direct-source-read"] as const;
+export const TYPE_SCRIPT_QUERY_METHODS = [
+  "query",
+  "query/owner-items",
+  "query/direct-source-read",
+] as const;
 export const TYPE_SCRIPT_AST_PATCH_METHODS = ["ast-patch/dry-run"] as const;
 export const TYPE_SCRIPT_AGENT_METHODS = ["agent/doctor", "agent/guide"] as const;
 
@@ -265,6 +276,19 @@ export interface SemanticLanguageMethodDescriptor {
   readonly command: SemanticLanguageCommand;
   readonly view?: string;
   readonly outputSchemaIds?: readonly string[];
+  readonly packetSchemas?: readonly string[];
+  readonly queryInputForms?: readonly (
+    | "selector"
+    | "code-shaped"
+    | "catalog-id"
+    | "s-expression"
+  )[];
+  readonly queryCatalogs?: readonly SemanticLanguageQueryCatalogDescriptor[];
+  readonly grammarId?: string;
+  readonly grammarProfileVersion?: string;
+  readonly grammarProfileSchema?: string;
+  readonly grammarProfilePath?: string;
+  readonly cacheReplay?: boolean;
   readonly requiresQuery?: boolean;
   readonly acceptsStdin?: boolean;
   readonly supportsPackageScope?: boolean;
@@ -287,6 +311,14 @@ export interface SemanticLanguageMethodDescriptor {
   readonly mutationAvailable?: boolean;
   readonly supportsJson: boolean;
   readonly supportsCompact: boolean;
+}
+
+export interface SemanticLanguageQueryCatalogDescriptor {
+  readonly id: string;
+  readonly path: string;
+  readonly sourceDelivery: "provider-binary-embedded";
+  readonly captures: readonly string[];
+  readonly description?: string;
 }
 
 export interface SemanticLanguageFallbackDescriptor {
@@ -370,6 +402,16 @@ export function typeScriptSemanticLanguageRegistration(): SemanticLanguageRegist
         schemaId: SEMANTIC_READ_PACKET_SCHEMA_ID,
         schemaVersion: "1",
         path: "schemas/semantic-read-packet.v1.schema.json",
+      },
+      {
+        schemaId: SEMANTIC_TREE_SITTER_QUERY_SCHEMA_ID,
+        schemaVersion: "1",
+        path: "schemas/semantic-tree-sitter-query.v1.schema.json",
+      },
+      {
+        schemaId: SEMANTIC_TREE_SITTER_GRAMMAR_PROFILE_SCHEMA_ID,
+        schemaVersion: "1",
+        path: "schemas/semantic-tree-sitter-grammar-profile.v1.schema.json",
       },
       {
         schemaId: SEMANTIC_GRAPH_SCHEMA_ID,
@@ -464,6 +506,56 @@ function typeScriptSemanticLanguageMethodDescriptors(): readonly SemanticLanguag
       supportsCompact: true,
     })),
     {
+      method: "query" as const,
+      command: "query" as const,
+      input: "tree-sitter-compatible syntax query",
+      requiredOptions: ["--catalog|--treesitter-query"],
+      outputSchemaIds: [SEMANTIC_TREE_SITTER_QUERY_SCHEMA_ID],
+      packetSchemas: ["semantic-tree-sitter-query.v1"],
+      queryInputForms: ["catalog-id", "s-expression"],
+      queryCatalogs: [
+        queryCatalog(
+          "declarations",
+          "tree-sitter/tree-sitter-typescript/queries/declarations.scm",
+          [
+            "function.definition",
+            "function.name",
+            "class.definition",
+            "class.name",
+            "interface.definition",
+            "interface.name",
+            "type.definition",
+            "type.name",
+            "enum.definition",
+            "enum.name",
+            "variable.definition",
+            "variable.name",
+            "import.declaration",
+            "import.source",
+            "export.declaration",
+          ],
+        ),
+        queryCatalog("imports", "tree-sitter/tree-sitter-typescript/queries/imports.scm", [
+          "import.declaration",
+          "import.source",
+          "export.declaration",
+          "export.source",
+        ]),
+        queryCatalog("calls", "tree-sitter/tree-sitter-typescript/queries/calls.scm", [
+          "call.expression",
+          "call.target",
+        ]),
+      ],
+      grammarId: "tree-sitter-typescript",
+      grammarProfileVersion: "2026-06-05.v1",
+      grammarProfileSchema: "semantic-tree-sitter-grammar-profile.v1",
+      grammarProfilePath: "tree-sitter/tree-sitter-typescript/grammar-profile.json",
+      cacheReplay: true,
+      supportsCompact: true,
+      supportsJson: true,
+      outputModes: ["compact", "json", "code"],
+    },
+    {
       method: "query/owner-items" as const,
       command: "query" as const,
       input: "owner-path",
@@ -524,6 +616,19 @@ function searchOutputSchemaIds(view: TypeScriptSemanticSearchView): readonly str
     : view === "policy"
       ? [SEMANTIC_SEARCH_PACKET_SCHEMA_ID, SEMANTIC_HANDLE_SCHEMA_ID]
       : [SEMANTIC_SEARCH_PACKET_SCHEMA_ID];
+}
+
+function queryCatalog(
+  id: string,
+  path: string,
+  captures: readonly string[],
+): SemanticLanguageQueryCatalogDescriptor {
+  return {
+    id,
+    path,
+    sourceDelivery: "provider-binary-embedded",
+    captures,
+  };
 }
 
 function searchView<const View extends string>(

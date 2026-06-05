@@ -1,5 +1,7 @@
-function alpha
-  assign value
-  if value > 0
-    return value
-  return number
+function alpha(flag: boolean) {
+  const value;
+  if (value > 0) {
+    return value;
+  }
+  return number;
+}

@@ -1,9 +1,12 @@
-async function beta
-  assign output
-  for value of values
-    if value.trim() === ""
+async function beta(values: string[], mapper: (value: string) => Promise<string>) {
+  const output;
+  for (value of values) {
+    if (value.trim() === "") {
       continue
-    push
+    }
+    output.push(await mapper(value));
       await
-        mapper
-  return output
+        mapper(value);
+  }
+  return output;
+}

@@ -22,6 +22,15 @@ export function isTypeScriptSourcePath(filePath: string): boolean {
   return TYPE_SCRIPT_EXTENSIONS.some((extension) => lowerPath.endsWith(extension));
 }
 
+function isGeneratedParserCompactExpectedOutputPath(filePath: string): boolean {
+  const normalized = filePath.replaceAll("\\", "/");
+  return (
+    (normalized.includes("/tests/fixtures/parser-compact/expected-output/") ||
+      normalized.includes("/tests/fixtures/parser-compact/real-output/")) &&
+    normalized.includes("/typescript/")
+  );
+}
+
 export function discoverTypeScriptFiles(
   roots: readonly string[],
   ignoredDirNames: readonly string[] = DEFAULT_IGNORED_DIR_NAMES,
@@ -64,7 +73,10 @@ function collectTypeScriptFiles(
   }
   const stat = fs.statSync(currentPath);
   if (stat.isFile()) {
-    if (isTypeScriptSourcePath(currentPath)) {
+    if (
+      isTypeScriptSourcePath(currentPath) &&
+      !isGeneratedParserCompactExpectedOutputPath(currentPath)
+    ) {
       discovered.push(currentPath);
     }
     return;

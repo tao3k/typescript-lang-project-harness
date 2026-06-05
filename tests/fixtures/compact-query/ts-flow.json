@@ -5,77 +5,70 @@
       "kind": "function",
       "read": "src/flow.ts:1:10",
       "projection": {
-        "mode": "outline",
-        "syntax": "semantic-outline",
+        "mode": "compact",
+        "syntax": "save-token-typescript",
         "sourceAuthority": "native-parser",
+        "compactSafety": {
+          "literalPolicy": "summarize",
+          "whitespacePolicy": "formatter-structural",
+          "normalization": "none",
+          "alignment": "parser-roundtrip",
+          "exactReadRequired": true
+        },
         "sourceFingerprint": "src/flow.ts:1:10:235:1c29c5e6",
         "losslessStructure": true,
         "exactRead": "src/flow.ts:1:10",
         "nodes": [
           {
             "id": "beta",
-            "nativeId": "typescript:function:1:10:9802c5e9",
-            "structuralFingerprint": "function:declaration:1:10:4a3e260b",
+            "nativeId": "typescript:function:1:10:2fa8bf19",
+            "structuralFingerprint": "function:declaration:1:10:2eeda53b",
             "kind": "function",
             "role": "declaration",
-            "label": "async function beta",
+            "label": "async function beta(values: string[], mapper: (value: string) => Promise<string>) {",
             "depth": 0,
             "read": "src/flow.ts:1:10",
-            "flags": [
-              "mutation",
-              "loop",
-              "branch",
-              "call",
-              "continue",
-              "await",
-              "return"
-            ]
+            "flags": ["mutation", "loop", "branch", "call", "continue", "await", "return"]
           },
           {
-            "id": "beta:const:2:2:544d39c9",
+            "id": "beta:const:2:2:33d63e5e",
             "parentId": "beta",
-            "nativeId": "typescript:FirstStatement:2:2:544d39c9",
-            "structuralFingerprint": "const:mutation:2:2:10f90b06",
+            "nativeId": "typescript:FirstStatement:2:2:33d63e5e",
+            "structuralFingerprint": "const:mutation:2:2:d764a7a3",
             "kind": "const",
             "role": "mutation",
-            "label": "assign output",
+            "label": "const output;",
             "depth": 1,
             "read": "src/flow.ts:2:2",
-            "flags": [
-              "mutation"
-            ]
+            "flags": ["mutation"]
           },
           {
-            "id": "beta:for:3:8:723a9048",
+            "id": "beta:for:3:8:528bc8be",
             "parentId": "beta",
-            "nativeId": "typescript:ForOfStatement:3:8:723a9048",
-            "structuralFingerprint": "for:control-flow:3:8:b5ecf20c",
+            "nativeId": "typescript:ForOfStatement:3:8:528bc8be",
+            "structuralFingerprint": "for:control-flow:3:8:b6abb72",
             "kind": "for",
             "role": "control-flow",
-            "label": "for value of values",
+            "label": "for (value of values) {",
             "depth": 1,
             "read": "src/flow.ts:3:8",
-            "flags": [
-              "loop"
-            ]
+            "flags": ["loop"]
           },
           {
-            "id": "beta:if:4:6:2660d8a7",
-            "parentId": "beta:for:3:8:723a9048",
-            "nativeId": "typescript:IfStatement:4:6:2660d8a7",
-            "structuralFingerprint": "if:control-flow:4:6:a4850f7",
+            "id": "beta:if:4:6:2e0a0f6b",
+            "parentId": "beta:for:3:8:528bc8be",
+            "nativeId": "typescript:IfStatement:4:6:2e0a0f6b",
+            "structuralFingerprint": "if:control-flow:4:6:2fde955b",
             "kind": "if",
             "role": "control-flow",
-            "label": "if value.trim() === \"\"",
+            "label": "if (value.trim() === \"\") {",
             "depth": 2,
             "read": "src/flow.ts:4:6",
-            "flags": [
-              "branch"
-            ]
+            "flags": ["branch"]
           },
           {
             "id": "beta:continue:5:5:b1727e44",
-            "parentId": "beta:if:4:6:2660d8a7",
+            "parentId": "beta:if:4:6:2e0a0f6b",
             "nativeId": "typescript:ContinueStatement:5:5:b1727e44",
             "structuralFingerprint": "continue:terminal:5:5:8a93d963",
             "kind": "continue",
@@ -83,27 +76,35 @@
             "label": "continue",
             "depth": 3,
             "read": "src/flow.ts:5:5",
-            "flags": [
-              "continue"
-            ]
+            "flags": ["continue"]
           },
           {
-            "id": "beta:call:7:7:876fffdd",
-            "parentId": "beta:for:3:8:723a9048",
-            "nativeId": "typescript:CallExpression:7:7:876fffdd",
-            "structuralFingerprint": "call:call:7:7:41b12389",
+            "id": "beta:if:4:6:2e0a0f6b:end",
+            "parentId": "beta:if:4:6:2e0a0f6b",
+            "nativeId": "typescript:delimiter:6:6:a98544c0",
+            "structuralFingerprint": "delimiter:delimiter:6:6:fda8076f",
+            "kind": "delimiter",
+            "role": "delimiter",
+            "label": "}",
+            "depth": 2,
+            "read": "src/flow.ts:6:6",
+            "flags": ["delimiter"]
+          },
+          {
+            "id": "beta:call:7:7:6484ba07",
+            "parentId": "beta:for:3:8:528bc8be",
+            "nativeId": "typescript:CallExpression:7:7:6484ba07",
+            "structuralFingerprint": "call:call:7:7:181ed417",
             "kind": "call",
             "role": "call",
-            "label": "push",
+            "label": "output.push(await mapper(value));",
             "depth": 2,
             "read": "src/flow.ts:7:7",
-            "flags": [
-              "call"
-            ]
+            "flags": ["call"]
           },
           {
             "id": "beta:await:7:7:dc0bbf8d",
-            "parentId": "beta:call:7:7:876fffdd",
+            "parentId": "beta:call:7:7:6484ba07",
             "nativeId": "typescript:AwaitExpression:7:7:dc0bbf8d",
             "structuralFingerprint": "await:effect:7:7:b3e1513d",
             "kind": "await",
@@ -111,73 +112,94 @@
             "label": "await",
             "depth": 3,
             "read": "src/flow.ts:7:7",
-            "flags": [
-              "await"
-            ]
+            "flags": ["await"]
           },
           {
-            "id": "beta:call:7:7:b77effd0",
+            "id": "beta:call:7:7:8489bff1",
             "parentId": "beta:await:7:7:dc0bbf8d",
-            "nativeId": "typescript:CallExpression:7:7:b77effd0",
-            "structuralFingerprint": "call:call:7:7:d350a882",
+            "nativeId": "typescript:CallExpression:7:7:8489bff1",
+            "structuralFingerprint": "call:call:7:7:860c88d5",
             "kind": "call",
             "role": "call",
-            "label": "mapper",
+            "label": "mapper(value);",
             "depth": 4,
             "read": "src/flow.ts:7:7",
-            "flags": [
-              "call"
-            ]
+            "flags": ["call"]
           },
           {
-            "id": "beta:return:9:9:1f7d21bc",
+            "id": "beta:for:3:8:528bc8be:end",
+            "parentId": "beta:for:3:8:528bc8be",
+            "nativeId": "typescript:delimiter:8:8:43ee0ee8",
+            "structuralFingerprint": "delimiter:delimiter:8:8:fda8076f",
+            "kind": "delimiter",
+            "role": "delimiter",
+            "label": "}",
+            "depth": 1,
+            "read": "src/flow.ts:8:8",
+            "flags": ["delimiter"]
+          },
+          {
+            "id": "beta:return:9:9:18fbc785",
             "parentId": "beta",
-            "nativeId": "typescript:ReturnStatement:9:9:1f7d21bc",
-            "structuralFingerprint": "return:terminal:9:9:56d2197c",
+            "nativeId": "typescript:ReturnStatement:9:9:18fbc785",
+            "structuralFingerprint": "return:terminal:9:9:d063f077",
             "kind": "return",
             "role": "terminal",
-            "label": "return output",
+            "label": "return output;",
             "depth": 1,
             "read": "src/flow.ts:9:9",
-            "flags": [
-              "return"
-            ]
+            "flags": ["return"]
+          },
+          {
+            "id": "beta:end",
+            "parentId": "beta",
+            "nativeId": "typescript:delimiter:10:10:d614bbea",
+            "structuralFingerprint": "delimiter:delimiter:10:10:fda8076f",
+            "kind": "delimiter",
+            "role": "delimiter",
+            "label": "}",
+            "depth": 0,
+            "read": "src/flow.ts:10:10",
+            "flags": ["delimiter"]
           }
         ],
         "renderedNodeIds": [
           "beta",
-          "beta:const:2:2:544d39c9",
-          "beta:for:3:8:723a9048",
-          "beta:if:4:6:2660d8a7",
+          "beta:const:2:2:33d63e5e",
+          "beta:for:3:8:528bc8be",
+          "beta:if:4:6:2e0a0f6b",
           "beta:continue:5:5:b1727e44",
-          "beta:call:7:7:876fffdd",
+          "beta:if:4:6:2e0a0f6b:end",
+          "beta:call:7:7:6484ba07",
           "beta:await:7:7:dc0bbf8d",
-          "beta:call:7:7:b77effd0",
-          "beta:return:9:9:1f7d21bc"
+          "beta:call:7:7:8489bff1",
+          "beta:for:3:8:528bc8be:end",
+          "beta:return:9:9:18fbc785",
+          "beta:end"
         ],
         "renderedRows": [
           {
             "nodeId": "beta",
             "rowKind": "declaration",
-            "text": "async function beta",
+            "text": "async function beta(values: string[], mapper: (value: string) => Promise<string>) {",
             "semanticWeight": 1
           },
           {
-            "nodeId": "beta:const:2:2:544d39c9",
+            "nodeId": "beta:const:2:2:33d63e5e",
             "rowKind": "mutation",
-            "text": "  assign output",
+            "text": "  const output;",
             "semanticWeight": 2
           },
           {
-            "nodeId": "beta:for:3:8:723a9048",
+            "nodeId": "beta:for:3:8:528bc8be",
             "rowKind": "control-flow",
-            "text": "  for value of values",
+            "text": "  for (value of values) {",
             "semanticWeight": 2
           },
           {
-            "nodeId": "beta:if:4:6:2660d8a7",
+            "nodeId": "beta:if:4:6:2e0a0f6b",
             "rowKind": "control-flow",
-            "text": "    if value.trim() === \"\"",
+            "text": "    if (value.trim() === \"\") {",
             "semanticWeight": 2
           },
           {
@@ -187,9 +209,15 @@
             "semanticWeight": 2
           },
           {
-            "nodeId": "beta:call:7:7:876fffdd",
+            "nodeId": "beta:if:4:6:2e0a0f6b:end",
+            "rowKind": "delimiter",
+            "text": "    }",
+            "semanticWeight": 1
+          },
+          {
+            "nodeId": "beta:call:7:7:6484ba07",
             "rowKind": "call",
-            "text": "    push",
+            "text": "    output.push(await mapper(value));",
             "semanticWeight": 2
           },
           {
@@ -199,18 +227,33 @@
             "semanticWeight": 2
           },
           {
-            "nodeId": "beta:call:7:7:b77effd0",
+            "nodeId": "beta:call:7:7:8489bff1",
             "rowKind": "call",
-            "text": "        mapper",
+            "text": "        mapper(value);",
             "semanticWeight": 2
           },
           {
-            "nodeId": "beta:return:9:9:1f7d21bc",
+            "nodeId": "beta:for:3:8:528bc8be:end",
+            "rowKind": "delimiter",
+            "text": "  }",
+            "semanticWeight": 1
+          },
+          {
+            "nodeId": "beta:return:9:9:18fbc785",
             "rowKind": "terminal",
-            "text": "  return output",
+            "text": "  return output;",
             "semanticWeight": 2
+          },
+          {
+            "nodeId": "beta:end",
+            "rowKind": "delimiter",
+            "text": "}",
+            "semanticWeight": 1
           }
         ],
+        "nodeCount": 12,
+        "nodeLimit": 32,
+        "nodesTruncated": false,
         "omitted": [
           {
             "nodeId": "beta",
@@ -229,19 +272,19 @@
           },
           {
             "kind": "exact-read",
-            "target": "beta:const:2:2:544d39c9",
+            "target": "beta:const:2:2:33d63e5e",
             "read": "src/flow.ts:2:2",
             "reason": "expand const node before editing"
           },
           {
             "kind": "exact-read",
-            "target": "beta:for:3:8:723a9048",
+            "target": "beta:for:3:8:528bc8be",
             "read": "src/flow.ts:3:8",
             "reason": "expand for node before editing"
           },
           {
             "kind": "exact-read",
-            "target": "beta:if:4:6:2660d8a7",
+            "target": "beta:if:4:6:2e0a0f6b",
             "read": "src/flow.ts:4:6",
             "reason": "expand if node before editing"
           },
@@ -253,13 +296,13 @@
           },
           {
             "kind": "exact-read",
-            "target": "beta:call:7:7:876fffdd",
+            "target": "beta:call:7:7:6484ba07",
             "read": "src/flow.ts:7:7",
             "reason": "expand call node before editing"
           },
           {
             "kind": "exact-read",
-            "target": "beta:return:9:9:1f7d21bc",
+            "target": "beta:return:9:9:18fbc785",
             "read": "src/flow.ts:9:9",
             "reason": "expand return node before editing"
           }

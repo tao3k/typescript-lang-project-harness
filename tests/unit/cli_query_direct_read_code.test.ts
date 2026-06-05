@@ -48,11 +48,22 @@ function second(): void {
   );
 
   assert.equal(status, 0);
-  assert.match(stdout, /mode=exact-source/u);
-  assert.match(stdout, /syntax=exact-source/u);
-  assert.match(stdout, /lineRange=7:14/u);
-  assert.match(stdout, /function second/u);
-  assert.match(stdout, /\\"--selector\\"/u);
+  assert.equal(
+    stdout,
+    [
+      '      "--selector",',
+      '      "src/tools/report.py",',
+      '      ".",',
+      "    ],",
+      "  );",
+      "}",
+      "",
+      "function second(): void {",
+      "",
+    ].join("\n"),
+  );
+  assert.doesNotMatch(stdout, /\[read-owner\]/u);
+  assert.doesNotMatch(stdout, /\|code /u);
   assert.doesNotMatch(stdout, /function first/u);
   assert.doesNotMatch(stdout, /const decision = classifyHook/u);
 });

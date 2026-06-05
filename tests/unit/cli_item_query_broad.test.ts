@@ -71,7 +71,7 @@ test("owner items broad mixed query returns names before code", () => {
     assert.match(output, /match=mixed/u);
     assert.match(output, /output=names/u);
     assert.match(output, /revise=expandActions->compactExpandActions/u);
-    assert.match(output, /next=select-item/u);
+    assert.match(output, /next=query-code/u);
     assert.match(output, /\|item function compactExpandActions/u);
     assert.doesNotMatch(output, /\|code /u);
   });

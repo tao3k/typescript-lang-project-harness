@@ -120,7 +120,7 @@ function assertSemanticHandle(value: JsonObject, schema: JsonObject, context: st
   if (value.fields !== undefined) assertFields(value.fields, `${context}.fields`);
 }
 
-function assertSchemaObject(value: JsonObject, schema: JsonObject, context: string): void {
+export function assertSchemaObject(value: JsonObject, schema: JsonObject, context: string): void {
   assertAllowedKeys(
     value,
     Object.keys(record(schema.properties, `${context} schema properties`)),
@@ -131,7 +131,7 @@ function assertSchemaObject(value: JsonObject, schema: JsonObject, context: stri
   }
 }
 
-function assertLocation(location: JsonObject, context: string): void {
+export function assertLocation(location: JsonObject, context: string): void {
   assertAllowedKeys(location, ["path", "lineRange"], context);
   assertString(location.path, `${context}.path`);
   if (location.lineRange !== undefined) {
@@ -140,14 +140,14 @@ function assertLocation(location: JsonObject, context: string): void {
   }
 }
 
-function assertFields(value: unknown, context: string): void {
+export function assertFields(value: unknown, context: string): void {
   const fields = record(value, context);
   for (const [key, fieldValue] of Object.entries(fields)) {
     assertScalar(fieldValue, `${context}.${key}`);
   }
 }
 
-function assertScalar(value: unknown, context: string): void {
+export function assertScalar(value: unknown, context: string): void {
   if (typeof value === "string" || typeof value === "boolean") return;
   if (typeof value === "number") {
     assert.ok(Number.isFinite(value), `${context} must be finite`);
@@ -180,7 +180,7 @@ function assertArray(
   }
 }
 
-function assertAllowedKeys(
+export function assertAllowedKeys(
   value: JsonObject,
   allowedKeys: readonly string[],
   context: string,
@@ -190,7 +190,7 @@ function assertAllowedKeys(
   }
 }
 
-function assertRequiredKeys(
+export function assertRequiredKeys(
   value: JsonObject,
   requiredKeys: readonly string[],
   context: string,
@@ -200,11 +200,11 @@ function assertRequiredKeys(
   }
 }
 
-function assertString(value: unknown, context: string): void {
+export function assertString(value: unknown, context: string): void {
   assert.equal(typeof value, "string", `${context} must be a string`);
 }
 
-function assertPositiveInteger(value: unknown, context: string): void {
+export function assertPositiveInteger(value: unknown, context: string): void {
   assert.equal(typeof value, "number", `${context} must be a number`);
   const numberValue = value as number;
   assert.ok(
@@ -213,7 +213,7 @@ function assertPositiveInteger(value: unknown, context: string): void {
   );
 }
 
-function record(value: unknown, context = "value"): JsonObject {
+export function record(value: unknown, context = "value"): JsonObject {
   assert.equal(typeof value, "object", `${context} must be an object`);
   assert.notEqual(value, null, `${context} must not be null`);
   assert.equal(Array.isArray(value), false, `${context} must not be an array`);

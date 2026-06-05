@@ -35,14 +35,13 @@ function writeTsProject(root: string, packageName: string, sourceText: string): 
   fs.writeFileSync(path.join(root, "src", "demo.ts"), sourceText);
 }
 
-test("owner items --query emits compact parser-owned code", () => {
+test("owner items --query emits compact item locators", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-owner-item-query-"));
   writeTsProject(
     root,
     "owner-item-query-fixture",
     readTextFixture("compact-query/sources/owner-item-demo.ts"),
   );
-  const expectedCode = readTextFixture("compact-query/owner-item-alpha.code.txt").trimEnd();
 
   const result = runCliCapture(
     ["search", "owner", "src/demo.ts", "items", "--query", "alpha", "."],
@@ -51,24 +50,15 @@ test("owner items --query emits compact parser-owned code", () => {
 
   assert.equal(result.exitCode, 0);
   assert.match(result.stdout, /^\[search-owner\].*item=1.*itemQuery=alpha/mu);
+  assert.match(result.stdout, /next=query-code/u);
   assert.match(
     result.stdout,
     /\|item function alpha owner=src\/demo\.ts column=0 exported=true read=src\/demo\.ts:1:4/u,
   );
-  assert.ok(
-    result.stdout
-      .split("\n")
-      .some(
-        (line) =>
-          line.startsWith(
-            "|code path=src/demo.ts lineRange=1:4 reason=item-query truncated=false ",
-          ) && line.includes(`text=${JSON.stringify(expectedCode)}`),
-      ),
-    result.stdout,
-  );
+  assert.doesNotMatch(result.stdout, /\|code /u);
+  assert.doesNotMatch(result.stdout, / text=/u);
   assert.doesNotMatch(result.stdout, /function beta/u);
 });
-
 test("owner items --json emits parser nodes and node expand actions", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-owner-item-json-"));
   writeTsProject(
@@ -104,9 +94,10 @@ test("owner items --json emits parser nodes and node expand actions", () => {
   const projection = match.projection;
 
   assert.equal(match.code, readTextFixture("compact-query/ts-alpha.code.txt").trimEnd());
-  assert.equal(projection.mode, "outline");
-  assert.equal(projection.syntax, "semantic-outline");
+  assert.equal(projection.mode, "compact");
+  assert.equal(projection.syntax, "save-token-typescript");
   assert.ok(projection.nodes.some((node) => node.read !== projection.exactRead));
+  assert.ok(projection.nodes.some((node) => node.role === "delimiter"));
   assert.ok(
     projection.nodes.some((node) => node.parentId !== undefined && node.parentId !== "alpha"),
   );

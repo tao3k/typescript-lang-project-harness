@@ -15,12 +15,7 @@ import {
   renderAgentDoctorJson,
   type AgentArgs,
 } from "./protocol-agent.js";
-import {
-  prefilterTypeScriptSearchPaths,
-  runtimeCostForTypeScriptPrefilter,
-  typeScriptSearchScopeFileNames,
-  type TypeScriptSearchPrefilterResult,
-} from "./search-prefilter.js";
+import { runtimeCostForTypeScriptPrefilter } from "./search-prefilter.js";
 import {
   typeScriptSemanticSearchViewDescriptor,
   type TypeScriptSemanticSearchPipe,
@@ -45,7 +40,14 @@ import {
   renderOwnerItemSemanticReadPacket,
   renderOwnerItemSemanticReadPacketJson,
 } from "./semantic-search/item-read.js";
+import { renderTypeScriptTreeSitterQuery } from "../parser/native_syntax/tree-sitter-query.js";
 import { renderTypeScriptAstPatchDryRunReceiptJson } from "./ast-patch.js";
+import {
+  checkConfig,
+  searchRunPlan,
+  SEARCH_VIEWS_REQUIRING_FULL_NATIVE_SYNTAX_FACTS,
+  SEARCH_VIEWS_REQUIRING_RULE_EVALUATION,
+} from "./protocol-runtime.js";
 
 export interface CliStreams {
   readonly stdout: { write(chunk: string): unknown };
@@ -56,13 +58,14 @@ export interface CliStreams {
 export type ProtocolArgs =
   | SearchArgs
   | QueryArgs
+  | TreeSitterQueryArgs
   | CheckArgs
   | AgentArgs
   | AstPatchArgs
   | ProtocolHelpArgs
   | ProtocolErrorArgs;
 
-interface SearchArgs {
+export interface SearchArgs {
   readonly kind: "search";
   readonly view: TypeScriptSemanticSearchView;
   readonly query: string | undefined;
@@ -94,7 +97,19 @@ interface QueryArgs {
   readonly renderMode: "read-packet" | undefined;
 }
 
-interface CheckArgs {
+interface TreeSitterQueryArgs {
+  readonly kind: "tree-sitter-query";
+  readonly catalogId: string | undefined;
+  readonly treeSitterQuery: string | undefined;
+  readonly terms: readonly string[];
+  readonly selector: string | undefined;
+  readonly projectRoot: string | undefined;
+  readonly packagePath: string | undefined;
+  readonly json: boolean;
+  readonly codeOnly: boolean;
+}
+
+export interface CheckArgs {
   readonly kind: "check";
   readonly mode: "changed" | "full";
   readonly projectRoot: string | undefined;
@@ -124,9 +139,11 @@ export function parseProtocolArgs(argv: readonly string[]): ProtocolArgs | undef
   if (command === "search") return parseSearchArgs(argv.slice(1));
   if (command === "query") {
     const queryArgs = argv.slice(1);
-    return isBroadHookQueryArgs(queryArgs)
-      ? parseSearchQueryArgs(queryArgs)
-      : parseQueryArgs(queryArgs);
+    return isTreeSitterQueryArgs(queryArgs)
+      ? parseTreeSitterQueryArgs(queryArgs)
+      : isBroadHookQueryArgs(queryArgs)
+        ? parseSearchQueryArgs(queryArgs)
+        : parseQueryArgs(queryArgs);
   }
   if (command === "ast-patch") return parseAstPatchArgs(argv.slice(1));
   if (command === "check") return parseCheckArgs(argv.slice(1));
@@ -168,6 +185,14 @@ export function runProtocolCli(
           ? (streams.stdin ?? "")
           : fs.readFileSync(path.resolve(cwd, args.packetPath), "utf8");
       streams.stdout.write(renderTypeScriptAstPatchDryRunReceiptJson(projectRoot, packetText));
+      return 0;
+    }
+    if (args.kind === "tree-sitter-query") {
+      let projectRoot = path.resolve(cwd, args.projectRoot ?? ".");
+      if (args.packagePath !== undefined) {
+        projectRoot = path.resolve(projectRoot, args.packagePath);
+      }
+      streams.stdout.write(renderTypeScriptTreeSitterQuery(projectRoot, args));
       return 0;
     }
     if (args.kind === "query") {
@@ -229,11 +254,13 @@ export function runProtocolCli(
     }
     if (args.kind === "check") {
       const projectRoot = path.resolve(cwd, args.projectRoot ?? ".");
-      const report = runTypeScriptProjectHarness(projectRoot);
+      const report = runTypeScriptProjectHarness(projectRoot, checkConfig(args.mode));
       if (args.json) {
         streams.stdout.write(renderTypeScriptProjectHarnessJson(report));
       } else {
-        const compact = renderTypeScriptProjectHarness(report);
+        const compact = renderTypeScriptProjectHarness(report, {
+          includeAdvice: args.mode !== "changed",
+        });
         streams.stdout.write(compact === "" ? "[ok] typescript\n" : `${compact}\n`);
       }
       return isTypeScriptHarnessClean(report) ? 0 : 1;
@@ -243,8 +270,8 @@ export function runProtocolCli(
     const searchPlan = searchRunPlan(cwd, args);
     const report = runTypeScriptProjectHarness(searchPlan.projectRoot, undefined, {
       collectSemanticDiagnostics: false,
-      collectNativeSyntaxFacts: searchNeedsFullNativeSyntaxFacts(args.view),
-      evaluateRules: searchNeedsRuleEvaluation(args.view),
+      collectNativeSyntaxFacts: SEARCH_VIEWS_REQUIRING_FULL_NATIVE_SYNTAX_FACTS.has(args.view),
+      evaluateRules: SEARCH_VIEWS_REQUIRING_RULE_EVALUATION.has(args.view),
       ...(searchPlan.fileNames === undefined ? {} : { fileNames: searchPlan.fileNames }),
     });
     const runtimeCost =
@@ -299,50 +326,6 @@ export function runProtocolCli(
   }
 }
 
-function searchNeedsFullNativeSyntaxFacts(view: TypeScriptSemanticSearchView): boolean {
-  switch (view) {
-    case "workspace":
-    case "owner":
-    case "api":
-    case "public-external-types":
-      return true;
-    case "prime":
-    case "dependency":
-    case "deps":
-    case "docs":
-    case "policy":
-    case "symbol":
-    case "callsite":
-    case "import":
-    case "tests":
-    case "fzf":
-    case "ingest":
-      return false;
-  }
-}
-
-function searchNeedsRuleEvaluation(view: TypeScriptSemanticSearchView): boolean {
-  switch (view) {
-    case "workspace":
-    case "owner":
-    case "policy":
-      return true;
-    case "prime":
-    case "dependency":
-    case "deps":
-    case "docs":
-    case "api":
-    case "public-external-types":
-    case "symbol":
-    case "callsite":
-    case "import":
-    case "tests":
-    case "fzf":
-    case "ingest":
-      return false;
-  }
-}
-
 function parseAstPatchArgs(argv: readonly string[]): ProtocolArgs {
   const mode = argv[0];
   if (mode === "--help" || mode === "-h") return { kind: "help" };
@@ -387,6 +370,97 @@ function parseAstPatchArgs(argv: readonly string[]): ProtocolArgs {
     packetPath,
     projectRoot: positionals[0],
   };
+}
+
+function parseTreeSitterQueryArgs(argv: readonly string[]): ProtocolArgs {
+  if (argv[0] === "--help" || argv[0] === "-h") return { kind: "help" };
+  let catalogId: string | undefined;
+  let treeSitterQuery: string | undefined;
+  let selector: string | undefined;
+  let packagePath: string | undefined;
+  let json = false;
+  let codeOnly = false;
+  const terms: string[] = [];
+  const positionals: string[] = [];
+  for (let index = 0; index < argv.length; index++) {
+    const arg = argv[index]!;
+    if (arg === "--catalog") {
+      const value = argv[index + 1];
+      if (value === undefined || value.startsWith("-")) {
+        return { kind: "error", message: "--catalog requires a catalog id" };
+      }
+      catalogId = value;
+      index += 1;
+    } else if (arg === "--treesitter-query") {
+      const value = argv[index + 1];
+      if (value === undefined || value.startsWith("-")) {
+        return { kind: "error", message: "--treesitter-query requires a query expression" };
+      }
+      treeSitterQuery = value;
+      index += 1;
+    } else if (arg === "--term" || arg === "--query") {
+      const value = argv[index + 1];
+      if (value === undefined) return { kind: "error", message: `${arg} requires a value` };
+      terms.push(
+        ...(arg === "--query"
+          ? value
+              .split("|")
+              .map((term) => term.trim())
+              .filter((term) => term.length > 0)
+          : [value]),
+      );
+      index += 1;
+    } else if (arg === "--selector") {
+      const value = argv[index + 1];
+      if (value === undefined || value.startsWith("-")) {
+        return { kind: "error", message: "--selector requires a selector" };
+      }
+      selector = value;
+      index += 1;
+    } else if (arg === "--package") {
+      const value = argv[index + 1];
+      if (value === undefined || value.startsWith("-")) {
+        return { kind: "error", message: "--package requires a package path" };
+      }
+      packagePath = value;
+      index += 1;
+    } else if (arg === "--json") {
+      json = true;
+    } else if (arg === "--code") {
+      codeOnly = true;
+    } else if (arg.startsWith("-")) {
+      return { kind: "error", message: `unknown tree-sitter query option: ${arg}` };
+    } else {
+      positionals.push(arg);
+    }
+  }
+  if ((catalogId === undefined) === (treeSitterQuery === undefined)) {
+    return {
+      kind: "error",
+      message: "query requires exactly one of --catalog or --treesitter-query",
+    };
+  }
+  if (json && codeOnly) {
+    return { kind: "error", message: "--code cannot be combined with --json" };
+  }
+  if (positionals.length > 1) {
+    return { kind: "error", message: "expected at most one PROJECT_ROOT argument" };
+  }
+  return {
+    kind: "tree-sitter-query",
+    catalogId,
+    treeSitterQuery,
+    terms,
+    selector,
+    projectRoot: positionals[0],
+    packagePath,
+    json,
+    codeOnly,
+  };
+}
+
+function isTreeSitterQueryArgs(argv: readonly string[]): boolean {
+  return argv.includes("--treesitter-query") || argv.includes("--catalog");
 }
 
 function parseQueryArgs(argv: readonly string[]): ProtocolArgs {
@@ -876,61 +950,6 @@ function parseCheckArgs(argv: readonly string[]): ProtocolArgs {
     return { kind: "error", message: "expected at most one PROJECT_ROOT argument" };
   }
   return { kind: "check", mode, projectRoot: positionals[0], json };
-}
-
-interface SearchRunPlan {
-  readonly projectRoot: string;
-  readonly fileNames?: readonly string[];
-  readonly prefilter?: TypeScriptSearchPrefilterResult;
-}
-
-function searchRunPlan(cwd: string, args: SearchArgs): SearchRunPlan {
-  const root = path.resolve(cwd, args.projectRoot ?? ".");
-  if (args.packagePath === undefined) {
-    return prefilteredSearchRunPlan(root, args, []);
-  }
-
-  const scopePath = path.resolve(root, args.packagePath);
-  if (!fs.existsSync(scopePath)) {
-    throw new Error(`package path does not exist: ${scopePath}`);
-  }
-  if (fs.existsSync(path.join(scopePath, "package.json"))) {
-    return prefilteredSearchRunPlan(scopePath, args, []);
-  }
-  return prefilteredSearchRunPlan(root, args, [scopePath]);
-}
-
-function prefilteredSearchRunPlan(
-  projectRoot: string,
-  args: SearchArgs,
-  scopePaths: readonly string[],
-): SearchRunPlan {
-  const queryTerms = prefilterQueryTerms(args);
-  const prefilter =
-    queryTerms.length === 0
-      ? undefined
-      : prefilterTypeScriptSearchPaths(projectRoot, queryTerms, {
-          scopePaths,
-          ...(args.ownerPath === undefined ? {} : { ownerPath: args.ownerPath }),
-        });
-  if (prefilter !== undefined) {
-    return { projectRoot, fileNames: prefilter.fileNames, prefilter };
-  }
-  if (scopePaths.length > 0) {
-    return { projectRoot, fileNames: typeScriptSearchScopeFileNames(scopePaths) };
-  }
-  return { projectRoot };
-}
-
-function prefilterQueryTerms(args: SearchArgs): readonly string[] {
-  if (args.view === "fzf") {
-    if (args.querySet.length > 0) return args.querySet;
-    return args.query === undefined ? [] : [args.query];
-  }
-  if (args.view === "api" && args.query !== undefined && !args.query.includes("::")) {
-    return [args.query];
-  }
-  return [];
 }
 
 function isSemanticSearchRenderMode(value: string | undefined): value is SemanticSearchRenderMode {

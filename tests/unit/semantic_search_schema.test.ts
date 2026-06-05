@@ -10,7 +10,18 @@ import {
   expectedSearchCapabilities,
   expectedSearchIngestRequiredFor,
 } from "./semantic_search_registry_expectations.js";
-import { assertSemanticHandles, assertTypeSurfaces } from "./semantic_search_schema_assertions.js";
+import {
+  assertAllowedKeys,
+  assertFields,
+  assertLocation,
+  assertPositiveInteger,
+  assertRequiredKeys,
+  assertSchemaObject,
+  assertSemanticHandles,
+  assertString,
+  assertTypeSurfaces,
+  record,
+} from "./semantic_search_schema_assertions.js";
 
 type JsonObject = Record<string, unknown>;
 
@@ -196,6 +207,7 @@ test("semantic language registry JSON documents the TypeScript provider identity
     "search/tests",
     "search/fzf",
     "search/ingest",
+    "query",
     "query/owner-items",
     "query/direct-source-read",
     "check/changed",
@@ -352,6 +364,37 @@ test("semantic language registry JSON documents the TypeScript provider identity
         );
       }
       assert.deepEqual(surfaces, expectedSearchIngestRequiredFor(String(descriptor.method)));
+    } else if (descriptor.method === "query") {
+      assert.equal(descriptor.command, "query");
+      assert.equal(Object.hasOwn(descriptor, "view"), false);
+      assert.deepEqual(descriptor.outputSchemaIds, [
+        "agent.semantic-protocols.semantic-tree-sitter-query",
+      ]);
+      assert.deepEqual(descriptor.packetSchemas, ["semantic-tree-sitter-query.v1"]);
+      assert.equal(descriptor.input, "tree-sitter-compatible syntax query");
+      assert.deepEqual(descriptor.requiredOptions, ["--catalog|--treesitter-query"]);
+      assert.deepEqual(descriptor.queryInputForms, ["catalog-id", "s-expression"]);
+      assert.equal(descriptor.grammarId, "tree-sitter-typescript");
+      assert.equal(descriptor.grammarProfileVersion, "2026-06-05.v1");
+      assert.equal(descriptor.grammarProfileSchema, "semantic-tree-sitter-grammar-profile.v1");
+      assert.equal(
+        descriptor.grammarProfilePath,
+        "tree-sitter/tree-sitter-typescript/grammar-profile.json",
+      );
+      assert.equal(descriptor.cacheReplay, true);
+      assert.deepEqual(descriptor.outputModes, ["compact", "json", "code"]);
+      const queryCatalogs = array(descriptor.queryCatalogs, "query queryCatalogs").map(
+        (catalog, index) => record(catalog, `query queryCatalogs[${index}]`),
+      );
+      assert.deepEqual(
+        queryCatalogs.map((catalog) => catalog.id),
+        ["declarations", "imports", "calls"],
+      );
+      for (const catalog of queryCatalogs) {
+        assert.equal(catalog.sourceDelivery, "provider-binary-embedded");
+        assert.ok(String(catalog.path).startsWith("tree-sitter/tree-sitter-typescript/queries/"));
+        assert.ok(array(catalog.captures, "query catalog captures").length > 0);
+      }
     } else if (String(descriptor.method).startsWith("query/")) {
       const method = String(descriptor.method);
       assert.equal(descriptor.command, "query");
@@ -443,6 +486,14 @@ test("semantic language registry JSON documents the TypeScript provider identity
     "schemas/semantic-read-packet.v1.schema.json",
   );
   assertRegisteredSchema(
+    "agent.semantic-protocols.semantic-tree-sitter-query",
+    "schemas/semantic-tree-sitter-query.v1.schema.json",
+  );
+  assertRegisteredSchema(
+    "agent.semantic-protocols.semantic-tree-sitter-grammar-profile",
+    "schemas/semantic-tree-sitter-grammar-profile.v1.schema.json",
+  );
+  assertRegisteredSchema(
     "agent.semantic-protocols.semantic-graph",
     "schemas/semantic-graph.v1.schema.json",
   );
@@ -497,6 +548,8 @@ test("package-local semantic schemas stay synchronized with the protocol reposit
     "semantic-search-packet.v1.schema.json",
     "semantic-query-packet.v1.schema.json",
     "semantic-read-packet.v1.schema.json",
+    "semantic-tree-sitter-query.v1.schema.json",
+    "semantic-tree-sitter-grammar-profile.v1.schema.json",
     "semantic-graph.v1.schema.json",
     "semantic-type-surface.v1.schema.json",
     "semantic-dev-command-log.v1.schema.json",
@@ -835,54 +888,6 @@ function assertNote(note: JsonObject, schema: JsonObject, context: string): void
   if (note.fields !== undefined) assertFields(note.fields, `${context}.fields`);
 }
 
-function assertSchemaObject(value: JsonObject, schema: JsonObject, context: string): void {
-  assertAllowedKeys(
-    value,
-    Object.keys(record(schema.properties, `${context} schema properties`)),
-    context,
-  );
-  if (schema.required !== undefined) {
-    assertRequiredKeys(value, stringArray(schema.required, `${context} schema required`), context);
-  }
-}
-
-function assertLocation(location: JsonObject, context: string): void {
-  assertAllowedKeys(location, ["path", "lineRange"], context);
-  assertString(location.path, `${context}.path`);
-  if (location.lineRange !== undefined) {
-    assertString(location.lineRange, `${context}.lineRange`);
-    assert.match(String(location.lineRange), /^[1-9][0-9]*:[1-9][0-9]*$/u);
-  }
-}
-
-function assertFields(value: unknown, context: string): void {
-  const fields = record(value, context);
-  for (const [key, fieldValue] of Object.entries(fields)) {
-    assertScalar(fieldValue, `${context}.${key}`);
-  }
-}
-
-function assertScalar(value: unknown, context: string): void {
-  if (typeof value === "string" || typeof value === "boolean") return;
-  if (typeof value === "number") {
-    assert.ok(Number.isFinite(value), `${context} must be finite`);
-    return;
-  }
-  if (Array.isArray(value)) {
-    for (const [index, item] of value.entries()) {
-      assertScalarArrayItem(item, `${context}[${index}]`);
-    }
-    return;
-  }
-  assert.fail(`${context} must be a scalar field value`);
-}
-
-function assertScalarArrayItem(value: unknown, context: string): void {
-  if (typeof value === "string" || typeof value === "boolean") return;
-  if (typeof value === "number" && Number.isFinite(value)) return;
-  assert.fail(`${context} must be a string, number, or boolean`);
-}
-
 function assertArray(
   value: unknown,
   context: string,
@@ -895,42 +900,9 @@ function assertArray(
   }
 }
 
-function assertAllowedKeys(
-  value: JsonObject,
-  allowedKeys: readonly string[],
-  context: string,
-): void {
-  for (const key of Object.keys(value)) {
-    assert.ok(allowedKeys.includes(key), `${context} has unexpected key ${key}`);
-  }
-}
-
-function assertRequiredKeys(
-  value: JsonObject,
-  requiredKeys: readonly string[],
-  context: string,
-): void {
-  for (const key of requiredKeys) {
-    assert.ok(Object.hasOwn(value, key), `${context} missing required key ${key}`);
-  }
-}
-
-function assertString(value: unknown, context: string): void {
-  assert.equal(typeof value, "string", `${context} must be a string`);
-}
-
 function assertNumber(value: unknown, context: string): void {
   assert.equal(typeof value, "number", `${context} must be a number`);
   assert.ok(Number.isFinite(value), `${context} must be finite`);
-}
-
-function assertPositiveInteger(value: unknown, context: string): void {
-  assert.equal(typeof value, "number", `${context} must be a number`);
-  const numberValue = value as number;
-  assert.ok(
-    Number.isInteger(numberValue) && numberValue >= 1,
-    `${context} must be an integer >= 1`,
-  );
 }
 
 function assertNonNegativeInteger(value: unknown, context: string): void {
@@ -940,13 +912,6 @@ function assertNonNegativeInteger(value: unknown, context: string): void {
     Number.isInteger(numberValue) && numberValue >= 0,
     `${context} must be an integer >= 0`,
   );
-}
-
-function record(value: unknown, context = "value"): JsonObject {
-  assert.equal(typeof value, "object", `${context} must be an object`);
-  assert.notEqual(value, null, `${context} must not be null`);
-  assert.equal(Array.isArray(value), false, `${context} must not be an array`);
-  return value as JsonObject;
 }
 
 function stringArray(value: unknown, context: string): string[] {

@@ -5,6 +5,8 @@ import {
   SEMANTIC_DEV_COMMAND_LOG_SCHEMA_ID,
   SEMANTIC_QUERY_PACKET_SCHEMA_ID,
   SEMANTIC_READ_PACKET_SCHEMA_ID,
+  SEMANTIC_TREE_SITTER_GRAMMAR_PROFILE_SCHEMA_ID,
+  SEMANTIC_TREE_SITTER_QUERY_SCHEMA_ID,
   semanticLanguageRegistryDocument,
 } from "../../src/cli/semantic-language.js";
 
@@ -37,4 +39,33 @@ test("registry advertises dev command log schema", () => {
   );
   assert.ok(schema, "dev command log schema should be advertised");
   assert.equal(schema.path, "schemas/semantic-dev-command-log.v1.schema.json");
+});
+
+test("registry declares TypeScript tree-sitter query ABI", () => {
+  const registry = semanticLanguageRegistryDocument();
+  const language = registry.languages.find((candidate) => candidate.languageId === "typescript");
+  assert.ok(language, "typescript language registration should exist");
+  assert.ok(language.methods.includes("query"));
+
+  const descriptor = language.methodDescriptors.find((candidate) => candidate.method === "query");
+  assert.ok(descriptor, "tree-sitter query descriptor should exist");
+  assert.deepEqual(descriptor.outputSchemaIds, [SEMANTIC_TREE_SITTER_QUERY_SCHEMA_ID]);
+  assert.deepEqual(descriptor.packetSchemas, ["semantic-tree-sitter-query.v1"]);
+  assert.deepEqual(descriptor.queryInputForms, ["catalog-id", "s-expression"]);
+  assert.equal(descriptor.grammarId, "tree-sitter-typescript");
+  assert.equal(descriptor.grammarProfileVersion, "2026-06-05.v1");
+  assert.equal(descriptor.cacheReplay, true);
+  assert.equal(descriptor.queryCatalogs?.length, 3);
+
+  const querySchema = language.schemas.find(
+    (candidate) => candidate.schemaId === SEMANTIC_TREE_SITTER_QUERY_SCHEMA_ID,
+  );
+  assert.ok(querySchema, "tree-sitter query schema should be advertised");
+  assert.equal(querySchema.path, "schemas/semantic-tree-sitter-query.v1.schema.json");
+
+  const profileSchema = language.schemas.find(
+    (candidate) => candidate.schemaId === SEMANTIC_TREE_SITTER_GRAMMAR_PROFILE_SCHEMA_ID,
+  );
+  assert.ok(profileSchema, "tree-sitter grammar profile schema should be advertised");
+  assert.equal(profileSchema.path, "schemas/semantic-tree-sitter-grammar-profile.v1.schema.json");
 });

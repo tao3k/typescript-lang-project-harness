@@ -1,11 +1,15 @@
-@sealed class Service
+@sealed class Service {
   @sealed
-  field readonly prefix: string
-  constructor
-    this.prefix = prefix
-  async method run
-    if value.length === 0
-      throw new Error
-    return template
+  readonly prefix: string;
+  constructor(prefix: string) {
+    this.prefix = prefix;
+  }
+  async run(value: string): Promise<string> {
+    if (value.length === 0) {
+      throw new Error;
+    }
+    return template;
       await
-        resolve
+        Promise.resolve(value);
+  }
+}

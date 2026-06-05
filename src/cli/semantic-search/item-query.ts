@@ -63,16 +63,38 @@ interface SemanticQueryCoverage {
 
 interface SemanticQueryProjection {
   readonly mode: "compact" | "names" | "outline" | "exact";
-  readonly syntax: "brace-block" | "token-compact" | "semantic-outline" | "exact-source" | "none";
+  readonly syntax:
+    | "brace-block"
+    | "token-compact"
+    | "semantic-outline"
+    | "save-token-typescript"
+    | "exact-source"
+    | "none";
   readonly sourceAuthority: "native-parser" | "parser-index" | "source-range";
+  readonly compactSafety?: SemanticQueryCompactSafety;
   readonly sourceFingerprint?: string;
   readonly losslessStructure?: boolean;
   readonly exactRead?: string;
   readonly nodes?: readonly SemanticQueryProjectionNode[];
   readonly renderedNodeIds?: readonly string[];
   readonly renderedRows?: readonly SemanticQueryProjectionRenderedRow[];
+  readonly nodeCount?: number;
+  readonly nodeLimit?: number;
+  readonly nodesTruncated?: boolean;
   readonly omitted?: readonly SemanticQueryProjectionOmission[];
   readonly expandActions?: readonly SemanticQueryExpandAction[];
+}
+
+interface SemanticQueryCompactSafety {
+  readonly literalPolicy: "preserve" | "summarize" | "omit";
+  readonly whitespacePolicy:
+    | "syntax-trivia-only"
+    | "semantic-outline"
+    | "formatter-structural"
+    | "exact-source";
+  readonly normalization?: "none" | "formatter-assisted";
+  readonly alignment?: "not-required" | "parser-roundtrip" | "formatter-roundtrip";
+  readonly exactReadRequired: boolean;
 }
 
 interface SemanticQueryProjectionNode {
@@ -87,6 +109,7 @@ interface SemanticQueryProjectionNode {
     | "control-flow"
     | "call"
     | "terminal"
+    | "delimiter"
     | "mutation"
     | "effect"
     | "unknown";
@@ -104,6 +127,7 @@ interface SemanticQueryProjectionRenderedRow {
     | "control-flow"
     | "call"
     | "terminal"
+    | "delimiter"
     | "mutation"
     | "effect"
     | "unknown";
@@ -187,11 +211,6 @@ export function renderOwnerItemQuery(
     ].filter((field) => field.length > 0);
     lines.push(`|item ${item.kind} ${item.name} ${itemFields.join(" ")}`);
     if (namesOnly) continue;
-    lines.push(
-      `|code path=${result.ownerPath} lineRange=${item.lineStart}:${item.lineEnd} reason=item-query truncated=false text=${JSON.stringify(
-        semanticOutlineCode(item),
-      )}`,
-    );
   }
   return lines.join("\n");
 }
@@ -211,13 +230,14 @@ function ownerItemQueryShouldAutoNamesOnly(
 
 function ownerItemQueryNextAction(
   result: {
+    readonly matches: readonly { readonly name: string }[];
     readonly fallback?: "owner-top-items";
   },
   namesOnly: boolean,
-): "code" | "revise-query" | "select-item" {
-  if (!namesOnly) return "code";
+): "query-code" | "revise-query" | "select-item" {
   if (result.fallback !== undefined) return "revise-query";
-  return "select-item";
+  if (namesOnly && result.matches.length > 1) return "select-item";
+  return "query-code";
 }
 
 function ownerItemQueryRevisionField(result: {
@@ -265,15 +285,16 @@ function compactProjectionRowTexts(
 }
 
 function compactRenderedProjectionEntries<
-  T extends { readonly depth?: number; readonly label: string },
+  T extends { readonly id?: string; readonly depth?: number; readonly label: string },
 >(nodes: readonly T[]): readonly { readonly node: T; readonly text: string }[] {
   const entries: { node: T; text: string }[] = [];
   const seen = new Set<string>();
   for (const node of nodes) {
     const text = compactRenderedRowText(node);
     const trimmed = text.trim();
-    if (trimmed.length === 0 || seen.has(trimmed)) continue;
-    seen.add(trimmed);
+    const key = node.id ?? trimmed;
+    if (trimmed.length === 0 || seen.has(key)) continue;
+    seen.add(key);
     entries.push({ node, text });
   }
   return entries;
@@ -291,15 +312,25 @@ function compactProjection(
   const compactCode = semanticOutlineCode(item);
   const nodes = compactProjectionNodes(item, ownerPath, exactRead, compactCode);
   return {
-    mode: "outline",
-    syntax: "semantic-outline",
+    mode: "compact",
+    syntax: "save-token-typescript",
     sourceAuthority: "native-parser",
+    compactSafety: {
+      literalPolicy: "summarize",
+      whitespacePolicy: "formatter-structural",
+      normalization: "none",
+      alignment: "parser-roundtrip",
+      exactReadRequired: true,
+    },
     sourceFingerprint: sourceFingerprint(exactRead, item.code),
     losslessStructure: true,
     exactRead,
     nodes,
     renderedNodeIds: compactRenderedNodeIds(nodes),
     renderedRows: compactRenderedRows(nodes),
+    nodeCount: nodes.length,
+    nodeLimit: 32,
+    nodesTruncated: false,
     omitted: compactProjectionOmissions(item, exactRead, compactCode, projectionNodeId(item.name)),
     expandActions: compactExpandActions(item.name, exactRead, nodes),
   };
@@ -329,6 +360,7 @@ function compactRenderedRowKind(
     case "control-flow":
     case "call":
     case "terminal":
+    case "delimiter":
     case "mutation":
     case "effect":
       return role;

@@ -5,20 +5,27 @@
       "kind": "class",
       "read": "src/service.ts:5:19",
       "projection": {
-        "mode": "outline",
-        "syntax": "semantic-outline",
+        "mode": "compact",
+        "syntax": "save-token-typescript",
         "sourceAuthority": "native-parser",
+        "compactSafety": {
+          "literalPolicy": "summarize",
+          "whitespacePolicy": "formatter-structural",
+          "normalization": "none",
+          "alignment": "parser-roundtrip",
+          "exactReadRequired": true
+        },
         "sourceFingerprint": "src/service.ts:5:19:260:da06451b",
         "losslessStructure": true,
         "exactRead": "src/service.ts:5:19",
         "nodes": [
           {
             "id": "Service",
-            "nativeId": "typescript:class:5:19:8c947c74",
-            "structuralFingerprint": "class:declaration:5:19:ef49dd3e",
+            "nativeId": "typescript:class:5:19:e7cf17c5",
+            "structuralFingerprint": "class:declaration:5:19:178cfbbf",
             "kind": "class",
             "role": "declaration",
-            "label": "@sealed class Service",
+            "label": "@sealed class Service {",
             "depth": 0,
             "read": "src/service.ts:5:19",
             "flags": [
@@ -42,105 +49,117 @@
             "label": "@sealed",
             "depth": 1,
             "read": "src/service.ts:5:5",
-            "flags": [
-              "decorator"
-            ]
+            "flags": ["decorator"]
           },
           {
-            "id": "Service:field:7:7:3799461e",
+            "id": "Service:field:7:7:dbc4543f",
             "parentId": "Service",
-            "nativeId": "typescript:PropertyDeclaration:7:7:3799461e",
-            "structuralFingerprint": "field:field:7:7:3c084d50",
+            "nativeId": "typescript:PropertyDeclaration:7:7:dbc4543f",
+            "structuralFingerprint": "field:field:7:7:d6871201",
             "kind": "field",
             "role": "field",
-            "label": "field readonly prefix: string",
+            "label": "readonly prefix: string;",
             "depth": 1,
             "read": "src/service.ts:7:7",
-            "flags": [
-              "field"
-            ]
+            "flags": ["field"]
           },
           {
-            "id": "Service:constructor:9:11:f25d9f4f",
+            "id": "Service:constructor:9:11:32af9c0c",
             "parentId": "Service",
-            "nativeId": "typescript:Constructor:9:11:f25d9f4f",
-            "structuralFingerprint": "constructor:declaration:9:11:fe62052f",
+            "nativeId": "typescript:Constructor:9:11:32af9c0c",
+            "structuralFingerprint": "constructor:declaration:9:11:72e902",
             "kind": "constructor",
             "role": "declaration",
-            "label": "constructor",
+            "label": "constructor(prefix: string) {",
             "depth": 1,
             "read": "src/service.ts:9:11"
           },
           {
-            "id": "Service:assign:10:10:dbe149d2",
-            "parentId": "Service:constructor:9:11:f25d9f4f",
-            "nativeId": "typescript:BinaryExpression:10:10:dbe149d2",
-            "structuralFingerprint": "assign:mutation:10:10:15c761f",
+            "id": "Service:assign:10:10:ca759cb",
+            "parentId": "Service:constructor:9:11:32af9c0c",
+            "nativeId": "typescript:BinaryExpression:10:10:ca759cb",
+            "structuralFingerprint": "assign:mutation:10:10:9b84c5f0",
             "kind": "assign",
             "role": "mutation",
-            "label": "this.prefix = prefix",
+            "label": "this.prefix = prefix;",
             "depth": 2,
             "read": "src/service.ts:10:10",
-            "flags": [
-              "mutation"
-            ]
+            "flags": ["mutation"]
           },
           {
-            "id": "Service:method:13:18:f31c649d",
+            "id": "Service:constructor:9:11:32af9c0c:end",
+            "parentId": "Service:constructor:9:11:32af9c0c",
+            "nativeId": "typescript:delimiter:11:11:5c9c2799",
+            "structuralFingerprint": "delimiter:delimiter:11:11:fda8076f",
+            "kind": "delimiter",
+            "role": "delimiter",
+            "label": "}",
+            "depth": 1,
+            "read": "src/service.ts:11:11",
+            "flags": ["delimiter"]
+          },
+          {
+            "id": "Service:method:13:18:39bb986",
             "parentId": "Service",
-            "nativeId": "typescript:MethodDeclaration:13:18:f31c649d",
-            "structuralFingerprint": "method:declaration:13:18:5cb272e5",
+            "nativeId": "typescript:MethodDeclaration:13:18:39bb986",
+            "structuralFingerprint": "method:declaration:13:18:6a2562f4",
             "kind": "method",
             "role": "declaration",
-            "label": "async method run",
+            "label": "async run(value: string): Promise<string> {",
             "depth": 1,
             "read": "src/service.ts:13:18"
           },
           {
-            "id": "Service:if:14:16:631ebdde",
-            "parentId": "Service:method:13:18:f31c649d",
-            "nativeId": "typescript:IfStatement:14:16:631ebdde",
-            "structuralFingerprint": "if:control-flow:14:16:e64f6c54",
+            "id": "Service:if:14:16:94743e48",
+            "parentId": "Service:method:13:18:39bb986",
+            "nativeId": "typescript:IfStatement:14:16:94743e48",
+            "structuralFingerprint": "if:control-flow:14:16:7c0b6fa6",
             "kind": "if",
             "role": "control-flow",
-            "label": "if value.length === 0",
+            "label": "if (value.length === 0) {",
             "depth": 2,
             "read": "src/service.ts:14:16",
-            "flags": [
-              "branch"
-            ]
+            "flags": ["branch"]
           },
           {
-            "id": "Service:throw:15:15:a6c35ff3",
-            "parentId": "Service:if:14:16:631ebdde",
-            "nativeId": "typescript:ThrowStatement:15:15:a6c35ff3",
-            "structuralFingerprint": "throw:terminal:15:15:ac8d41ed",
+            "id": "Service:throw:15:15:4d8fc7d8",
+            "parentId": "Service:if:14:16:94743e48",
+            "nativeId": "typescript:ThrowStatement:15:15:4d8fc7d8",
+            "structuralFingerprint": "throw:terminal:15:15:e7c5fd86",
             "kind": "throw",
             "role": "terminal",
-            "label": "throw new Error",
+            "label": "throw new Error;",
             "depth": 3,
             "read": "src/service.ts:15:15",
-            "flags": [
-              "throw"
-            ]
+            "flags": ["throw"]
           },
           {
-            "id": "Service:return:17:17:5b26e2d3",
-            "parentId": "Service:method:13:18:f31c649d",
-            "nativeId": "typescript:ReturnStatement:17:17:5b26e2d3",
-            "structuralFingerprint": "return:terminal:17:17:1ce05e99",
+            "id": "Service:if:14:16:94743e48:end",
+            "parentId": "Service:if:14:16:94743e48",
+            "nativeId": "typescript:delimiter:16:16:fbed3fb5",
+            "structuralFingerprint": "delimiter:delimiter:16:16:fda8076f",
+            "kind": "delimiter",
+            "role": "delimiter",
+            "label": "}",
+            "depth": 2,
+            "read": "src/service.ts:16:16",
+            "flags": ["delimiter"]
+          },
+          {
+            "id": "Service:return:17:17:66373338",
+            "parentId": "Service:method:13:18:39bb986",
+            "nativeId": "typescript:ReturnStatement:17:17:66373338",
+            "structuralFingerprint": "return:terminal:17:17:3e8052d0",
             "kind": "return",
             "role": "terminal",
-            "label": "return template",
+            "label": "return template;",
             "depth": 2,
             "read": "src/service.ts:17:17",
-            "flags": [
-              "return"
-            ]
+            "flags": ["return"]
           },
           {
             "id": "Service:await:17:17:dc0bbf8d",
-            "parentId": "Service:return:17:17:5b26e2d3",
+            "parentId": "Service:return:17:17:66373338",
             "nativeId": "typescript:AwaitExpression:17:17:dc0bbf8d",
             "structuralFingerprint": "await:effect:17:17:b3e1513d",
             "kind": "await",
@@ -148,43 +167,67 @@
             "label": "await",
             "depth": 3,
             "read": "src/service.ts:17:17",
-            "flags": [
-              "await"
-            ]
+            "flags": ["await"]
           },
           {
-            "id": "Service:call:17:17:aef31c63",
+            "id": "Service:call:17:17:75969291",
             "parentId": "Service:await:17:17:dc0bbf8d",
-            "nativeId": "typescript:CallExpression:17:17:aef31c63",
-            "structuralFingerprint": "call:call:17:17:58d5de8b",
+            "nativeId": "typescript:CallExpression:17:17:75969291",
+            "structuralFingerprint": "call:call:17:17:e2c4fe75",
             "kind": "call",
             "role": "call",
-            "label": "resolve",
+            "label": "Promise.resolve(value);",
             "depth": 4,
             "read": "src/service.ts:17:17",
-            "flags": [
-              "call"
-            ]
+            "flags": ["call"]
+          },
+          {
+            "id": "Service:method:13:18:39bb986:end",
+            "parentId": "Service:method:13:18:39bb986",
+            "nativeId": "typescript:delimiter:18:18:75a5c3eb",
+            "structuralFingerprint": "delimiter:delimiter:18:18:fda8076f",
+            "kind": "delimiter",
+            "role": "delimiter",
+            "label": "}",
+            "depth": 1,
+            "read": "src/service.ts:18:18",
+            "flags": ["delimiter"]
+          },
+          {
+            "id": "Service:end",
+            "parentId": "Service",
+            "nativeId": "typescript:delimiter:19:19:601bcdaf",
+            "structuralFingerprint": "delimiter:delimiter:19:19:fda8076f",
+            "kind": "delimiter",
+            "role": "delimiter",
+            "label": "}",
+            "depth": 0,
+            "read": "src/service.ts:19:19",
+            "flags": ["delimiter"]
           }
         ],
         "renderedNodeIds": [
           "Service",
           "Service:decorator:5:5:f27e01cf",
-          "Service:field:7:7:3799461e",
-          "Service:constructor:9:11:f25d9f4f",
-          "Service:assign:10:10:dbe149d2",
-          "Service:method:13:18:f31c649d",
-          "Service:if:14:16:631ebdde",
-          "Service:throw:15:15:a6c35ff3",
-          "Service:return:17:17:5b26e2d3",
+          "Service:field:7:7:dbc4543f",
+          "Service:constructor:9:11:32af9c0c",
+          "Service:assign:10:10:ca759cb",
+          "Service:constructor:9:11:32af9c0c:end",
+          "Service:method:13:18:39bb986",
+          "Service:if:14:16:94743e48",
+          "Service:throw:15:15:4d8fc7d8",
+          "Service:if:14:16:94743e48:end",
+          "Service:return:17:17:66373338",
           "Service:await:17:17:dc0bbf8d",
-          "Service:call:17:17:aef31c63"
+          "Service:call:17:17:75969291",
+          "Service:method:13:18:39bb986:end",
+          "Service:end"
         ],
         "renderedRows": [
           {
             "nodeId": "Service",
             "rowKind": "declaration",
-            "text": "@sealed class Service",
+            "text": "@sealed class Service {",
             "semanticWeight": 1
           },
           {
@@ -194,45 +237,57 @@
             "semanticWeight": 1
           },
           {
-            "nodeId": "Service:field:7:7:3799461e",
+            "nodeId": "Service:field:7:7:dbc4543f",
             "rowKind": "field",
-            "text": "  field readonly prefix: string",
+            "text": "  readonly prefix: string;",
             "semanticWeight": 1
           },
           {
-            "nodeId": "Service:constructor:9:11:f25d9f4f",
+            "nodeId": "Service:constructor:9:11:32af9c0c",
             "rowKind": "declaration",
-            "text": "  constructor",
+            "text": "  constructor(prefix: string) {",
             "semanticWeight": 1
           },
           {
-            "nodeId": "Service:assign:10:10:dbe149d2",
+            "nodeId": "Service:assign:10:10:ca759cb",
             "rowKind": "mutation",
-            "text": "    this.prefix = prefix",
+            "text": "    this.prefix = prefix;",
             "semanticWeight": 2
           },
           {
-            "nodeId": "Service:method:13:18:f31c649d",
-            "rowKind": "declaration",
-            "text": "  async method run",
+            "nodeId": "Service:constructor:9:11:32af9c0c:end",
+            "rowKind": "delimiter",
+            "text": "  }",
             "semanticWeight": 1
           },
           {
-            "nodeId": "Service:if:14:16:631ebdde",
+            "nodeId": "Service:method:13:18:39bb986",
+            "rowKind": "declaration",
+            "text": "  async run(value: string): Promise<string> {",
+            "semanticWeight": 1
+          },
+          {
+            "nodeId": "Service:if:14:16:94743e48",
             "rowKind": "control-flow",
-            "text": "    if value.length === 0",
+            "text": "    if (value.length === 0) {",
             "semanticWeight": 2
           },
           {
-            "nodeId": "Service:throw:15:15:a6c35ff3",
+            "nodeId": "Service:throw:15:15:4d8fc7d8",
             "rowKind": "terminal",
-            "text": "      throw new Error",
+            "text": "      throw new Error;",
             "semanticWeight": 2
           },
           {
-            "nodeId": "Service:return:17:17:5b26e2d3",
+            "nodeId": "Service:if:14:16:94743e48:end",
+            "rowKind": "delimiter",
+            "text": "    }",
+            "semanticWeight": 1
+          },
+          {
+            "nodeId": "Service:return:17:17:66373338",
             "rowKind": "terminal",
-            "text": "    return template",
+            "text": "    return template;",
             "semanticWeight": 2
           },
           {
@@ -242,12 +297,27 @@
             "semanticWeight": 2
           },
           {
-            "nodeId": "Service:call:17:17:aef31c63",
+            "nodeId": "Service:call:17:17:75969291",
             "rowKind": "call",
-            "text": "        resolve",
+            "text": "        Promise.resolve(value);",
             "semanticWeight": 2
+          },
+          {
+            "nodeId": "Service:method:13:18:39bb986:end",
+            "rowKind": "delimiter",
+            "text": "  }",
+            "semanticWeight": 1
+          },
+          {
+            "nodeId": "Service:end",
+            "rowKind": "delimiter",
+            "text": "}",
+            "semanticWeight": 1
           }
         ],
+        "nodeCount": 15,
+        "nodeLimit": 32,
+        "nodesTruncated": false,
         "omitted": [
           {
             "nodeId": "Service",
@@ -266,25 +336,25 @@
           },
           {
             "kind": "exact-read",
-            "target": "Service:assign:10:10:dbe149d2",
+            "target": "Service:assign:10:10:ca759cb",
             "read": "src/service.ts:10:10",
             "reason": "expand assign node before editing"
           },
           {
             "kind": "exact-read",
-            "target": "Service:if:14:16:631ebdde",
+            "target": "Service:if:14:16:94743e48",
             "read": "src/service.ts:14:16",
             "reason": "expand if node before editing"
           },
           {
             "kind": "exact-read",
-            "target": "Service:throw:15:15:a6c35ff3",
+            "target": "Service:throw:15:15:4d8fc7d8",
             "read": "src/service.ts:15:15",
             "reason": "expand throw node before editing"
           },
           {
             "kind": "exact-read",
-            "target": "Service:return:17:17:5b26e2d3",
+            "target": "Service:return:17:17:66373338",
             "read": "src/service.ts:17:17",
             "reason": "expand return node before editing"
           }
