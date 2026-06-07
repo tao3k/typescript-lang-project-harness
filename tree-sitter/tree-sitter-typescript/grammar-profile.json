@@ -13,7 +13,7 @@
     "owner": "main-asp",
     "repository": "https://github.com/tao3k/agent-semantic-protocols",
     "revision": "4e3417721d576716bcf82b7cbf8b9c2dc9a2b32a",
-    "contractFingerprint": "sha256:bb4278b3d1d3bc44bd6ba8a3a1dd3fb9470c9fcd5d42a842e3427d32c31cf2f6",
+    "contractFingerprint": "sha256:2ca8ca2597483a65f9310b549bd205390be5c78148f34ffd6666a648b1d8e76b",
     "queryCorpusValidator": "asp-tree-sitter-validate-typescript-query-corpus"
   },
   "sourceAuthority": "native-parser-adapter",
