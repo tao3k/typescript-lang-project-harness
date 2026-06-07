@@ -92,3 +92,64 @@ test("owner items render as compact item inventory", () => {
   assert.doesNotMatch(rendered, /^\|synthesis /m);
   assert.doesNotMatch(rendered, /^\|next-run /m);
 });
+
+test("owner items render as graph frontier in seeds mode", () => {
+  const packet: SemanticSearchPacket = {
+    schemaId: "agent.semantic-protocols.semantic-search-packet",
+    schemaVersion: "1",
+    protocolId: "agent.semantic-protocols.semantic-language",
+    protocolVersion: "1",
+    languageId: "typescript",
+    providerId: "ts-harness",
+    binary: "ts-harness",
+    namespace: "agent.semantic-protocols.languages.typescript.ts-harness",
+    method: "search/owner",
+    projectRoot: ".",
+    view: "owner",
+    renderMode: "seeds",
+    header: {
+      kind: "search-owner",
+      fields: {
+        q: "src/cli/semantic-search/item-query.ts",
+        pipes: "items",
+      },
+    },
+    nodes: [],
+    edges: [],
+    owners: [
+      {
+        path: "src/cli/semantic-search/item-query.ts",
+        role: "source",
+        public: true,
+        exports: ["SemanticReadPacket"],
+        fields: { imports: 3 },
+      },
+    ],
+    items: [
+      {
+        name: "SemanticReadPacket",
+        kind: "interface",
+        ownerPath: "src/cli/semantic-search/item-query.ts",
+        location: {
+          path: "src/cli/semantic-search/item-query.ts",
+          lineRange: "22:22",
+        },
+        fields: { exported: true, typeOnly: true },
+      },
+    ],
+    hits: [],
+    findings: [],
+    nextActions: [],
+    notes: [],
+  };
+
+  const rendered = renderSemanticSearchPacket(packet);
+
+  assert.match(rendered, /^\[search-owner\] /m);
+  assert.match(
+    rendered,
+    /I=item:symbol\(SemanticReadPacket\)@src\/cli\/semantic-search\/item-query\.ts:22:22!code/u,
+  );
+  assert.match(rendered, /frontier=I\.code/u);
+  assert.doesNotMatch(rendered, /^\|item /m);
+});

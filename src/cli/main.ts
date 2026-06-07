@@ -4,14 +4,21 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { parseProtocolArgs, runProtocolCli, type CliStreams } from "./protocol.js";
+import { tryRunFastQueryCli } from "../queries/fast-query-cli.js";
+
+export interface CliStreams {
+  readonly stdout: { write(chunk: string): unknown };
+  readonly stderr: { write(chunk: string): unknown };
+  readonly stdin?: string;
+}
 
 export const HELP_TEXT = `ts-harness — TypeScript semantic search and project harness
 
 Usage:
   ts-harness search <view> ... [--json] [--code] [--package <path>] [project-root]
   ts-harness query <owner-path> --term <symbol> [--term <symbol>] [--names-only | --code] [project-root]
-  ts-harness query (--catalog <id> | --treesitter-query <s-expression>) [--selector <path[:start[:end]]>] [--code] [--json] [project-root]
+  ts-harness query (--catalog <id> | --treesitter-query <s-expression>) [--workspace] [--selector <path[:start[:end]]>] [--code] [--json] [project-root]
+  ts-harness query --catalog flow-lite --where 'source.call=NAME sink.constructs=TYPE scope.fn=FUNCTION' [--json] [project-root]
   ts-harness ast-patch dry-run --packet <semantic-ast-patch.json|-> [project-root]
   ts-harness check [--changed | --full] [--json] [project-root]
   ts-harness agent doctor [--json] [project-root]
@@ -52,8 +59,12 @@ QUERY
                               Pure compact parser-owned code output
   query --treesitter-query <s-expression> [--selector <selector>] [--code]
                              Tree-sitter-compatible syntax locate, capture, and pure code extraction
+  query --from-hook direct-source-read --workspace --selector <workspace-path:start:end> --code
+                             Source-preserved direct read for workspace-relative selectors
   query --catalog declarations
                              Provider-embedded canonical tree-sitter query catalog
+  query --catalog flow-lite --where 'source.call=NAME sink.constructs=TYPE scope.fn=FUNCTION'
+                             Flow-lite ABI compatibility surface; TypeScript executor is not enabled yet
 
 AST PATCH
   ast-patch dry-run --packet <path|->
@@ -93,6 +104,7 @@ EXAMPLES
   ts-harness query src/domain/order.ts --term findOrderStatus --code .
   ts-harness query --treesitter-query '(function_declaration name: (identifier) @function.name)' .
   ts-harness query --catalog declarations --selector src/domain/order.ts --code .
+  ts-harness query --catalog flow-lite --where 'source.call=payload sink.constructs=Action scope.fn=collect' .
   ts-harness ast-patch dry-run --packet semantic-ast-patch.json .
   rg -n "OrderStatus" src tests | ts-harness search ingest .
   ts-harness check --changed .
@@ -100,12 +112,12 @@ EXAMPLES
 
 `;
 
-export function runCliFromEnv(): number {
+export async function runCliFromEnv(): Promise<number> {
   const argv = process.argv.slice(2);
   const cwd = process.cwd();
   const log = startDevCommandLog(argv, cwd);
   try {
-    const exitCode = runCli(
+    const exitCode = await runCli(
       argv,
       {
         stdout: process.stdout,
@@ -122,14 +134,21 @@ export function runCliFromEnv(): number {
   }
 }
 
-export function runCli(argv: readonly string[], streams: CliStreams, cwd: string): number {
+export async function runCli(
+  argv: readonly string[],
+  streams: CliStreams,
+  cwd: string,
+): Promise<number> {
+  const fastQueryStatus = tryRunFastQueryCli(argv, streams, cwd);
+  if (fastQueryStatus !== undefined) return fastQueryStatus;
+  if (argv.length === 0 || argv[0] === "--help" || argv[0] === "-h") {
+    streams.stdout.write(HELP_TEXT);
+    return 0;
+  }
+  const { parseProtocolArgs, runProtocolCli } = await import("./protocol.js");
   const protocolArgs = parseProtocolArgs(argv);
   if (protocolArgs !== undefined) {
     return runProtocolCli(protocolArgs, streams, cwd, HELP_TEXT);
-  }
-  if (argv.length === 0) {
-    streams.stdout.write(HELP_TEXT);
-    return 0;
   }
 
   const command = argv[0]!;
@@ -142,7 +161,17 @@ export function runCli(argv: readonly string[], streams: CliStreams, cwd: string
 }
 
 if (isDirectCliEntry(process.argv[1])) {
-  process.exitCode = runCliFromEnv();
+  void runCliFromEnv().then(
+    (exitCode) => {
+      process.exitCode = exitCode;
+    },
+    (error: unknown) => {
+      process.stderr.write(
+        `${error instanceof Error ? (error.stack ?? error.message) : String(error)}\n`,
+      );
+      process.exitCode = 2;
+    },
+  );
 }
 
 function isDirectCliEntry(argvPath: string | undefined): boolean {

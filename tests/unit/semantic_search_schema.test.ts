@@ -39,6 +39,7 @@ const TYPE_SCRIPT_SEARCH_VIEWS = [
   "import",
   "tests",
   "fzf",
+  "reasoning",
   "ingest",
 ] as const;
 
@@ -87,6 +88,17 @@ test("semantic-search JSON packets conform to the shared schema envelope", () =>
     jsonPacket(root, ["search", "import", "./index", "--json", "."]),
     jsonPacket(root, ["search", "tests", "src/index.ts", "--json", "."]),
     jsonPacket(root, ["search", "fzf", "OrderStatus", "--json", "."]),
+    jsonPacket(root, [
+      "search",
+      "reasoning",
+      "owner-query",
+      "--owner",
+      "src/index.ts",
+      "--query",
+      "findOrderStatus",
+      "--json",
+      ".",
+    ]),
     jsonPacket(root, ["search", "ingest", "--json", "."], "src/index.ts:1:findOrderStatus\n"),
   ];
 
@@ -206,6 +218,7 @@ test("semantic language registry JSON documents the TypeScript provider identity
     "search/import",
     "search/tests",
     "search/fzf",
+    "search/reasoning",
     "search/ingest",
     "query",
     "query/owner-items",
@@ -273,6 +286,7 @@ test("semantic language registry JSON documents the TypeScript provider identity
           "search/import",
           "search/tests",
           "search/fzf",
+          "search/reasoning",
         ].includes(String(descriptor.method)),
       );
       assert.equal(descriptor.acceptsStdin, descriptor.method === "search/ingest");
@@ -440,7 +454,7 @@ test("semantic language registry JSON documents the TypeScript provider identity
       assert.deepEqual(
         descriptor.outputModes,
         method === "query/direct-source-read"
-          ? ["compact", "json", "names", "read-packet"]
+          ? ["compact", "json", "code", "names", "read-packet"]
           : ["compact", "json", "code", "names"],
       );
       assert.deepEqual(
@@ -452,7 +466,11 @@ test("semantic language registry JSON documents the TypeScript provider identity
       assert.equal(descriptor.grammarId, "tree-sitter-typescript");
       assert.deepEqual(
         descriptor.queryInputForms === undefined ? [] : descriptor.queryInputForms,
-        method === "query/direct-source-read" ? ["selector"] : [],
+        method === "query/direct-source-read"
+          ? ["selector"]
+          : method === "query/owner-items"
+            ? ["selector", "code-shaped"]
+            : [],
       );
       assert.equal(descriptor.supportsQuerySet, method === "query/owner-items" ? true : undefined);
       assert.deepEqual(

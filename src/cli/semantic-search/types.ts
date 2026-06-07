@@ -20,6 +20,7 @@ export type SemanticSearchView =
   | "import"
   | "tests"
   | "fzf"
+  | "reasoning"
   | "ingest";
 export type SemanticSearchPipe = SemanticSearchView | "items";
 export type SemanticSearchRenderMode = "graph" | "hits" | "both" | "seeds";
@@ -36,6 +37,8 @@ export interface SemanticSearchBuildOptions {
   readonly view: SemanticSearchView;
   readonly renderMode?: SemanticSearchRenderMode;
   readonly query?: string;
+  readonly itemQuery?: string;
+  readonly dependency?: string;
   readonly querySet?: readonly string[];
   readonly queryScope?: SemanticSearchQueryScope;
   readonly pipes?: readonly SemanticSearchPipe[];

@@ -66,6 +66,7 @@ export type TypeScriptSemanticSearchView =
   | "import"
   | "tests"
   | "fzf"
+  | "reasoning"
   | "ingest";
 export type TypeScriptSemanticSearchPipe = TypeScriptSemanticSearchView | "items";
 export type TypeScriptSemanticSearchMethod = `search/${TypeScriptSemanticSearchView}`;
@@ -212,6 +213,17 @@ export const TYPE_SCRIPT_SEARCH_VIEW_DESCRIPTORS = [
       typeScriptIngestSurface("generated-artifact"),
     ],
   }),
+  searchView("reasoning", {
+    requiresQuery: true,
+    acceptsStdin: false,
+    capabilities: [
+      semanticCapability("reasoning-owner-search"),
+      semanticCapability("dependency-manifest-search"),
+      typeScriptCapability("owner-item-query"),
+      typeScriptCapability("test-owner-search"),
+      typeScriptCapability("dependency-local-usage-search"),
+    ],
+  }),
   searchView("ingest", {
     requiresQuery: false,
     acceptsStdin: true,
@@ -295,9 +307,48 @@ export interface SemanticLanguageMethodDescriptor {
   readonly grammarProfileVersion?: string;
   readonly grammarProfileSchema?: string;
   readonly grammarProfilePath?: string;
+  readonly adapterModes?: readonly (
+    | "native-projection"
+    | "hybrid"
+    | "tree-sitter-runtime"
+    | "codeql-query"
+    | "cached-replay"
+  )[];
+  readonly sourceAuthorities?: readonly (
+    | "native-parser"
+    | "native-parser-adapter"
+    | "tree-sitter-runtime"
+    | "codeql"
+    | "hybrid"
+    | "cached-provider-export"
+  )[];
+  readonly executionBackends?: readonly (
+    | "native-parser"
+    | "tree-sitter-runtime"
+    | "codeql"
+    | "hybrid"
+    | "cached-replay"
+  )[];
+  readonly renderProfiles?: readonly (
+    | "compact-graph-frontier"
+    | "corpus-locator"
+    | "flow-lite-frontier"
+  )[];
   readonly supportedPredicates?: readonly string[];
   readonly unsupportedPredicates?: readonly string[];
   readonly cacheReplay?: boolean;
+  readonly codeOutput?: {
+    readonly mode: "pure-code";
+    readonly multiMatch: "deny" | "allow" | "require-limit" | "first-only";
+    readonly requires: readonly (
+      | "exact-selector"
+      | "unique-predicate"
+      | "unique-match"
+      | "--limit"
+      | "--first"
+    )[];
+  };
+  readonly unsupportedPatternBehavior?: "diagnostic" | "empty-frontier";
   readonly requiresQuery?: boolean;
   readonly acceptsStdin?: boolean;
   readonly supportsPackageScope?: boolean;
@@ -550,6 +601,10 @@ function typeScriptSemanticLanguageMethodDescriptors(): readonly SemanticLanguag
       outputSchemaIds: [SEMANTIC_TREE_SITTER_QUERY_SCHEMA_ID],
       packetSchemas: ["semantic-tree-sitter-query.v1"],
       queryInputForms: ["catalog-id", "s-expression"],
+      adapterModes: ["native-projection"],
+      sourceAuthorities: ["native-parser-adapter", "native-parser"],
+      executionBackends: ["native-parser"],
+      renderProfiles: ["corpus-locator"],
       queryCatalogs: [
         queryCatalog(
           "declarations",
@@ -614,6 +669,12 @@ function typeScriptSemanticLanguageMethodDescriptors(): readonly SemanticLanguag
       ],
       unsupportedPredicates: [],
       cacheReplay: true,
+      codeOutput: {
+        mode: "pure-code",
+        multiMatch: "deny",
+        requires: ["exact-selector", "unique-predicate"],
+      },
+      unsupportedPatternBehavior: "diagnostic",
       supportsCompact: true,
       supportsJson: true,
       outputModes: ["compact", "json", "code"],
@@ -626,6 +687,21 @@ function typeScriptSemanticLanguageMethodDescriptors(): readonly SemanticLanguag
       outputSchemaIds: [SEMANTIC_QUERY_PACKET_SCHEMA_ID],
       packetSchemas: ["semantic-query-packet.v1", "semantic-tree-sitter-query.v1"],
       grammarId: "tree-sitter-typescript",
+      grammarProfileVersion: "2026-06-05.v1",
+      grammarProfileSchema: "semantic-tree-sitter-grammar-profile.v1",
+      grammarProfilePath: "tree-sitter/tree-sitter-typescript/grammar-profile.json",
+      queryInputForms: ["selector", "code-shaped"],
+      adapterModes: ["native-projection"],
+      sourceAuthorities: ["native-parser"],
+      executionBackends: ["native-parser"],
+      renderProfiles: ["compact-graph-frontier"],
+      cacheReplay: true,
+      codeOutput: {
+        mode: "pure-code",
+        multiMatch: "deny",
+        requires: ["exact-selector", "unique-match"],
+      },
+      unsupportedPatternBehavior: "diagnostic",
       supportsCompact: true,
       supportsJson: true,
       supportsQuerySet: true,
@@ -646,9 +722,23 @@ function typeScriptSemanticLanguageMethodDescriptors(): readonly SemanticLanguag
       ],
       queryInputForms: ["selector"],
       grammarId: "tree-sitter-typescript",
+      grammarProfileVersion: "2026-06-05.v1",
+      grammarProfileSchema: "semantic-tree-sitter-grammar-profile.v1",
+      grammarProfilePath: "tree-sitter/tree-sitter-typescript/grammar-profile.json",
+      adapterModes: ["native-projection"],
+      sourceAuthorities: ["native-parser"],
+      executionBackends: ["native-parser"],
+      renderProfiles: ["corpus-locator"],
+      cacheReplay: true,
+      codeOutput: {
+        mode: "pure-code",
+        multiMatch: "deny",
+        requires: ["exact-selector"],
+      },
+      unsupportedPatternBehavior: "diagnostic",
       supportsCompact: true,
       supportsJson: true,
-      outputModes: ["compact", "json", "names", "read-packet"],
+      outputModes: ["compact", "json", "code", "names", "read-packet"],
     },
     ...TYPE_SCRIPT_CHECK_METHODS.map((method) => ({
       method,

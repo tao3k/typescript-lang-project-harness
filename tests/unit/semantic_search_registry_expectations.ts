@@ -71,6 +71,14 @@ export function expectedSearchCapabilities(method: string): readonly CapabilityE
         semanticCapability("finder-fuzzy-candidate-search"),
         typeScriptCapability("parser-visible-source-fuzzy-search"),
       ];
+    case "search/reasoning":
+      return [
+        semanticCapability("reasoning-owner-search"),
+        semanticCapability("dependency-manifest-search"),
+        typeScriptCapability("owner-item-query"),
+        typeScriptCapability("test-owner-search"),
+        typeScriptCapability("dependency-local-usage-search"),
+      ];
     case "search/ingest":
       return [
         semanticCapability("external-candidate-ingest"),

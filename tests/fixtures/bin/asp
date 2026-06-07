@@ -59,9 +59,10 @@ if (aliases.length > 0) {
   );
 }
 
-lines.push(
-  "entries=owner-query(O,Q=>items+tests+dependency-usage),owner-tests(O=>covering-tests+test-entrypoints+fixtures)",
-);
+const entries = reasoningEntries(packet, aliases);
+if (entries.length > 0) {
+  lines.push(`entries=${entries.join(",")}`);
+}
 
 process.stdout.write(`${lines.join("\n")}\n`);
 
@@ -76,6 +77,7 @@ async function readStdin() {
 
 function collectSeeds(packet) {
   const querySeeds = [];
+  const itemSeeds = [];
   const ownerSeeds = [];
   const testSeeds = [];
   const symbolSeeds = [];
@@ -85,9 +87,22 @@ function collectSeeds(packet) {
   if (packet.header?.kind === "search-fzf" && query !== undefined) {
     querySeeds.push({ kind: "fzf", target: query });
   }
+  if (packet.header?.kind === "search-reasoning" && fields.query !== undefined) {
+    querySeeds.push({ kind: "query", target: fields.query });
+  }
 
   for (const action of packet.nextActions ?? []) {
     addSeed(action, ownerSeeds, testSeeds, symbolSeeds, otherSeeds);
+  }
+  for (const item of packet.items ?? []) {
+    if (item.name !== undefined) {
+      itemSeeds.push({
+        kind: "item",
+        target: item.name,
+        location: item.location,
+        ownerPath: item.ownerPath,
+      });
+    }
   }
   for (const resolution of packet.ownerResolution ?? []) {
     if (resolution.ownerPath !== undefined) {
@@ -145,6 +160,7 @@ function collectSeeds(packet) {
 
   return [
     ...dedupeSeeds(querySeeds),
+    ...dedupeSeeds(itemSeeds),
     ...dedupeSeeds(ownerSeeds),
     ...dedupeSeeds(testSeeds),
     ...dedupeSeeds(interleaveTestsAndSymbols(synthesisTests, synthesisSymbols)),
@@ -212,9 +228,61 @@ function assignAliases(seeds) {
       kind: descriptor.kind,
       next: descriptor.next,
       edge: descriptor.edge,
-      rendered: `${id}=${descriptor.kind}:${descriptor.role}(${escapeRoleValue(seed.target)})!${descriptor.next}`,
+      rendered: `${id}=${descriptor.kind}:${renderDescriptorValue(descriptor, seed)}!${descriptor.next}`,
     };
   });
+}
+
+function reasoningEntries(packet, aliases) {
+  const profiles = packet.reasoningProfiles ?? defaultReasoningProfiles();
+  return profiles.flatMap((profile) => {
+    const selectorAliases = [];
+    for (const selector of profile.selectors ?? []) {
+      const alias = aliases.find((candidate) => candidate.kind === selector.kind);
+      if (alias === undefined) {
+        if (selector.required === false) {
+          continue;
+        }
+        return [];
+      }
+      selectorAliases.push(alias.id);
+    }
+    if (selectorAliases.length === 0 || !Array.isArray(profile.returns)) {
+      return [];
+    }
+    return [
+      `${profile.profile}(${selectorAliases.join(",")}=>${profile.returns.join("+")})`,
+    ];
+  });
+}
+
+function defaultReasoningProfiles() {
+  return [
+    {
+      profile: "owner-query",
+      selectors: [
+        { kind: "owner", required: true },
+        { kind: "query", required: true },
+      ],
+      returns: ["items", "tests", "dependency-usage"],
+    },
+    {
+      profile: "owner-tests",
+      selectors: [{ kind: "owner", required: true }],
+      returns: ["covering-tests", "test-entrypoints", "fixtures"],
+    },
+  ];
+}
+
+function renderDescriptorValue(descriptor, seed) {
+  if (descriptor.kind === "item") {
+    const location = seed.location;
+    const path = location?.path ?? seed.ownerPath;
+    const lineRange = location?.lineRange;
+    const locator = path === undefined ? "" : `@${path}${lineRange === undefined ? "" : `:${lineRange}`}`;
+    return `${descriptor.role}(${escapeRoleValue(seed.target)})${locator}`;
+  }
+  return `${descriptor.role}(${escapeRoleValue(seed.target)})`;
 }
 
 function describeSeed(seed) {
@@ -230,6 +298,8 @@ function describeSeed(seed) {
       return { prefix: "T", kind: "test", role: "path", next: "tests", edge: "tests" };
     case "symbol":
       return { prefix: "S", kind: "symbol", role: "symbol", next: "symbol", edge: "selects" };
+    case "item":
+      return { prefix: "I", kind: "item", role: "symbol", next: "code", edge: "matches" };
     case "dependency":
     case "deps":
       return { prefix: "D", kind: "dependency", role: "dep", next: "dependency", edge: "selects" };

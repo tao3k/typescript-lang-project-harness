@@ -177,6 +177,7 @@ test("configured verification skill binding keeps compact output quiet and expan
   assert.match(rendered, /contract_ref=typescript-verification-performance@vitest-bench/u);
   assert.doesNotMatch(rendered, /\|why: performance=/u);
   assert.match(contracts, /^\[skill-contract\] typescript-verification-performance@vitest-bench/u);
+  assert.match(contracts, /\|run: npm run test:perf/u);
   assert.match(contracts, /\|receipt: benchmark_command,baseline,regression_threshold/u);
 
   const performanceTask = plan.tasks.find((task) => task.kind === "performance");
@@ -225,9 +226,9 @@ function performanceDescriptor(): TypeScriptVerificationSkillDescriptor {
   return {
     skillId: "typescript-verification-performance",
     adapter: "vitest-bench",
-    tool: "vitest",
-    command: "vitest bench",
-    standard: "project benchmark stays within configured threshold",
+    tool: "node:test",
+    command: "npm run test:perf",
+    standard: "project microbenchmarks stay within configured threshold",
     requiredInputs: ["bench_target", "baseline", "regression_threshold"],
     passCriteria: ["regression<=threshold"],
     receiptFields: ["benchmark_command", "baseline", "regression_threshold"],

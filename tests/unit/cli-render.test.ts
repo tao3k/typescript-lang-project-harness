@@ -35,9 +35,9 @@ describe("CLI protocol help", () => {
     assert.equal(HELP_TEXT.includes("--agent-snapshot"), false);
   });
 
-  it("runCli with --help prints help and exits 0", () => {
+  it("runCli with --help prints help and exits 0", async () => {
     const { stdout, stderr, out, err } = captureStd();
-    const code = runCli(["--help"], { stdout, stderr }, "/");
+    const code = await runCli(["--help"], { stdout, stderr }, "/");
     assert.equal(code, 0);
     assert.match(out.join(""), /^ts-harness/u);
     assert.equal(err.join(""), "");
@@ -45,7 +45,7 @@ describe("CLI protocol help", () => {
 });
 
 describe("CLI removed compatibility flags", () => {
-  it("rejects old direct output flags", () => {
+  it("rejects old direct output flags", async () => {
     for (const argv of [
       ["--tree", "."],
       ["--stats", "."],
@@ -54,14 +54,14 @@ describe("CLI removed compatibility flags", () => {
       ["--agent-snapshot", "."],
     ]) {
       const { stdout, stderr } = captureStd();
-      const code = runCli(argv, { stdout, stderr }, "/");
+      const code = await runCli(argv, { stdout, stderr }, "/");
       assert.equal(code, 2);
     }
   });
 
-  it("rejects bare project-root invocation", () => {
+  it("rejects bare project-root invocation", async () => {
     const { stdout, stderr } = captureStd();
-    const code = runCli(["."], { stdout, stderr }, "/");
+    const code = await runCli(["."], { stdout, stderr }, "/");
     assert.equal(code, 2);
   });
 });

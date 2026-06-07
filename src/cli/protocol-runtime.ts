@@ -46,7 +46,7 @@ export function checkConfig(projectRoot: string, mode: CheckArgs["mode"]) {
 export function searchRunPlan(cwd: string, args: SearchArgs): SearchRunPlan {
   const root = path.resolve(cwd, args.projectRoot ?? ".");
   const config = typeScriptHarnessConfigForProject(root);
-  if (args.packagePath === undefined) {
+  if (args.packagePath === undefined || args.workspace) {
     return prefilteredSearchRunPlan(root, args, [], config);
   }
 

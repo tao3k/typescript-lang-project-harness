@@ -170,7 +170,28 @@ test("CLI exposes semantic-search protocol commands", () => {
   assert.equal(packagePrimePacket.method, "search/prime");
   assert.equal(packagePrimePacket.view, "prime");
   assert.equal(packagePrimePacket.packageName, "@example/core");
-  assert.equal(packagePrimePacket.projectRoot, path.join(root, "packages", "core"));
+  assert.equal(
+    packagePrimePacket.projectRoot,
+    fs.realpathSync(path.join(root, "packages", "core")),
+  );
+
+  const workspaceDirectRead = runCliCapture(
+    [
+      "query",
+      "--from-hook",
+      "direct-source-read",
+      "--workspace",
+      "--package",
+      "packages/core",
+      "--selector",
+      "packages/core/src/index.ts:1:1",
+      "--code",
+      ".",
+    ],
+    root,
+  );
+  assert.equal(workspaceDirectRead.exitCode, 0);
+  assert.equal(workspaceDirectRead.stdout, "export interface Core { readonly ok: true; }\n");
 
   const primeJson = runCliCapture(["search", "prime", "--json", "."], root);
   assert.equal(primeJson.exitCode, 0);
@@ -520,10 +541,10 @@ test("CLI exposes semantic-search protocol commands", () => {
   );
   assert.equal(ownerSeeds.exitCode, 0);
   assert.match(ownerSeeds.stdout, /^\[search-owner\] /u);
-  assert.match(ownerSeeds.stdout, /O=owner:path\(src\/index\.ts\)!owner/u);
-  assert.match(ownerSeeds.stdout, /Q=query:term\(findOrderStatus\)!fzf/u);
-  assert.match(ownerSeeds.stdout, /frontier=.*O\.owner/u);
-  assert.match(ownerSeeds.stdout, /frontier=.*Q\.fzf/u);
+  assert.match(ownerSeeds.stdout, /O\d*=owner:path\(src\/index\.ts\)!owner/u);
+  assert.match(ownerSeeds.stdout, /frontier=.*O\d*\.owner/u);
+  assert.match(ownerSeeds.stdout, /I=item:symbol\(findOrderStatus\)@src\/index\.ts:1:1!code/u);
+  assert.match(ownerSeeds.stdout, /frontier=.*I\.code/u);
   assert.doesNotMatch(ownerSeeds.stdout, /\|seed /u);
   assert.doesNotMatch(ownerSeeds.stdout, /\|edge /u);
 
@@ -538,6 +559,32 @@ test("CLI exposes semantic-search protocol commands", () => {
     ].join("\n"),
   );
 
+  const ownerItemsText = runCliCapture(
+    ["search", "owner", "src/protocol-types.ts", "items", "."],
+    root,
+  );
+  assert.equal(ownerItemsText.exitCode, 0);
+  assert.match(ownerItemsText.stdout, /^\[search-owner\] /u);
+  assert.match(ownerItemsText.stdout, /\bpipes=items\b/u);
+  assert.match(
+    ownerItemsText.stdout,
+    /\|item interface SearchPacket lineRange=3:3 .*typeOnly=true/u,
+  );
+  assert.match(ownerItemsText.stdout, /\|item type SearchOwner lineRange=4:4 .*typeOnly=true/u);
+  assert.match(
+    ownerItemsText.stdout,
+    /\|item function buildPacket lineRange=5:5 .*typeOnly=false/u,
+  );
+  assert.match(
+    ownerItemsText.stdout,
+    /\|item variable MAX_PACKET_ITEMS lineRange=2:2 .*typeOnly=false/u,
+  );
+  assert.ok(
+    ownerItemsText.stdout.indexOf("|item interface SearchPacket") <
+      ownerItemsText.stdout.indexOf("|item variable MAX_PACKET_ITEMS"),
+  );
+  assert.doesNotMatch(ownerItemsText.stdout, /\|edge /u);
+
   const ownerItemsSeeds = runCliCapture(
     ["search", "owner", "src/protocol-types.ts", "items", "--view", "seeds", "."],
     root,
@@ -547,22 +594,14 @@ test("CLI exposes semantic-search protocol commands", () => {
   assert.match(ownerItemsSeeds.stdout, /\bpipes=items\b/u);
   assert.match(
     ownerItemsSeeds.stdout,
-    /\|item interface SearchPacket lineRange=3:3 .*typeOnly=true/u,
-  );
-  assert.match(ownerItemsSeeds.stdout, /\|item type SearchOwner lineRange=4:4 .*typeOnly=true/u);
-  assert.match(
-    ownerItemsSeeds.stdout,
-    /\|item function buildPacket lineRange=5:5 .*typeOnly=false/u,
+    /I=item:symbol\(SearchPacket\)@src\/protocol-types\.ts:3:3!code/u,
   );
   assert.match(
     ownerItemsSeeds.stdout,
-    /\|item variable MAX_PACKET_ITEMS lineRange=2:2 .*typeOnly=false/u,
+    /I\d*=item:symbol\(buildPacket\)@src\/protocol-types\.ts:5:5!code/u,
   );
-  assert.ok(
-    ownerItemsSeeds.stdout.indexOf("|item interface SearchPacket") <
-      ownerItemsSeeds.stdout.indexOf("|item variable MAX_PACKET_ITEMS"),
-  );
-  assert.doesNotMatch(ownerItemsSeeds.stdout, /\|edge /u);
+  assert.match(ownerItemsSeeds.stdout, /frontier=.*I\.code/u);
+  assert.doesNotMatch(ownerItemsSeeds.stdout, /^\|item /u);
 
   const ownerItemsJson = runCliCapture(
     ["search", "owner", "src/protocol-types.ts", "items", "--json", "."],
@@ -743,6 +782,7 @@ test("CLI exposes semantic-search protocol commands", () => {
     "search/import",
     "search/tests",
     "search/fzf",
+    "search/reasoning",
     "search/ingest",
     "query",
     "query/owner-items",
@@ -792,6 +832,7 @@ test("CLI exposes semantic-search protocol commands", () => {
             "search/import",
             "search/tests",
             "search/fzf",
+            "search/reasoning",
           ].includes(method),
           acceptsStdin: method === "search/ingest",
           supportsPackageScope: true,
@@ -848,6 +889,15 @@ test("CLI exposes semantic-search protocol commands", () => {
         outputSchemaIds: ["agent.semantic-protocols.semantic-tree-sitter-query"],
         packetSchemas: ["semantic-tree-sitter-query.v1"],
         queryInputForms: ["catalog-id", "s-expression"],
+        executionBackends: ["native-parser"],
+        sourceAuthorities: ["native-parser-adapter", "native-parser"],
+        adapterModes: ["native-projection"],
+        codeOutput: {
+          mode: "pure-code",
+          requires: ["exact-selector", "unique-predicate"],
+          multiMatch: "deny",
+        },
+        renderProfiles: ["corpus-locator"],
         queryCatalogs: [
           {
             id: "declarations",
@@ -923,6 +973,7 @@ test("CLI exposes semantic-search protocol commands", () => {
         supportsJson: true,
         supportsCompact: true,
         outputModes: ["compact", "json", "code"],
+        unsupportedPatternBehavior: "diagnostic",
       },
       {
         method: "query/owner-items",
@@ -932,12 +983,27 @@ test("CLI exposes semantic-search protocol commands", () => {
         outputSchemaIds: ["agent.semantic-protocols.semantic-query-packet"],
         packetSchemas: ["semantic-query-packet.v1", "semantic-tree-sitter-query.v1"],
         grammarId: "tree-sitter-typescript",
+        grammarProfileVersion: "2026-06-05.v1",
+        grammarProfileSchema: "semantic-tree-sitter-grammar-profile.v1",
+        grammarProfilePath: "tree-sitter/tree-sitter-typescript/grammar-profile.json",
+        executionBackends: ["native-parser"],
+        sourceAuthorities: ["native-parser"],
+        adapterModes: ["native-projection"],
+        codeOutput: {
+          mode: "pure-code",
+          requires: ["exact-selector", "unique-match"],
+          multiMatch: "deny",
+        },
         supportsJson: true,
         supportsCompact: true,
         supportsQuerySet: true,
         acceptedQuerySetSelectors: ["exact-set"],
+        queryInputForms: ["selector", "code-shaped"],
         querySetScopes: ["owner"],
+        renderProfiles: ["compact-graph-frontier"],
         outputModes: ["compact", "json", "code", "names"],
+        cacheReplay: true,
+        unsupportedPatternBehavior: "diagnostic",
       },
       {
         method: "query/direct-source-read",
@@ -955,9 +1021,23 @@ test("CLI exposes semantic-search protocol commands", () => {
         ],
         queryInputForms: ["selector"],
         grammarId: "tree-sitter-typescript",
+        grammarProfileVersion: "2026-06-05.v1",
+        grammarProfileSchema: "semantic-tree-sitter-grammar-profile.v1",
+        grammarProfilePath: "tree-sitter/tree-sitter-typescript/grammar-profile.json",
+        executionBackends: ["native-parser"],
+        sourceAuthorities: ["native-parser"],
+        adapterModes: ["native-projection"],
+        codeOutput: {
+          mode: "pure-code",
+          requires: ["exact-selector"],
+          multiMatch: "deny",
+        },
         supportsJson: true,
         supportsCompact: true,
-        outputModes: ["compact", "json", "names", "read-packet"],
+        outputModes: ["compact", "json", "code", "names", "read-packet"],
+        renderProfiles: ["corpus-locator"],
+        cacheReplay: true,
+        unsupportedPatternBehavior: "diagnostic",
       },
       ...expectedMethods
         .filter((method) => method.startsWith("check/"))
@@ -1178,6 +1258,14 @@ function expectedSearchCapabilities(
       return [
         semanticCapability("finder-fuzzy-candidate-search"),
         typeScriptCapability("parser-visible-source-fuzzy-search"),
+      ];
+    case "search/reasoning":
+      return [
+        semanticCapability("reasoning-owner-search"),
+        semanticCapability("dependency-manifest-search"),
+        typeScriptCapability("owner-item-query"),
+        typeScriptCapability("test-owner-search"),
+        typeScriptCapability("dependency-local-usage-search"),
       ];
     case "search/ingest":
       return [

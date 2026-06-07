@@ -21,11 +21,11 @@ export function renderSemanticSearchPacketJson(packet: SemanticSearchPacket): st
 }
 
 export function renderSemanticSearchPacket(packet: SemanticSearchPacket): string {
-  if ((packet.items?.length ?? 0) > 0) {
-    return renderSemanticSearchItemPacket(packet);
-  }
   if (packet.renderMode === "seeds") {
     return renderSemanticSearchSeedPacket(packet);
+  }
+  if ((packet.items?.length ?? 0) > 0) {
+    return renderSemanticSearchItemPacket(packet);
   }
 
   const lines = [`[${packet.header.kind}] ${renderFields(packet.header.fields)}`];

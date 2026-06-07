@@ -228,7 +228,9 @@ export function buildOwnerPacket(
     .slice(0, MAX_PRIME_EDGES);
   const findings = findingGroups(report).filter((finding) => finding.location.path === ownerPath);
   const searchSynthesis = ownerGraphSynthesis(ownerPath, edges, findings);
-  const items = options.pipes?.includes("items") === true ? ownerItems(report, ownerPath) : [];
+  const shouldIncludeItems =
+    options.pipes?.includes("items") === true || options.renderMode === "seeds";
+  const items = shouldIncludeItems ? ownerItems(report, ownerPath) : [];
   const nextActions =
     items.length > 0 ? ownerItemNextActions(ownerPath, items) : (owner.nextActions ?? []);
   return basePacket(report, options, {

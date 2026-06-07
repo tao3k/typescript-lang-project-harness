@@ -8,6 +8,8 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { renderExactSourceWindowCode } from "../../queries/exact-source-window.js";
+import { sourceSelectorLineRange } from "../../queries/source-selector.js";
 import {
   queryTypeScriptOwnerItems,
   type TypeScriptItemQueryMatch,
@@ -221,20 +223,10 @@ export function renderOwnerExactSourceWindowCode(
   ownerPath: string,
   selector: string,
 ): string {
-  const range = sourceSelectorLineRange(selector, ownerPath);
-  if (range === undefined) return renderOwnerItemQueryCode(projectRoot, ownerPath, "", selector);
-  const sourceText = fs.readFileSync(path.resolve(projectRoot, ownerPath), "utf8");
-  const sourceLines = sourceText.split(/\r?\n/u);
-  if (range.lineStart > sourceLines.length) {
-    throw new Error(
-      `direct-source-read selector starts after end of file: ${ownerPath}:${range.lineStart}`,
-    );
-  }
-  const lineEnd = Math.min(range.lineEnd, sourceLines.length);
-  return sourceLines
-    .slice(range.lineStart - 1, lineEnd)
-    .join("\n")
-    .trimEnd();
+  return (
+    renderExactSourceWindowCode(projectRoot, ownerPath, selector) ??
+    renderOwnerItemQueryCode(projectRoot, ownerPath, "", selector)
+  );
 }
 
 export function buildOwnerItemSemanticReadPacket(
@@ -711,24 +703,6 @@ function rangeCoverage(
   if (selectedStart > itemStart && selectedEnd >= itemEnd) return "tail-only";
   if (selectedStart <= itemStart && selectedEnd < itemEnd) return "head-only";
   return "middle";
-}
-
-function sourceSelectorLineRange(
-  selector: string,
-  ownerPath: string,
-): { readonly lineStart: number; readonly lineEnd: number } | undefined {
-  const normalized = selector.replace(/\\/gu, "/").replace(/^owner:/u, "");
-  const match = /:(\d+)(?::|-)(\d+)$/u.exec(normalized);
-  if (match === null) return undefined;
-  const selectedOwnerPath = normalized.slice(0, match.index);
-  if (selectedOwnerPath !== ownerPath) return undefined;
-  const lineStart = Number.parseInt(match[1]!, 10);
-  const lineEnd = Number.parseInt(match[2]!, 10);
-  if (!Number.isFinite(lineStart) || !Number.isFinite(lineEnd)) return undefined;
-  return {
-    lineStart: Math.min(lineStart, lineEnd),
-    lineEnd: Math.max(lineStart, lineEnd),
-  };
 }
 
 function fieldValue(value: string): string {

@@ -18,6 +18,7 @@ export interface TreeSitterQueryArgs {
   readonly aspSyntaxQueryPlan: SyntaxQueryPlan | undefined;
   readonly projectRoot: string | undefined;
   readonly packagePath: string | undefined;
+  readonly workspace: boolean;
   readonly json: boolean;
   readonly codeOnly: boolean;
 }
@@ -39,6 +40,7 @@ interface TreeSitterQueryParseState {
   treeSitterQuery: string | undefined;
   selector: string | undefined;
   packagePath: string | undefined;
+  workspace: boolean;
   aspSyntaxQueryPlan: MutableSyntaxQueryPlan | undefined;
   json: boolean;
   codeOnly: boolean;
@@ -105,6 +107,8 @@ function parseTreeSitterQueryOptions(argv: readonly string[]): TreeSitterQueryOp
       }
       state.packagePath = value;
       index += 1;
+    } else if (arg === "--workspace") {
+      state.workspace = true;
     } else if (isAspSyntaxQueryPlanOption(arg)) {
       const value = argv[index + 1];
       if (value === undefined) {
@@ -133,6 +137,7 @@ function initialTreeSitterQueryParseState(): TreeSitterQueryParseState {
     treeSitterQuery: undefined,
     selector: undefined,
     packagePath: undefined,
+    workspace: false,
     aspSyntaxQueryPlan: undefined,
     json: false,
     codeOnly: false,
@@ -150,6 +155,7 @@ function finalizeTreeSitterQueryArgs(state: TreeSitterQueryParseState): TreeSitt
     aspSyntaxQueryPlan,
     positionals,
     packagePath,
+    workspace,
     json,
     codeOnly,
   } = state;
@@ -174,6 +180,7 @@ function finalizeTreeSitterQueryArgs(state: TreeSitterQueryParseState): TreeSitt
     aspSyntaxQueryPlan,
     projectRoot: positionals[0],
     packagePath,
+    workspace,
     json,
     codeOnly,
   };

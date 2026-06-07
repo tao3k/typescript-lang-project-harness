@@ -1,6 +1,5 @@
 import { spawnSync } from "node:child_process";
-
-import { runCli } from "../../src/cli/main.js";
+import { fileURLToPath } from "node:url";
 
 export function runCliCapture(
   argv: readonly string[],
@@ -11,18 +10,18 @@ export function runCliCapture(
   readonly stdout: string;
   readonly stderr: string;
 } {
-  let stdout = "";
-  let stderr = "";
-  const exitCode = runCli(
-    argv,
-    {
-      stdout: { write: (chunk: string) => void (stdout += chunk) },
-      stderr: { write: (chunk: string) => void (stderr += chunk) },
-      stdin,
-    },
+  const cliPath = fileURLToPath(new URL("../../src/cli/main.js", import.meta.url));
+  const result = spawnSync(process.execPath, [cliPath, ...argv], {
     cwd,
-  );
-  return { exitCode, stdout, stderr };
+    encoding: "utf8",
+    input: stdin,
+  });
+  return {
+    exitCode: result.status ?? 1,
+    stdout: result.stdout,
+    stderr:
+      result.stderr === "" && result.error !== undefined ? String(result.error) : result.stderr,
+  };
 }
 
 export function hasCommand(command: string): boolean {

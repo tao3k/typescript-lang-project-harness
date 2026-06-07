@@ -320,6 +320,68 @@ test("query --catalog declarations uses embedded canonical catalog", () => {
   assert.ok(array(packet.matches, "packet.matches").length >= 4);
 });
 
+test("query --catalog flow-lite renders native bounded frontier", () => {
+  const root = flowLiteQueryFixture();
+  const result = runCliCapture(flowLiteQueryArgs(), root);
+
+  assert.equal(result.exitCode, 0, result.stderr);
+  assert.match(result.stdout, /^\[query-flow-lite\] root=.* lang=typescript catalog=flow-lite/u);
+  assert.match(result.stdout, /S=source:call\(payload_string\)@src\/flow.ts:10!code/u);
+  assert.match(result.stdout, /K=sink:constructs\(ToolAction\)@src\/flow.ts:11!code/u);
+  assert.match(result.stdout, /P=path:bounded\(S->K\)!flow/u);
+  assert.match(result.stdout, /S>\{K:flows-to\}/u);
+  assert.match(result.stdout, /confidence=bounded sourceAuthority=native-parser/u);
+  assert.match(result.stdout, /frontier=S\.code,K\.code,P\.flow/u);
+  assert.doesNotMatch(result.stdout, /unknown tree-sitter query option/u);
+});
+
+test("query --catalog flow-lite --json emits semantic flow-lite bounded packet", () => {
+  const root = flowLiteQueryFixture();
+  const result = runCliCapture(flowLiteQueryArgs(["--json"]), root);
+
+  assert.equal(result.exitCode, 0, result.stderr);
+  const packet = JSON.parse(result.stdout) as JsonObject;
+  assert.equal(packet.schemaId, "agent.semantic-protocols.semantic-flow-lite");
+  assert.equal(packet.languageId, "typescript");
+  assert.equal(packet.providerId, "ts-harness");
+  assert.equal(packet.flowKind, "local-source-sink");
+  assert.equal(packet.sourceAuthority, "native-parser");
+  assert.equal(packet.executionBackend, "native-parser");
+  assert.equal(packet.adapterMode, "native-projection");
+  assert.equal(packet.confidence, "bounded");
+  assert.equal(packet.ownerPath, "src/flow.ts");
+  assert.equal(array(packet.path, "packet.path").length, 3);
+  assert.equal(record(array(packet.path, "packet.path")[0], "packet.path[0]").relation, "source");
+  assert.equal(record(array(packet.path, "packet.path")[1], "packet.path[1]").relation, "sink");
+  assert.equal(record(array(packet.path, "packet.path")[2], "packet.path[2]").relation, "flows-to");
+  assert.deepEqual(packet.omissions, []);
+  const fields = record(packet.fields, "packet.fields");
+  assert.equal(fields.rawSourceStored, false);
+  assert.equal(record(fields.where, "packet.fields.where")["scope.fn"], "collectToolActions");
+});
+
+test("query --catalog flow-lite rejects code output and open where keys", () => {
+  const root = treeSitterQueryFixture();
+
+  const codeOutput = runCliCapture(flowLiteQueryArgs(["--code"]), root);
+  assert.equal(codeOutput.exitCode, 2);
+  assert.match(codeOutput.stderr, /locator\/provenance surface/u);
+
+  const openWhere = runCliCapture(
+    [
+      "query",
+      "--catalog",
+      "flow-lite",
+      "--where",
+      "source.call=payload sink.constructs=Action scope.fn=collectToolActions guard.eq=isSafe",
+      ".",
+    ],
+    root,
+  );
+  assert.equal(openWhere.exitCode, 2);
+  assert.match(openWhere.stderr, /unsupported flow-lite --where key `guard\.eq`/u);
+});
+
 function treeSitterQueryFixture(): string {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-tree-sitter-query-"));
   fs.mkdirSync(path.join(root, "src"));
@@ -364,6 +426,29 @@ function treeSitterMultiPathFixture(): string {
   return root;
 }
 
+function flowLiteQueryFixture(): string {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-flow-lite-query-"));
+  fs.mkdirSync(path.join(root, "src"));
+  fs.writeFileSync(
+    path.join(root, "src", "flow.ts"),
+    [
+      "export class ToolAction {",
+      "  constructor(readonly payload: string) {}",
+      "}",
+      "",
+      "export function payload_string(input: string): string {",
+      "  return input.trim();",
+      "}",
+      "",
+      "export function collectToolActions(input: string): ToolAction[] {",
+      "  const payload = payload_string(input);",
+      "  return [new ToolAction(payload)];",
+      "}",
+    ].join("\n"),
+  );
+  return root;
+}
+
 function functionNameTreeSitterQueryArgs(
   extraArgs: readonly string[] = [],
   planArgs: readonly string[] = [],
@@ -382,6 +467,18 @@ function functionNameTreeSitterQueryArgs(
     "--asp-syntax-query-fields",
     "name",
     ...planArgs,
+  ];
+}
+
+function flowLiteQueryArgs(extraArgs: readonly string[] = []): readonly string[] {
+  return [
+    "query",
+    "--catalog",
+    "flow-lite",
+    "--where",
+    "source.call=payload_string sink.constructs=ToolAction scope.fn=collectToolActions",
+    ...extraArgs,
+    ".",
   ];
 }
 

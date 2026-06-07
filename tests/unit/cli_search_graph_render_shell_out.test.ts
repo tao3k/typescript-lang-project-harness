@@ -19,25 +19,25 @@ test("compact graph renderer shells out to canonical asp by default", (t) => {
   writeFileSync(
     aspBin,
     "#!/bin/sh\n" +
-      'printf "%s\\n" "$@" > "$ASLP_ARGV_PATH"\n' +
-      'cat > "$ASLP_STDIN_PATH"\n' +
+      'printf "%s\\n" "$@" > "$ASP_ARGV_PATH"\n' +
+      'cat > "$ASP_STDIN_PATH"\n' +
       'printf "[search-fzf] q=test\\n"\n',
   );
   chmodSync(aspBin, 0o755);
   const oldBin = process.env[SEMANTIC_AGENT_PROTOCOL_BIN_ENV];
   const oldPath = process.env.PATH;
-  const oldArgvPath = process.env.ASLP_ARGV_PATH;
-  const oldStdinPath = process.env.ASLP_STDIN_PATH;
+  const oldArgvPath = process.env.ASP_ARGV_PATH;
+  const oldStdinPath = process.env.ASP_STDIN_PATH;
   t.after(() => {
     restoreEnv(SEMANTIC_AGENT_PROTOCOL_BIN_ENV, oldBin);
     restoreEnv("PATH", oldPath);
-    restoreEnv("ASLP_ARGV_PATH", oldArgvPath);
-    restoreEnv("ASLP_STDIN_PATH", oldStdinPath);
+    restoreEnv("ASP_ARGV_PATH", oldArgvPath);
+    restoreEnv("ASP_STDIN_PATH", oldStdinPath);
   });
   delete process.env[SEMANTIC_AGENT_PROTOCOL_BIN_ENV];
   process.env.PATH = `${dir}${path.delimiter}${oldPath ?? ""}`;
-  process.env.ASLP_ARGV_PATH = argvPath;
-  process.env.ASLP_STDIN_PATH = stdinPath;
+  process.env.ASP_ARGV_PATH = argvPath;
+  process.env.ASP_STDIN_PATH = stdinPath;
 
   const packet = { header: { kind: "search-fzf" } } as unknown as SemanticSearchPacket;
   const output = renderCompactGraphPacket(packet, 3);

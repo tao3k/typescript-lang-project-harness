@@ -6,7 +6,7 @@ import test from "node:test";
 
 import { runCli } from "../../src/cli/main.js";
 
-function withTypeScriptProject<T>(callback: (root: string) => T): T {
+async function withTypeScriptProject<T>(callback: (root: string) => T | Promise<T>): Promise<T> {
   const root = mkdtempSync(path.join(tmpdir(), "ts-harness-item-query-"));
   try {
     mkdirSync(path.join(root, "src"), { recursive: true });
@@ -38,16 +38,16 @@ function withTypeScriptProject<T>(callback: (root: string) => T): T {
       ].join("\n"),
     );
 
-    return callback(root);
+    return await callback(root);
   } finally {
     rmSync(root, { force: true, recursive: true });
   }
 }
 
-function runSearch(root: string, itemQuery: string): string {
+async function runSearch(root: string, itemQuery: string): Promise<string> {
   let stdout = "";
   let stderr = "";
-  const exitCode = runCli(
+  const exitCode = await runCli(
     ["search", "owner", "src/item-query.ts", "items", "--query", itemQuery, "."],
     {
       stdout: { write: (chunk: string) => (stdout += chunk) },
@@ -60,9 +60,9 @@ function runSearch(root: string, itemQuery: string): string {
   return stdout;
 }
 
-test("owner items broad mixed query returns names before code", () => {
-  withTypeScriptProject((root) => {
-    const output = runSearch(
+test("owner items broad mixed query returns names before code", async () => {
+  await withTypeScriptProject(async (root) => {
+    const output = await runSearch(
       root,
       "render_semantic_query_json|projection_from_code_line|projection_node|expandActions",
     );
@@ -77,9 +77,9 @@ test("owner items broad mixed query returns names before code", () => {
   });
 });
 
-test("owner items fallback miss returns revise-query before code", () => {
-  withTypeScriptProject((root) => {
-    const output = runSearch(root, "render_semantic_query_json|projection_from_code_line");
+test("owner items fallback miss returns revise-query before code", async () => {
+  await withTypeScriptProject(async (root) => {
+    const output = await runSearch(root, "render_semantic_query_json|projection_from_code_line");
 
     assert.match(output, /status=miss/u);
     assert.match(output, /fallback=owner-top-items/u);

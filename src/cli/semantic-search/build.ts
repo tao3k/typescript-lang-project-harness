@@ -17,6 +17,7 @@ import {
   buildTestsPacket,
 } from "./packet-views.js";
 import { buildPublicExternalTypesPacketPayload } from "./public-external-types.js";
+import { buildReasoningPacket } from "./reasoning.js";
 import type { SemanticSearchBuildOptions, SemanticSearchPacket } from "./types.js";
 
 import { buildPolicyPacket } from "./policy.js";
@@ -54,6 +55,8 @@ export function buildSemanticSearchPacket(
       return buildTestsPacket(report, options);
     case "fzf":
       return buildFzfPacket(report, options);
+    case "reasoning":
+      return buildReasoningPacket(report, options);
     case "ingest":
       return buildIngestPacket(report, options);
   }
