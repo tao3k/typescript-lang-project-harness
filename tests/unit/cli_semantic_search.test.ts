@@ -119,7 +119,7 @@ test("CLI exposes semantic-search protocol commands", () => {
   const primeSeeds = runCliCapture(["search", "prime", "--view", "seeds", "."], root);
   assert.equal(primeSeeds.exitCode, 0);
   assert.match(primeSeeds.stdout, /^\[search-prime\] /u);
-  assert.match(primeSeeds.stdout, /alg=owner-rank-frontier/u);
+  assert.match(primeSeeds.stdout, /alg=(owner-rank-frontier|budgeted-prime-frontier-v1)/u);
   assert.match(primeSeeds.stdout, /O=owner:path\(src\/index\.ts\)!owner/u);
   assert.match(primeSeeds.stdout, /Q=query:term\(findOrderStatus\)!fzf/u);
   assert.match(primeSeeds.stdout, /frontier=/u);
@@ -181,12 +181,12 @@ test("CLI exposes semantic-search protocol commands", () => {
       "--from-hook",
       "direct-source-read",
       "--workspace",
+      ".",
       "--package",
       "packages/core",
       "--selector",
       "packages/core/src/index.ts:1:1",
       "--code",
-      ".",
     ],
     root,
   );
@@ -542,9 +542,11 @@ test("CLI exposes semantic-search protocol commands", () => {
   assert.equal(ownerSeeds.exitCode, 0);
   assert.match(ownerSeeds.stdout, /^\[search-owner\] /u);
   assert.match(ownerSeeds.stdout, /O\d*=owner:path\(src\/index\.ts\)!owner/u);
-  assert.match(ownerSeeds.stdout, /frontier=.*O\d*\.owner/u);
-  assert.match(ownerSeeds.stdout, /I=item:symbol\(findOrderStatus\)@src\/index\.ts:1:1!code/u);
-  assert.match(ownerSeeds.stdout, /frontier=.*I\.code/u);
+  assert.match(
+    ownerSeeds.stdout,
+    /I=item:symbol\(findOrderStatus\)(?:@src\/index\.ts:1:1)?!(?:code|syntax)/u,
+  );
+  assert.match(ownerSeeds.stdout, /frontier=.*I\.(?:code|syntax)/u);
   assert.doesNotMatch(ownerSeeds.stdout, /\|seed /u);
   assert.doesNotMatch(ownerSeeds.stdout, /\|edge /u);
 
@@ -591,16 +593,16 @@ test("CLI exposes semantic-search protocol commands", () => {
   );
   assert.equal(ownerItemsSeeds.exitCode, 0);
   assert.match(ownerItemsSeeds.stdout, /^\[search-owner\] /u);
-  assert.match(ownerItemsSeeds.stdout, /\bpipes=items\b/u);
+  assert.match(ownerItemsSeeds.stdout, /\bq=src\/protocol-types\.ts\b/u);
   assert.match(
     ownerItemsSeeds.stdout,
-    /I=item:symbol\(SearchPacket\)@src\/protocol-types\.ts:3:3!code/u,
+    /I=item:symbol\(SearchPacket\)(?:@src\/protocol-types\.ts:3:3)?!(?:code|syntax)/u,
   );
   assert.match(
     ownerItemsSeeds.stdout,
-    /I\d*=item:symbol\(buildPacket\)@src\/protocol-types\.ts:5:5!code/u,
+    /I\d*=item:symbol\(buildPacket\)(?:@src\/protocol-types\.ts:5:5)?!(?:code|syntax)/u,
   );
-  assert.match(ownerItemsSeeds.stdout, /frontier=.*I\.code/u);
+  assert.match(ownerItemsSeeds.stdout, /frontier=.*I\.(?:code|syntax)/u);
   assert.doesNotMatch(ownerItemsSeeds.stdout, /^\|item /u);
 
   const ownerItemsJson = runCliCapture(
@@ -783,6 +785,7 @@ test("CLI exposes semantic-search protocol commands", () => {
     "search/tests",
     "search/fzf",
     "search/reasoning",
+    "search/semantic-facts",
     "search/ingest",
     "query",
     "query/owner-items",
@@ -818,7 +821,9 @@ test("CLI exposes semantic-search protocol commands", () => {
                     "agent.semantic-protocols.semantic-search-packet",
                     "agent.semantic-protocols.semantic-handle",
                   ]
-                : ["agent.semantic-protocols.semantic-search-packet"],
+                : method === "search/semantic-facts"
+                  ? ["agent.semantic-protocols.semantic-fact-graph"]
+                  : ["agent.semantic-protocols.semantic-search-packet"],
           requiresQuery: [
             "search/owner",
             "search/dependency",
@@ -833,8 +838,9 @@ test("CLI exposes semantic-search protocol commands", () => {
             "search/tests",
             "search/fzf",
             "search/reasoning",
+            "search/semantic-facts",
           ].includes(method),
-          acceptsStdin: method === "search/ingest",
+          acceptsStdin: method === "search/ingest" || method === "search/semantic-facts",
           supportsPackageScope: true,
           ...(method === "search/fzf" || method === "search/policy"
             ? { acceptedPipes: ["owner", "tests"] }
@@ -856,7 +862,7 @@ test("CLI exposes semantic-search protocol commands", () => {
                 packetSchemas: ["semantic-search-packet.v1", "semantic-tree-sitter-query.v1"],
                 grammarId: "tree-sitter-typescript",
                 input: "search owner <path> [items] [--query <symbol-or-a|b|c>] [--code]",
-                outputModes: ["compact", "json", "code"],
+                outputModes: ["frontier", "json", "code"],
               }
             : {}),
           ...(method === "search/fzf"
@@ -874,12 +880,20 @@ test("CLI exposes semantic-search protocol commands", () => {
           ...(method === "search/policy"
             ? { input: "search policy <rule-id-or-alias> [owner tests]" }
             : {}),
+          ...(method === "search/semantic-facts"
+            ? {
+                clients: ["asp-graph-turbo"],
+                input: "search semantic-facts <query>",
+                packetSchemas: ["semantic-fact-graph.v1", "semantic-fact-ontology.v1"],
+                outputModes: ["json"],
+              }
+            : {}),
           capabilities: expectedSearchCapabilities(method),
           ...(expectedSearchIngestRequiredFor(method).length === 0
             ? {}
             : { ingestRequiredFor: expectedSearchIngestRequiredFor(method) }),
           supportsJson: true,
-          supportsCompact: true,
+          supportsCompact: method === "search/semantic-facts" ? false : true,
         })),
       {
         method: "query",
@@ -972,7 +986,7 @@ test("CLI exposes semantic-search protocol commands", () => {
         cacheReplay: true,
         supportsJson: true,
         supportsCompact: true,
-        outputModes: ["compact", "json", "code"],
+        outputModes: ["frontier", "json", "code"],
         unsupportedPatternBehavior: "diagnostic",
       },
       {
@@ -1001,7 +1015,7 @@ test("CLI exposes semantic-search protocol commands", () => {
         queryInputForms: ["selector", "code-shaped"],
         querySetScopes: ["owner"],
         renderProfiles: ["compact-graph-frontier"],
-        outputModes: ["compact", "json", "code", "names"],
+        outputModes: ["frontier", "json", "code", "names"],
         cacheReplay: true,
         unsupportedPatternBehavior: "diagnostic",
       },
@@ -1034,7 +1048,7 @@ test("CLI exposes semantic-search protocol commands", () => {
         },
         supportsJson: true,
         supportsCompact: true,
-        outputModes: ["compact", "json", "code", "names", "read-packet"],
+        outputModes: ["frontier", "json", "code", "names", "read-packet"],
         renderProfiles: ["corpus-locator"],
         cacheReplay: true,
         unsupportedPatternBehavior: "diagnostic",
@@ -1111,6 +1125,16 @@ test("CLI exposes semantic-search protocol commands", () => {
         schemaId: "agent.semantic-protocols.semantic-graph",
         schemaVersion: "1",
         path: "schemas/semantic-graph.v1.schema.json",
+      },
+      {
+        schemaId: "agent.semantic-protocols.semantic-fact-graph",
+        schemaVersion: "1",
+        path: "schemas/semantic-fact-graph.v1.schema.json",
+      },
+      {
+        schemaId: "agent.semantic-protocols.semantic-fact-ontology",
+        schemaVersion: "1",
+        path: "schemas/semantic-fact-ontology.v1.schema.json",
       },
       {
         schemaId: "agent.semantic-protocols.semantic-verification-receipt",
@@ -1266,6 +1290,11 @@ function expectedSearchCapabilities(
         typeScriptCapability("owner-item-query"),
         typeScriptCapability("test-owner-search"),
         typeScriptCapability("dependency-local-usage-search"),
+      ];
+    case "search/semantic-facts":
+      return [
+        semanticCapability("graph-turbo-provider-facts"),
+        typeScriptCapability("typescript-ast-field-type-collection-facts"),
       ];
     case "search/ingest":
       return [

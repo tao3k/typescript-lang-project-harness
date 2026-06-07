@@ -160,10 +160,7 @@ export function renderOwnerItemSemanticReadPacket(packet: SemanticReadPacket): s
         ? ""
         : ` item=${fieldValue(window.itemName)} kind=${fieldValue(window.itemKind)}`;
     lines.push(
-      `|read path=${window.ownerPath}${itemFields} lineRange=${window.location.lineRange} reason=${window.reason} truncated=${window.truncated}`,
-    );
-    lines.push(
-      `|code path=${window.ownerPath} lineRange=${window.location.lineRange} reason=direct-source-read text=${JSON.stringify(window.text)}`,
+      `|read path=${window.ownerPath}${itemFields} lineRange=${window.location.lineRange} read=${window.read} next=direct-source-read reason=${window.reason} truncated=${window.truncated}`,
     );
   }
   return lines.join("\n");

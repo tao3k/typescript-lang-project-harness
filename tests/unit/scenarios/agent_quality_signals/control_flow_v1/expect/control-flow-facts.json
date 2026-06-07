@@ -1,0 +1,52 @@
+[
+  {
+    "functionName": "nested",
+    "statementCount": 7,
+    "branchCount": 5,
+    "loopCount": 0,
+    "maxNestingDepth": 5,
+    "maxLiteralDispatchChain": 0,
+    "manualTransformLoopCount": 0,
+    "maxBlockStatementCount": 2
+  },
+  {
+    "functionName": "route",
+    "statementCount": 9,
+    "branchCount": 4,
+    "loopCount": 0,
+    "maxNestingDepth": 4,
+    "maxLiteralDispatchChain": 4,
+    "manualTransformLoopCount": 0,
+    "maxBlockStatementCount": 2
+  },
+  {
+    "functionName": "traverse",
+    "statementCount": 12,
+    "branchCount": 4,
+    "loopCount": 2,
+    "maxNestingDepth": 3,
+    "maxLiteralDispatchChain": 1,
+    "manualTransformLoopCount": 0,
+    "maxBlockStatementCount": 4
+  },
+  {
+    "functionName": "broad",
+    "statementCount": 93,
+    "branchCount": 0,
+    "loopCount": 0,
+    "maxNestingDepth": 0,
+    "maxLiteralDispatchChain": 0,
+    "manualTransformLoopCount": 0,
+    "maxBlockStatementCount": 93
+  },
+  {
+    "functionName": "transform",
+    "statementCount": 5,
+    "branchCount": 1,
+    "loopCount": 1,
+    "maxNestingDepth": 2,
+    "maxLiteralDispatchChain": 0,
+    "manualTransformLoopCount": 1,
+    "maxBlockStatementCount": 3
+  }
+]

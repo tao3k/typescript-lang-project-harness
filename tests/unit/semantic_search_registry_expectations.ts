@@ -79,6 +79,11 @@ export function expectedSearchCapabilities(method: string): readonly CapabilityE
         typeScriptCapability("test-owner-search"),
         typeScriptCapability("dependency-local-usage-search"),
       ];
+    case "search/semantic-facts":
+      return [
+        semanticCapability("graph-turbo-provider-facts"),
+        typeScriptCapability("typescript-ast-field-type-collection-facts"),
+      ];
     case "search/ingest":
       return [
         semanticCapability("external-candidate-ingest"),

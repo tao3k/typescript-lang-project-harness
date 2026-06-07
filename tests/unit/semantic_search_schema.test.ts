@@ -4,7 +4,6 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
-import { runCliCapture } from "./cli_helpers.js";
 import { jsonPacket, semanticSearchFixture } from "./semantic_search_schema_fixture.js";
 import {
   expectedSearchCapabilities,
@@ -219,6 +218,7 @@ test("semantic language registry JSON documents the TypeScript provider identity
     "search/tests",
     "search/fzf",
     "search/reasoning",
+    "search/semantic-facts",
     "search/ingest",
     "query",
     "query/owner-items",
@@ -249,7 +249,9 @@ test("semantic language registry JSON documents the TypeScript provider identity
     assert.equal(descriptor.supportsJson, descriptor.method === "agent/guide" ? false : true);
     assert.equal(
       descriptor.supportsCompact,
-      descriptor.method === "ast-patch/dry-run" ? false : true,
+      descriptor.method === "ast-patch/dry-run" || descriptor.method === "search/semantic-facts"
+        ? false
+        : true,
     );
     assert.ok(
       ["search", "query", "check", "ast-patch", "agent"].includes(String(descriptor.command)),
@@ -269,7 +271,9 @@ test("semantic language registry JSON documents the TypeScript provider identity
                 "agent.semantic-protocols.semantic-search-packet",
                 "agent.semantic-protocols.semantic-handle",
               ]
-            : ["agent.semantic-protocols.semantic-search-packet"],
+            : String(descriptor.method) === "search/semantic-facts"
+              ? ["agent.semantic-protocols.semantic-fact-graph"]
+              : ["agent.semantic-protocols.semantic-search-packet"],
       );
       assert.equal(
         descriptor.requiresQuery,
@@ -287,9 +291,13 @@ test("semantic language registry JSON documents the TypeScript provider identity
           "search/tests",
           "search/fzf",
           "search/reasoning",
+          "search/semantic-facts",
         ].includes(String(descriptor.method)),
       );
-      assert.equal(descriptor.acceptsStdin, descriptor.method === "search/ingest");
+      assert.equal(
+        descriptor.acceptsStdin,
+        descriptor.method === "search/ingest" || descriptor.method === "search/semantic-facts",
+      );
       assert.equal(descriptor.supportsPackageScope, true);
       assert.deepEqual(
         descriptor.acceptedPipes === undefined
@@ -309,7 +317,9 @@ test("semantic language registry JSON documents the TypeScript provider identity
           : stringArray(descriptor.packetSchemas, `${String(descriptor.method)} packetSchemas`),
         String(descriptor.method) === "search/owner"
           ? ["semantic-search-packet.v1", "semantic-tree-sitter-query.v1"]
-          : [],
+          : String(descriptor.method) === "search/semantic-facts"
+            ? ["semantic-fact-graph.v1", "semantic-fact-ontology.v1"]
+            : [],
       );
       assert.equal(
         descriptor.grammarId,
@@ -420,7 +430,7 @@ test("semantic language registry JSON documents the TypeScript provider identity
       ]);
       assert.deepEqual(descriptor.unsupportedPredicates, []);
       assert.equal(descriptor.cacheReplay, true);
-      assert.deepEqual(descriptor.outputModes, ["compact", "json", "code"]);
+      assert.deepEqual(descriptor.outputModes, ["frontier", "json", "code"]);
       const queryCatalogs = array(descriptor.queryCatalogs, "query queryCatalogs").map(
         (catalog, index) => record(catalog, `query queryCatalogs[${index}]`),
       );
@@ -454,8 +464,8 @@ test("semantic language registry JSON documents the TypeScript provider identity
       assert.deepEqual(
         descriptor.outputModes,
         method === "query/direct-source-read"
-          ? ["compact", "json", "code", "names", "read-packet"]
-          : ["compact", "json", "code", "names"],
+          ? ["frontier", "json", "code", "names", "read-packet"]
+          : ["frontier", "json", "code", "names"],
       );
       assert.deepEqual(
         descriptor.packetSchemas,
@@ -555,6 +565,14 @@ test("semantic language registry JSON documents the TypeScript provider identity
     "schemas/semantic-graph.v1.schema.json",
   );
   assertRegisteredSchema(
+    "agent.semantic-protocols.semantic-fact-graph",
+    "schemas/semantic-fact-graph.v1.schema.json",
+  );
+  assertRegisteredSchema(
+    "agent.semantic-protocols.semantic-fact-ontology",
+    "schemas/semantic-fact-ontology.v1.schema.json",
+  );
+  assertRegisteredSchema(
     "agent.semantic-protocols.semantic-verification-receipt",
     "schemas/semantic-verification-receipt.v1.schema.json",
   );
@@ -618,6 +636,8 @@ test("package-local semantic schemas stay synchronized with the protocol reposit
     "semantic-tree-sitter-query.v1.schema.json",
     "semantic-tree-sitter-grammar-profile.v1.schema.json",
     "semantic-graph.v1.schema.json",
+    "semantic-fact-graph.v1.schema.json",
+    "semantic-fact-ontology.v1.schema.json",
     "semantic-type-surface.v1.schema.json",
     "semantic-handle.v1.schema.json",
     "semantic-dev-command-log.v1.schema.json",

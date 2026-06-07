@@ -41,6 +41,7 @@ interface TreeSitterQueryParseState {
   selector: string | undefined;
   packagePath: string | undefined;
   workspace: boolean;
+  workspaceRoot: string | undefined;
   aspSyntaxQueryPlan: MutableSyntaxQueryPlan | undefined;
   json: boolean;
   codeOnly: boolean;
@@ -108,7 +109,13 @@ function parseTreeSitterQueryOptions(argv: readonly string[]): TreeSitterQueryOp
       state.packagePath = value;
       index += 1;
     } else if (arg === "--workspace") {
+      const value = argv[index + 1];
+      if (value === undefined || value.startsWith("-")) {
+        return { kind: "error", message: "--workspace requires a project root" };
+      }
       state.workspace = true;
+      state.workspaceRoot = value;
+      index += 1;
     } else if (isAspSyntaxQueryPlanOption(arg)) {
       const value = argv[index + 1];
       if (value === undefined) {
@@ -138,6 +145,7 @@ function initialTreeSitterQueryParseState(): TreeSitterQueryParseState {
     selector: undefined,
     packagePath: undefined,
     workspace: false,
+    workspaceRoot: undefined,
     aspSyntaxQueryPlan: undefined,
     json: false,
     codeOnly: false,
@@ -156,6 +164,7 @@ function finalizeTreeSitterQueryArgs(state: TreeSitterQueryParseState): TreeSitt
     positionals,
     packagePath,
     workspace,
+    workspaceRoot,
     json,
     codeOnly,
   } = state;
@@ -168,6 +177,18 @@ function finalizeTreeSitterQueryArgs(state: TreeSitterQueryParseState): TreeSitt
   if (json && codeOnly) {
     return { kind: "error", message: "--code cannot be combined with --json" };
   }
+  if (workspaceRoot !== undefined && positionals.length > 0) {
+    return {
+      kind: "error",
+      message: "query accepts project root via --workspace or positional PROJECT_ROOT, not both",
+    };
+  }
+  if (codeOnly && positionals.length > 0) {
+    return {
+      kind: "error",
+      message: "query --code does not accept a trailing PROJECT_ROOT; use --workspace PROJECT_ROOT",
+    };
+  }
   if (positionals.length > 1) {
     return { kind: "error", message: "expected at most one PROJECT_ROOT argument" };
   }
@@ -178,7 +199,7 @@ function finalizeTreeSitterQueryArgs(state: TreeSitterQueryParseState): TreeSitt
     terms,
     selector,
     aspSyntaxQueryPlan,
-    projectRoot: positionals[0],
+    projectRoot: workspaceRoot ?? positionals[0],
     packagePath,
     workspace,
     json,

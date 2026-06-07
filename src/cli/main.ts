@@ -16,8 +16,8 @@ export const HELP_TEXT = `ts-harness — TypeScript semantic search and project 
 
 Usage:
   ts-harness search <view> ... [--json] [--code] [--package <path>] [project-root]
-  ts-harness query <owner-path> --term <symbol> [--term <symbol>] [--names-only | --code] [project-root]
-  ts-harness query (--catalog <id> | --treesitter-query <s-expression>) [--workspace] [--selector <path[:start[:end]]>] [--code] [--json] [project-root]
+  ts-harness query <owner-path> --term <symbol> [--term <symbol>] [--workspace <project-root>] [--names-only | --code]
+  ts-harness query (--catalog <id> | --treesitter-query <s-expression>) [--workspace <project-root>] [--selector <path[:start[:end]]>] [--code] [--json]
   ts-harness query --catalog flow-lite --where 'source.call=NAME sink.constructs=TYPE scope.fn=FUNCTION' [--json] [project-root]
   ts-harness ast-patch dry-run --packet <semantic-ast-patch.json|-> [project-root]
   ts-harness check [--changed | --full] [--json] [project-root]
@@ -47,6 +47,8 @@ SEARCH VIEWS
                              Minimal final-only fuzzy -> owner -> tests pipe
   search fzf --query-set <q1> --query-set <q2> [owner tests] [--owner <path>]
                              Homogeneous fuzzy query-set with optional owner scope
+  search semantic-facts <query>
+                             Provider-owned field/type/collection facts for graph-turbo
   search ingest             Detect stdin shape and group hits by owner
   --package <path>          Run the selected search in a workspace package scope
 
@@ -59,7 +61,7 @@ QUERY
                               Pure compact parser-owned code output
   query --treesitter-query <s-expression> [--selector <selector>] [--code]
                              Tree-sitter-compatible syntax locate, capture, and pure code extraction
-  query --from-hook direct-source-read --workspace --selector <workspace-path:start:end> --code
+  query --from-hook direct-source-read --workspace <project-root> --selector <workspace-path:start:end> --code
                              Source-preserved direct read for workspace-relative selectors
   query --catalog declarations
                              Provider-embedded canonical tree-sitter query catalog
@@ -100,10 +102,10 @@ EXAMPLES
   ts-harness search tests src/domain/order.ts .
   ts-harness search fzf OrderStatus .
   ts-harness search fzf --query-set OrderStatus --query-set findOrderStatus owner tests .
-  ts-harness query src/domain/order.ts --term findOrderStatus --names-only .
-  ts-harness query src/domain/order.ts --term findOrderStatus --code .
-  ts-harness query --treesitter-query '(function_declaration name: (identifier) @function.name)' .
-  ts-harness query --catalog declarations --selector src/domain/order.ts --code .
+  ts-harness query src/domain/order.ts --term findOrderStatus --workspace . --names-only
+  ts-harness query src/domain/order.ts --term findOrderStatus --workspace . --code
+  ts-harness query --treesitter-query '(function_declaration name: (identifier) @function.name)' --workspace .
+  ts-harness query --catalog declarations --selector src/domain/order.ts --workspace . --code
   ts-harness query --catalog flow-lite --where 'source.call=payload sink.constructs=Action scope.fn=collect' .
   ts-harness ast-patch dry-run --packet semantic-ast-patch.json .
   rg -n "OrderStatus" src tests | ts-harness search ingest .

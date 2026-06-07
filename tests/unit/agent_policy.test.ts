@@ -322,8 +322,85 @@ test("agent policy reports parser-native algorithm shape advice without blocking
     report.findings.map((finding) => finding.ruleId),
     ["TS-AGENT-R007", "TS-AGENT-R008"],
   );
+  assert.equal(
+    report.findings.find((finding) => finding.ruleId === "TS-AGENT-R007")?.labels
+      .agentQualitySignals,
+    "control-flow.decision-stack",
+  );
+  assert.equal(
+    report.findings.find((finding) => finding.ruleId === "TS-AGENT-R008")?.labels
+      .agentQualitySignals,
+    "control-flow.broad-linear-phase",
+  );
   assert.match(rendered, /hides algorithm shape/u);
   assert.match(rendered, /broadLinearAlgorithm/u);
+});
+
+test("agent policy labels parser-native traversal knot advice", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-traversal-agent-"));
+  fs.mkdirSync(path.join(root, "src"));
+  fs.writeFileSync(path.join(root, "tsconfig.json"), JSON.stringify({ include: ["src/**/*.ts"] }));
+  fs.writeFileSync(
+    path.join(root, "src", "algorithm.ts"),
+    [
+      "export function traverse(groups: readonly (readonly number[])[]): number {",
+      "  let total = 0;",
+      "  for (const group of groups) {",
+      "    for (const value of group) {",
+      "      if (value > 10) {",
+      "        total += value;",
+      "      }",
+      "      if (value < 0) {",
+      "        total -= value;",
+      "      }",
+      "      if (value === 0) {",
+      "        total += 0;",
+      "      }",
+      "      if (value === 1) {",
+      "        total += 1;",
+      "      }",
+      "    }",
+      "  }",
+      "  return total;",
+      "}",
+    ].join("\n"),
+  );
+
+  const report = runTypeScriptProjectHarness(root);
+  const traversalFinding = report.findings.find((finding) => finding.ruleId === "TS-AGENT-R007");
+
+  assert.equal(isTypeScriptHarnessClean(report), true);
+  assert.equal(traversalFinding?.labels.agentQualitySignals, "control-flow.traversal-knot");
+});
+
+test("agent policy labels parser-native literal dispatch advice", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-literal-dispatch-agent-"));
+  fs.mkdirSync(path.join(root, "src"));
+  fs.writeFileSync(path.join(root, "tsconfig.json"), JSON.stringify({ include: ["src/**/*.ts"] }));
+  fs.writeFileSync(
+    path.join(root, "src", "algorithm.ts"),
+    [
+      "export function route(kind: string): number {",
+      '  if (kind === "alpha") {',
+      "    return 1;",
+      '  } else if (kind === "beta") {',
+      "    return 2;",
+      '  } else if (kind === "gamma") {',
+      "    return 3;",
+      '  } else if (kind === "delta") {',
+      "    return 4;",
+      "  }",
+      "  return 0;",
+      "}",
+    ].join("\n"),
+  );
+
+  const report = runTypeScriptProjectHarness(root);
+  const dispatchFinding = report.findings.find((finding) => finding.ruleId === "TS-AGENT-R007");
+
+  assert.equal(isTypeScriptHarnessClean(report), true);
+  assert.equal(dispatchFinding?.labels.agentQualitySignals, "control-flow.literal-dispatch-chain");
+  assert.match(dispatchFinding?.summary ?? "", /control-flow\.literal-dispatch-chain/u);
 });
 
 test("agent policy reports parser-native public data shape advice without blocking", () => {

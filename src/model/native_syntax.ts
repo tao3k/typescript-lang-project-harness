@@ -70,6 +70,8 @@ export interface TypeScriptPublicFunctionControlFlowFact {
   readonly branchCount: number;
   readonly loopCount: number;
   readonly maxNestingDepth: number;
+  readonly maxLiteralDispatchChain: number;
+  readonly manualTransformLoopCount: number;
   readonly maxBlockStatementCount: number;
   readonly location: SourceLocation;
   readonly sourceLine?: string;

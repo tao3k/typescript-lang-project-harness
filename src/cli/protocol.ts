@@ -27,6 +27,7 @@ import {
   renderSemanticSearchPacketJson,
   type SemanticSearchRenderMode,
 } from "./semantic-search.js";
+import { renderTypeScriptSemanticGraphFactsJson } from "./semantic-graph-facts.js";
 import { buildOwnerItemQueryPacket, renderOwnerItemQuery } from "./semantic-search/item-query.js";
 import { renderOwnerItemQueryCode } from "./semantic-search/item-read.js";
 import { renderTypeScriptTreeSitterQuery } from "../parser/native_syntax/tree-sitter-query.js";
@@ -209,6 +210,17 @@ export function runProtocolCli(
       }
       return isTypeScriptHarnessClean(report) ? 0 : 1;
     }
+    if (args.view === "semantic-facts") {
+      if (!args.json) {
+        streams.stderr.write("search semantic-facts requires --json\n");
+        return 2;
+      }
+      const projectRoot = path.resolve(cwd, args.projectRoot ?? ".");
+      streams.stdout.write(
+        renderTypeScriptSemanticGraphFactsJson(projectRoot, args.query ?? "", streams.stdin ?? ""),
+      );
+      return 0;
+    }
 
     const started = Date.now();
     const searchPlan = searchRunPlan(cwd, args);
@@ -326,6 +338,7 @@ function parseQueryArgs(argv: readonly string[]): ProtocolArgs {
   let renderMode: "read-packet" | undefined;
   let packagePath: string | undefined;
   let workspace = false;
+  let workspaceRoot: string | undefined;
   let fromHook: string | undefined;
   let selector: string | undefined;
   const terms: string[] = [];
@@ -384,7 +397,13 @@ function parseQueryArgs(argv: readonly string[]): ProtocolArgs {
       packagePath = value;
       index += 1;
     } else if (arg === "--workspace") {
+      const value = argv[index + 1];
+      if (value === undefined || value.startsWith("-")) {
+        return { kind: "error", message: "--workspace requires a project root" };
+      }
       workspace = true;
+      workspaceRoot = value;
+      index += 1;
     } else if (arg === "--help" || arg === "-h") {
       return { kind: "help" };
     } else if (arg.startsWith("-")) {
@@ -409,9 +428,22 @@ function parseQueryArgs(argv: readonly string[]): ProtocolArgs {
     return { kind: "error", message: "--view read-packet requires --json" };
   }
   const ownerPath = selector === undefined ? positionals[0] : ownerPathFromQuerySelector(selector);
-  const projectRoot = selector === undefined ? positionals[1] : positionals[0];
+  const positionalProjectRoot = selector === undefined ? positionals[1] : positionals[0];
+  const projectRoot = workspaceRoot ?? positionalProjectRoot;
   if (ownerPath === undefined) {
     return { kind: "error", message: "query requires an owner path" };
+  }
+  if (workspaceRoot !== undefined && positionalProjectRoot !== undefined) {
+    return {
+      kind: "error",
+      message: "query accepts project root via --workspace or positional PROJECT_ROOT, not both",
+    };
+  }
+  if (codeOnly && positionalProjectRoot !== undefined) {
+    return {
+      kind: "error",
+      message: "query --code does not accept a trailing PROJECT_ROOT; use --workspace PROJECT_ROOT",
+    };
   }
   if (positionals.length > (selector === undefined ? 2 : 1)) {
     return { kind: "error", message: "expected owner path and optional PROJECT_ROOT" };
@@ -469,6 +501,7 @@ function parseSearchArgs(argv: readonly string[]): ProtocolArgs {
   let renderMode: SemanticSearchRenderMode | undefined;
   let packagePath: string | undefined;
   let workspace = false;
+  let workspaceRoot: string | undefined;
   let ownerPath: string | undefined;
   let dependency: string | undefined;
   const querySet: string[] = [];
@@ -497,7 +530,13 @@ function parseSearchArgs(argv: readonly string[]): ProtocolArgs {
       packagePath = value;
       index += 1;
     } else if (arg === "--workspace") {
+      const value = argv[index + 1];
+      if (value === undefined || value.startsWith("-")) {
+        return { kind: "error", message: "--workspace requires a project root" };
+      }
       workspace = true;
+      workspaceRoot = value;
+      index += 1;
     } else if (arg === "--owner") {
       const value = argv[index + 1];
       if (value === undefined) {
@@ -572,12 +611,25 @@ function parseSearchArgs(argv: readonly string[]): ProtocolArgs {
     if (error !== undefined) {
       return { kind: "error", message: error };
     }
+    if (workspaceRoot !== undefined && projectRoot !== undefined) {
+      return {
+        kind: "error",
+        message: "search accepts project root via --workspace or positional PROJECT_ROOT, not both",
+      };
+    }
+    if (codeOnly && projectRoot !== undefined) {
+      return {
+        kind: "error",
+        message:
+          "search --code does not accept a trailing PROJECT_ROOT; use --workspace PROJECT_ROOT",
+      };
+    }
     return {
       kind: "search",
       view: searchView.view,
       query,
       ...(itemQuery !== undefined ? { itemQuery } : {}),
-      projectRoot,
+      projectRoot: workspaceRoot ?? projectRoot,
       packagePath,
       workspace,
       ownerPath,
@@ -598,11 +650,17 @@ function parseSearchArgs(argv: readonly string[]): ProtocolArgs {
   if (error !== undefined) {
     return { kind: "error", message: error };
   }
+  if (workspaceRoot !== undefined && projectRoot !== undefined) {
+    return {
+      kind: "error",
+      message: "search accepts project root via --workspace or positional PROJECT_ROOT, not both",
+    };
+  }
   return {
     kind: "search",
     view: searchView.view,
     query: undefined,
-    projectRoot,
+    projectRoot: workspaceRoot ?? projectRoot,
     packagePath,
     workspace,
     ownerPath: undefined,
@@ -623,6 +681,7 @@ function parseSearchQueryArgs(argv: readonly string[]): ProtocolArgs {
   let renderMode: SemanticSearchRenderMode | undefined;
   let packagePath: string | undefined;
   let workspace = false;
+  let workspaceRoot: string | undefined;
   const terms: string[] = [];
   let pipes: TypeScriptSemanticSearchPipe[] = [];
   const positionals: string[] = [];
@@ -680,7 +739,13 @@ function parseSearchQueryArgs(argv: readonly string[]): ProtocolArgs {
       packagePath = value;
       index += 1;
     } else if (arg === "--workspace") {
+      const value = argv[index + 1];
+      if (value === undefined || value.startsWith("-")) {
+        return { kind: "error", message: "--workspace requires a project root" };
+      }
       workspace = true;
+      workspaceRoot = value;
+      index += 1;
     } else if (arg.startsWith("-")) {
       return { kind: "error", message: `unknown search query option: ${arg}` };
     } else {
@@ -696,6 +761,12 @@ function parseSearchQueryArgs(argv: readonly string[]): ProtocolArgs {
   if (positionals.length > 1) {
     return { kind: "error", message: "expected at most one PROJECT_ROOT argument" };
   }
+  if (workspaceRoot !== undefined && positionals.length > 0) {
+    return {
+      kind: "error",
+      message: "search accepts project root via --workspace or positional PROJECT_ROOT, not both",
+    };
+  }
   return {
     kind: "search",
     view: "fzf",
@@ -703,7 +774,7 @@ function parseSearchQueryArgs(argv: readonly string[]): ProtocolArgs {
     ...(fromHook !== undefined ? { fromHook } : {}),
     ...(selector !== undefined ? { selector } : {}),
     ...(intent !== undefined ? { intent } : {}),
-    projectRoot: positionals[0],
+    projectRoot: workspaceRoot ?? positionals[0],
     packagePath,
     workspace,
     ownerPath: ownerPathFromQuerySelector(selector),
@@ -851,9 +922,12 @@ function isFlagLikeLiteralSearchQuery(
     arg.startsWith("-") &&
     arg !== "--view" &&
     arg !== "--package" &&
+    arg !== "--workspace" &&
     arg !== "--owner" &&
     arg !== "--dependency" &&
+    arg !== "--query" &&
     arg !== "--query-set" &&
+    arg !== "--code" &&
     arg !== "--help" &&
     arg !== "-h"
   );

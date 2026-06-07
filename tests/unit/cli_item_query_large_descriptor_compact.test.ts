@@ -74,8 +74,9 @@ test("item query compacts descriptor arrays and object maps structurally", () =>
       "src/catalog.ts",
       "--term",
       "typescriptViewDescriptors|typescriptViewIndex",
-      "--code",
+      "--workspace",
       root,
+      "--code",
     ],
     root,
   );

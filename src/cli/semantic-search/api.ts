@@ -432,6 +432,8 @@ function controlFlowFields(
     branches: controlFlow.branchCount,
     loops: controlFlow.loopCount,
     maxNesting: controlFlow.maxNestingDepth,
+    maxLiteralDispatchChain: controlFlow.maxLiteralDispatchChain,
+    manualTransformLoops: controlFlow.manualTransformLoopCount,
   };
 }
 

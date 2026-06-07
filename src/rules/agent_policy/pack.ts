@@ -15,6 +15,15 @@ import {
   TS_AGENT_R012,
   evaluateNativeDataShapeAdvice,
 } from "./data_shape.js";
+import {
+  CONTROL_FLOW_BROAD_LINEAR_PHASE,
+  CONTROL_FLOW_DECISION_STACK,
+  CONTROL_FLOW_LITERAL_DISPATCH_CHAIN,
+  CONTROL_FLOW_TRAVERSAL_KNOT,
+  formatAgentQualitySignals,
+  NATIVE_IDIOM_MANUAL_TRANSFORM_LOOP,
+  withAgentQualitySignals,
+} from "./quality_signals.js";
 
 const TS_AGENT_R001: TypeScriptHarnessRule = {
   ruleId: "TS-AGENT-R001",
@@ -356,6 +365,7 @@ function evaluateNativeAlgorithmShapeAdvice(
     .flatMap((controlFlow) => [
       ...nestedAlgorithmAdvice(controlFlow),
       ...broadLinearAlgorithmAdvice(controlFlow),
+      ...manualTransformLoopAdvice(controlFlow),
     ])
     .sort((left, right) => findingSortKey(left).localeCompare(findingSortKey(right)));
 }
@@ -368,18 +378,19 @@ function nestedAlgorithmAdvice(
     return [];
   }
   const rule = TS_AGENT_R007;
+  const signalIds = nestedAlgorithmQualitySignals(signals);
   return [
     {
       ruleId: rule.ruleId,
       packId: rule.packId,
       severity: rule.severity,
       title: rule.title,
-      summary: `Public function '${controlFlow.functionName}' hides algorithm shape. Signals: ${signals.join(", ")}.`,
+      summary: `Public function '${controlFlow.functionName}' hides algorithm shape. Signals: ${formatAgentQualitySignals(signalIds)}.`,
       location: controlFlow.location,
       requirement: rule.requirement,
       ...sourceLineField(controlFlow.sourceLine),
       label: "public function nested algorithm",
-      labels: rule.labels,
+      labels: withAgentQualitySignals(rule.labels, signalIds),
     },
   ];
 }
@@ -398,12 +409,35 @@ function broadLinearAlgorithmAdvice(
       packId: rule.packId,
       severity: rule.severity,
       title: rule.title,
-      summary: `Public function '${controlFlow.functionName}' spans ${controlFlow.lineSpan} lines with ${controlFlow.statementCount} statements and a ${controlFlow.maxBlockStatementCount}-statement block. Signals: ${signals.join(", ")}.`,
+      summary: `Public function '${controlFlow.functionName}' spans ${controlFlow.lineSpan} lines with ${controlFlow.statementCount} statements and a ${controlFlow.maxBlockStatementCount}-statement block. Signals: ${formatAgentQualitySignals([CONTROL_FLOW_BROAD_LINEAR_PHASE])}.`,
       location: controlFlow.location,
       requirement: rule.requirement,
       ...sourceLineField(controlFlow.sourceLine),
       label: "public function broad linear algorithm",
-      labels: rule.labels,
+      labels: withAgentQualitySignals(rule.labels, [CONTROL_FLOW_BROAD_LINEAR_PHASE]),
+    },
+  ];
+}
+
+function manualTransformLoopAdvice(
+  controlFlow: TypeScriptPublicFunctionControlFlowFact,
+): TypeScriptHarnessFinding[] {
+  if (controlFlow.manualTransformLoopCount === 0) {
+    return [];
+  }
+  const rule = TS_AGENT_R008;
+  return [
+    {
+      ruleId: rule.ruleId,
+      packId: rule.packId,
+      severity: rule.severity,
+      title: rule.title,
+      summary: `Public function '${controlFlow.functionName}' uses ${controlFlow.manualTransformLoopCount} manual transform loop(s). Signals: ${formatAgentQualitySignals([NATIVE_IDIOM_MANUAL_TRANSFORM_LOOP])}.`,
+      location: controlFlow.location,
+      requirement: rule.requirement,
+      ...sourceLineField(controlFlow.sourceLine),
+      label: "public function manual transform loop",
+      labels: withAgentQualitySignals(rule.labels, [NATIVE_IDIOM_MANUAL_TRANSFORM_LOOP]),
     },
   ];
 }
@@ -419,7 +453,31 @@ function nestedAlgorithmSignals(
     controlFlow.branchCount >= 12 && controlFlow.loopCount === 0
       ? "large branch surface without dispatch table"
       : undefined,
+    controlFlow.maxLiteralDispatchChain >= 4 ? "literal dispatch chain without switch" : undefined,
   ].filter((signal): signal is string => signal !== undefined);
+}
+
+function nestedAlgorithmQualitySignals(signals: readonly string[]): readonly string[] {
+  const signalIds: string[] = [];
+  for (const signal of signals) {
+    if (
+      signal === "deep control-flow nesting" ||
+      signal === "large branch surface without dispatch table"
+    ) {
+      pushUnique(signalIds, CONTROL_FLOW_DECISION_STACK);
+    } else if (signal === "nested loops mixed with branches") {
+      pushUnique(signalIds, CONTROL_FLOW_TRAVERSAL_KNOT);
+    } else if (signal === "literal dispatch chain without switch") {
+      pushUnique(signalIds, CONTROL_FLOW_LITERAL_DISPATCH_CHAIN);
+    }
+  }
+  return signalIds;
+}
+
+function pushUnique(values: string[], value: string): void {
+  if (!values.includes(value)) {
+    values.push(value);
+  }
 }
 
 function broadLinearAlgorithmSignals(

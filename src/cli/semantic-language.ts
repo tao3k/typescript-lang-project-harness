@@ -22,6 +22,10 @@ export const SEMANTIC_TREE_SITTER_QUERY_SCHEMA_ID =
 export const SEMANTIC_TREE_SITTER_GRAMMAR_PROFILE_SCHEMA_ID =
   "agent.semantic-protocols.semantic-tree-sitter-grammar-profile" as const;
 export const SEMANTIC_GRAPH_SCHEMA_ID = "agent.semantic-protocols.semantic-graph" as const;
+export const SEMANTIC_FACT_GRAPH_SCHEMA_ID =
+  "agent.semantic-protocols.semantic-fact-graph" as const;
+export const SEMANTIC_FACT_ONTOLOGY_SCHEMA_ID =
+  "agent.semantic-protocols.semantic-fact-ontology" as const;
 export const SEMANTIC_VERIFICATION_RECEIPT_SCHEMA_ID =
   "agent.semantic-protocols.semantic-verification-receipt" as const;
 export const SEMANTIC_BEHAVIOR_SNAPSHOT_SCHEMA_ID =
@@ -67,8 +71,11 @@ export type TypeScriptSemanticSearchView =
   | "tests"
   | "fzf"
   | "reasoning"
+  | "semantic-facts"
   | "ingest";
-export type TypeScriptSemanticSearchPipe = TypeScriptSemanticSearchView | "items";
+export type TypeScriptSemanticSearchPipe =
+  | Exclude<TypeScriptSemanticSearchView, "semantic-facts">
+  | "items";
 export type TypeScriptSemanticSearchMethod = `search/${TypeScriptSemanticSearchView}`;
 export type TypeScriptSemanticQueryMethod =
   | "query"
@@ -109,7 +116,7 @@ export const TYPE_SCRIPT_SEARCH_VIEW_DESCRIPTORS = [
     ],
     packetSchemas: ["semantic-search-packet.v1", "semantic-tree-sitter-query.v1"],
     grammarId: "tree-sitter-typescript",
-    outputModes: ["compact", "json", "code"],
+    outputModes: ["frontier", "json", "code"],
     input: "search owner <path> [items] [--query <symbol-or-a|b|c>] [--code]",
     ingestRequiredFor: [typeScriptIngestSurface("non-parser-path")],
   }),
@@ -224,6 +231,18 @@ export const TYPE_SCRIPT_SEARCH_VIEW_DESCRIPTORS = [
       typeScriptCapability("dependency-local-usage-search"),
     ],
   }),
+  searchView("semantic-facts", {
+    requiresQuery: true,
+    acceptsStdin: true,
+    clients: ["asp-graph-turbo"],
+    input: "search semantic-facts <query>",
+    packetSchemas: ["semantic-fact-graph.v1", "semantic-fact-ontology.v1"],
+    outputModes: ["json"],
+    capabilities: [
+      semanticCapability("graph-turbo-provider-facts"),
+      typeScriptCapability("typescript-ast-field-type-collection-facts"),
+    ],
+  }),
   searchView("ingest", {
     requiresQuery: false,
     acceptsStdin: true,
@@ -255,7 +274,7 @@ export type TypeScriptSemanticLanguageMethod =
   | (typeof TYPE_SCRIPT_AST_PATCH_METHODS)[number]
   | (typeof TYPE_SCRIPT_AGENT_METHODS)[number];
 export type SemanticLanguageCommand = "search" | "query" | "check" | "ast-patch" | "agent";
-export type SemanticLanguageOutputMode = "compact" | "json" | "code" | "names" | "read-packet";
+export type SemanticLanguageOutputMode = "frontier" | "json" | "code" | "names" | "read-packet";
 export type SemanticLanguageCapabilityNamespace = "semantic" | typeof TYPE_SCRIPT_LANGUAGE_ID;
 
 export interface SemanticLanguageCapabilityDescriptor {
@@ -502,6 +521,16 @@ export function typeScriptSemanticLanguageRegistration(): SemanticLanguageRegist
         path: "schemas/semantic-graph.v1.schema.json",
       },
       {
+        schemaId: SEMANTIC_FACT_GRAPH_SCHEMA_ID,
+        schemaVersion: "1",
+        path: "schemas/semantic-fact-graph.v1.schema.json",
+      },
+      {
+        schemaId: SEMANTIC_FACT_ONTOLOGY_SCHEMA_ID,
+        schemaVersion: "1",
+        path: "schemas/semantic-fact-ontology.v1.schema.json",
+      },
+      {
         schemaId: SEMANTIC_VERIFICATION_RECEIPT_SCHEMA_ID,
         schemaVersion: "1",
         path: "schemas/semantic-verification-receipt.v1.schema.json",
@@ -591,7 +620,7 @@ function typeScriptSemanticLanguageMethodDescriptors(): readonly SemanticLanguag
       ...descriptor,
       outputSchemaIds: searchOutputSchemaIds(descriptor.view),
       supportsJson: true,
-      supportsCompact: true,
+      supportsCompact: descriptor.view === "semantic-facts" ? false : true,
     })),
     {
       method: "query" as const,
@@ -677,7 +706,7 @@ function typeScriptSemanticLanguageMethodDescriptors(): readonly SemanticLanguag
       unsupportedPatternBehavior: "diagnostic",
       supportsCompact: true,
       supportsJson: true,
-      outputModes: ["compact", "json", "code"],
+      outputModes: ["frontier", "json", "code"],
     },
     {
       method: "query/owner-items" as const,
@@ -707,7 +736,7 @@ function typeScriptSemanticLanguageMethodDescriptors(): readonly SemanticLanguag
       supportsQuerySet: true,
       acceptedQuerySetSelectors: ["exact-set"],
       querySetScopes: ["owner"],
-      outputModes: ["compact", "json", "code", "names"],
+      outputModes: ["frontier", "json", "code", "names"],
     },
     {
       method: "query/direct-source-read" as const,
@@ -738,7 +767,7 @@ function typeScriptSemanticLanguageMethodDescriptors(): readonly SemanticLanguag
       unsupportedPatternBehavior: "diagnostic",
       supportsCompact: true,
       supportsJson: true,
-      outputModes: ["compact", "json", "code", "names", "read-packet"],
+      outputModes: ["frontier", "json", "code", "names", "read-packet"],
     },
     ...TYPE_SCRIPT_CHECK_METHODS.map((method) => ({
       method,
@@ -773,11 +802,13 @@ function typeScriptSemanticLanguageMethodDescriptors(): readonly SemanticLanguag
 }
 
 function searchOutputSchemaIds(view: TypeScriptSemanticSearchView): readonly string[] {
-  return view === "public-external-types"
-    ? [SEMANTIC_SEARCH_PACKET_SCHEMA_ID, SEMANTIC_TYPE_SURFACE_SCHEMA_ID]
-    : view === "policy"
-      ? [SEMANTIC_SEARCH_PACKET_SCHEMA_ID, SEMANTIC_HANDLE_SCHEMA_ID]
-      : [SEMANTIC_SEARCH_PACKET_SCHEMA_ID];
+  return view === "semantic-facts"
+    ? [SEMANTIC_FACT_GRAPH_SCHEMA_ID]
+    : view === "public-external-types"
+      ? [SEMANTIC_SEARCH_PACKET_SCHEMA_ID, SEMANTIC_TYPE_SURFACE_SCHEMA_ID]
+      : view === "policy"
+        ? [SEMANTIC_SEARCH_PACKET_SCHEMA_ID, SEMANTIC_HANDLE_SCHEMA_ID]
+        : [SEMANTIC_SEARCH_PACKET_SCHEMA_ID];
 }
 
 function queryCatalog(

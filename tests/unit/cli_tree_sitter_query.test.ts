@@ -454,12 +454,13 @@ function functionNameTreeSitterQueryArgs(
   planArgs: readonly string[] = [],
   query = "(function_declaration name: (identifier) @function.name)",
 ): readonly string[] {
+  const rootArgs = extraArgs.includes("--code") ? ["--workspace", "."] : ["."];
   return [
     "query",
     "--treesitter-query",
     query,
     ...extraArgs,
-    ".",
+    ...rootArgs,
     "--asp-syntax-query-captures",
     "function.name",
     "--asp-syntax-query-node-types",
@@ -471,6 +472,7 @@ function functionNameTreeSitterQueryArgs(
 }
 
 function flowLiteQueryArgs(extraArgs: readonly string[] = []): readonly string[] {
+  const rootArgs = extraArgs.includes("--code") ? ["--workspace", "."] : ["."];
   return [
     "query",
     "--catalog",
@@ -478,7 +480,7 @@ function flowLiteQueryArgs(extraArgs: readonly string[] = []): readonly string[]
     "--where",
     "source.call=payload_string sink.constructs=ToolAction scope.fn=collectToolActions",
     ...extraArgs,
-    ".",
+    ...rootArgs,
   ];
 }
 

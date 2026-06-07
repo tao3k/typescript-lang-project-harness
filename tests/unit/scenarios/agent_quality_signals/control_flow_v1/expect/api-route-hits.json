@@ -1,0 +1,30 @@
+[
+  {
+    "symbol": "route",
+    "reason": "exported-api",
+    "fields": {
+      "source": "native-parser",
+      "apiKind": "function",
+      "typeOnly": false
+    }
+  },
+  {
+    "symbol": "route",
+    "reason": "public-function-api",
+    "fields": {
+      "source": "native-parser",
+      "apiKind": "function",
+      "params": [
+        "kind:string"
+      ],
+      "paramCount": 1,
+      "lineSpan": 12,
+      "statements": 9,
+      "branches": 4,
+      "loops": 0,
+      "maxNesting": 4,
+      "maxLiteralDispatchChain": 4,
+      "manualTransformLoops": 0
+    }
+  }
+]

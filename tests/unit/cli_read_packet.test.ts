@@ -115,11 +115,12 @@ test("query direct-source-read read-packet preserves exact non-item source windo
       "direct-source-read",
       "--selector",
       "src/header.ts:1:2",
+      "--workspace",
+      ".",
       "--code",
       "--view",
       "read-packet",
       "--json",
-      ".",
     ],
     root,
   );
@@ -151,12 +152,10 @@ test("query direct-source-read line selector emits bounded source window", () =>
   );
   assert.match(
     result.stdout,
-    /\|read path=src\/demo\.ts item=alpha kind=function lineRange=2:2 reason=direct-selector truncated=false/,
+    /\|read path=src\/demo\.ts item=alpha kind=function lineRange=2:2 read=src\/demo\.ts:2:2 next=direct-source-read reason=direct-selector truncated=false/,
   );
-  assert.match(
-    result.stdout,
-    /\|code path=src\/demo\.ts lineRange=2:2 reason=direct-source-read text="  return input\.toUpperCase\(\);"/,
-  );
+  assert.doesNotMatch(result.stdout, /\|code /);
+  assert.doesNotMatch(result.stdout, /text=/);
   assert.doesNotMatch(result.stdout, /\|item function alpha/);
   assert.doesNotMatch(result.stdout, /interface Beta/);
 });
@@ -170,11 +169,12 @@ test("query direct-source-read wide selector emits source windows", () => {
       "direct-source-read",
       "--selector",
       "src/demo.ts:1-80",
+      "--workspace",
+      ".",
       "--code",
       "--view",
       "read-packet",
       "--json",
-      ".",
     ],
     root,
   );

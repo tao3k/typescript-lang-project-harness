@@ -11,10 +11,13 @@ test("agent guide advertises --code as pure item output", () => {
   const result = runCliCapture(["agent", "guide", packageRoot], packageRoot);
 
   assert.equal(result.exitCode, 0);
-  assert.match(result.stdout, /asp typescript query <owner-path> --term <symbol> --code/);
   assert.match(
     result.stdout,
-    /asp typescript search owner <owner-path> items --query <symbol-or-a\|b\|c> --code/,
+    /asp typescript query <owner-path> --term <symbol> --workspace <workspace-root> --code/,
+  );
+  assert.match(
+    result.stdout,
+    /asp typescript search owner <owner-path> items --query <symbol-or-a\|b\|c> --workspace <workspace-root> --code/,
   );
 });
 
@@ -24,7 +27,7 @@ test("help advertises --code as an explicit owner item output mode", () => {
   assert.match(top.stdout, /ts-harness search <view> \.\.\. \[--json\] \[--code\]/u);
   assert.match(
     top.stdout,
-    /ts-harness query <owner-path> --term <symbol> \[--term <symbol>\] \[--names-only \| --code\]/u,
+    /ts-harness query <owner-path> --term <symbol> \[--term <symbol>\] \[--workspace <project-root>\] \[--names-only \| --code\]/u,
   );
 
   const search = runCliCapture(["search", "--help"], packageRoot);
@@ -36,7 +39,10 @@ test("help advertises --code as an explicit owner item output mode", () => {
 
   const query = runCliCapture(["query", "--help"], packageRoot);
   assert.equal(query.exitCode, 0, query.stderr);
-  assert.match(query.stdout, /query <owner-path> --term <symbol> --code/u);
+  assert.match(
+    query.stdout,
+    /query <owner-path> --term <symbol> \[--term <symbol>\] \[--workspace <project-root>\] \[--names-only \| --code\]/u,
+  );
 });
 
 test("owner item query --code emits compact code without line protocol metadata", () => {
@@ -48,8 +54,9 @@ test("owner item query --code emits compact code without line protocol metadata"
       "items",
       "--query",
       "SemanticSearchPacket",
-      "--code",
+      "--workspace",
       ".",
+      "--code",
     ],
     packageRoot,
   );
@@ -72,9 +79,10 @@ test("owner item query --code rejects JSON output", () => {
       "items",
       "--query",
       "SemanticSearchPacket",
-      "--code",
       "--json",
+      "--workspace",
       ".",
+      "--code",
     ],
     packageRoot,
   );
