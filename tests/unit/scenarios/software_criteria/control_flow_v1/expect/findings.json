@@ -1,0 +1,37 @@
+[
+  {
+    "ruleId": "TS-AGENT-R007",
+    "summary": "Public function 'route' hides algorithm shape. Criteria: software-criterion/control-flow.literal-dispatch-chain.",
+    "locationLine": 16,
+    "label": "public function nested algorithm",
+    "softwareCriteria": "control-flow.literal-dispatch-chain"
+  },
+  {
+    "ruleId": "TS-AGENT-R007",
+    "summary": "Public function 'nested' hides algorithm shape. Criteria: software-criterion/control-flow.decision-stack.",
+    "locationLine": 1,
+    "label": "public function nested algorithm",
+    "softwareCriteria": "control-flow.decision-stack"
+  },
+  {
+    "ruleId": "TS-AGENT-R007",
+    "summary": "Public function 'traverse' hides algorithm shape. Criteria: software-criterion/control-flow.traversal-knot.",
+    "locationLine": 29,
+    "label": "public function nested algorithm",
+    "softwareCriteria": "control-flow.traversal-knot"
+  },
+  {
+    "ruleId": "TS-AGENT-R008",
+    "summary": "Public function 'transform' uses 1 manual transform loop(s). Criteria: software-criterion/native-idiom.manual-transform-loop.",
+    "locationLine": 146,
+    "label": "public function manual transform loop",
+    "softwareCriteria": "native-idiom.manual-transform-loop"
+  },
+  {
+    "ruleId": "TS-AGENT-R008",
+    "summary": "Public function 'broad' spans 95 lines with 93 statements and a 93-statement block. Criteria: software-criterion/control-flow.broad-linear-phase.",
+    "locationLine": 50,
+    "label": "public function broad linear algorithm",
+    "softwareCriteria": "control-flow.broad-linear-phase"
+  }
+]

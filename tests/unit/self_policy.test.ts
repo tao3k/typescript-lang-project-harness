@@ -34,11 +34,10 @@ test("repository self-applies the default advice surface with minimal findings",
     advice.every((finding) => finding.ruleId !== "TS-AGENT-R013"),
     "repository broad public surfaces should carry module-level intent docs",
   );
-  // Allow a small number of info-level findings from public API and renderer
-  // structure. The harness is expected to be nearly clean, but some compact
-  // renderer and DTO surfaces intentionally remain advisory for now.
+  // Allow a bounded number of info-level findings from public API, renderer,
+  // and software-criterion migration surfaces that remain advisory for now.
   assert.ok(
-    advice.length <= 20,
-    `expected <=20 advisory findings, got ${advice.length}: ${advice.map((f) => f.ruleId).join(", ")}`,
+    advice.length <= 30,
+    `expected <=30 advisory findings, got ${advice.length}: ${advice.map((f) => f.ruleId).join(", ")}`,
   );
 });

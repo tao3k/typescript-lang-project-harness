@@ -12,15 +12,15 @@ const SCENARIO = path.join(
   "tests",
   "unit",
   "scenarios",
-  "agent_quality_signals",
+  "software_criteria",
   "control_flow_v1",
 );
 
-test("agent quality signal control-flow v1 scenario snapshot", () => {
-  const root = setupScenario("ts-quality-snapshot-");
+test("agent software criterion control-flow v1 scenario snapshot", () => {
+  const root = setupScenario("ts-criterion-snapshot-");
   const report = runTypeScriptProjectHarness(root);
-  const qualityModule = report.reasoningTree.modules.find((moduleReport) =>
-    moduleReport.path.endsWith("src/quality.ts"),
+  const criterionModule = report.reasoningTree.modules.find((moduleReport) =>
+    moduleReport.path.endsWith("src/criterion.ts"),
   );
   const findings = report.findings.filter(
     (finding) => finding.ruleId === "TS-AGENT-R007" || finding.ruleId === "TS-AGENT-R008",
@@ -29,7 +29,7 @@ test("agent quality signal control-flow v1 scenario snapshot", () => {
 
   assert.equal(
     stableJson(
-      qualityModule?.publicFunctionControlFlows.map((controlFlow) => ({
+      criterionModule?.publicFunctionControlFlows.map((controlFlow) => ({
         functionName: controlFlow.functionName,
         statementCount: controlFlow.statementCount,
         branchCount: controlFlow.branchCount,
@@ -49,7 +49,7 @@ test("agent quality signal control-flow v1 scenario snapshot", () => {
         summary: finding.summary,
         locationLine: finding.location.line,
         label: finding.label,
-        agentQualitySignals: finding.labels.agentQualitySignals,
+        softwareCriteria: finding.labels.softwareCriteria,
       })),
     ),
     expectFile("findings.json"),

@@ -323,13 +323,11 @@ test("agent policy reports parser-native algorithm shape advice without blocking
     ["TS-AGENT-R007", "TS-AGENT-R008"],
   );
   assert.equal(
-    report.findings.find((finding) => finding.ruleId === "TS-AGENT-R007")?.labels
-      .agentQualitySignals,
+    report.findings.find((finding) => finding.ruleId === "TS-AGENT-R007")?.labels.softwareCriteria,
     "control-flow.decision-stack",
   );
   assert.equal(
-    report.findings.find((finding) => finding.ruleId === "TS-AGENT-R008")?.labels
-      .agentQualitySignals,
+    report.findings.find((finding) => finding.ruleId === "TS-AGENT-R008")?.labels.softwareCriteria,
     "control-flow.broad-linear-phase",
   );
   assert.match(rendered, /hides algorithm shape/u);
@@ -370,7 +368,7 @@ test("agent policy labels parser-native traversal knot advice", () => {
   const traversalFinding = report.findings.find((finding) => finding.ruleId === "TS-AGENT-R007");
 
   assert.equal(isTypeScriptHarnessClean(report), true);
-  assert.equal(traversalFinding?.labels.agentQualitySignals, "control-flow.traversal-knot");
+  assert.equal(traversalFinding?.labels.softwareCriteria, "control-flow.traversal-knot");
 });
 
 test("agent policy labels parser-native literal dispatch advice", () => {
@@ -399,7 +397,7 @@ test("agent policy labels parser-native literal dispatch advice", () => {
   const dispatchFinding = report.findings.find((finding) => finding.ruleId === "TS-AGENT-R007");
 
   assert.equal(isTypeScriptHarnessClean(report), true);
-  assert.equal(dispatchFinding?.labels.agentQualitySignals, "control-flow.literal-dispatch-chain");
+  assert.equal(dispatchFinding?.labels.softwareCriteria, "control-flow.literal-dispatch-chain");
   assert.match(dispatchFinding?.summary ?? "", /control-flow\.literal-dispatch-chain/u);
 });
 

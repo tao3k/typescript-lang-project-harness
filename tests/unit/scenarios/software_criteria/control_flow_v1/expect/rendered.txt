@@ -1,34 +1,34 @@
 [TS-AGENT-R007] Info: Public function hides algorithm behind nested control flow
-src/quality.ts:16:17
+src/criterion.ts:16:17
 > export function route(kind: string): number {
 public function nested algorithm
-Help: Public function 'route' hides algorithm shape. Signals: agent-coding-quality/control-flow.literal-dispatch-chain.
+Help: Public function 'route' hides algorithm shape. Criteria: software-criterion/control-flow.literal-dispatch-chain.
 Contract: Expose public TypeScript algorithm shape through guard clauses, discriminated dispatch, or small named pipeline steps so agents can reason about the branch structure before editing.
 
 [TS-AGENT-R007] Info: Public function hides algorithm behind nested control flow
-src/quality.ts:1:17
+src/criterion.ts:1:17
 > export function nested(value: number): number {
 public function nested algorithm
-Help: Public function 'nested' hides algorithm shape. Signals: agent-coding-quality/control-flow.decision-stack.
+Help: Public function 'nested' hides algorithm shape. Criteria: software-criterion/control-flow.decision-stack.
 Contract: Expose public TypeScript algorithm shape through guard clauses, discriminated dispatch, or small named pipeline steps so agents can reason about the branch structure before editing.
 
 [TS-AGENT-R007] Info: Public function hides algorithm behind nested control flow
-src/quality.ts:29:17
+src/criterion.ts:29:17
 > export function traverse(groups: readonly (readonly number[])[]): number {
 public function nested algorithm
-Help: Public function 'traverse' hides algorithm shape. Signals: agent-coding-quality/control-flow.traversal-knot.
+Help: Public function 'traverse' hides algorithm shape. Criteria: software-criterion/control-flow.traversal-knot.
 Contract: Expose public TypeScript algorithm shape through guard clauses, discriminated dispatch, or small named pipeline steps so agents can reason about the branch structure before editing.
 
 [TS-AGENT-R008] Info: Public function owns a broad linear algorithm surface
-src/quality.ts:146:17
+src/criterion.ts:146:17
 > export function transform(values: readonly number[]): number[] {
 public function manual transform loop
-Help: Public function 'transform' uses 1 manual transform loop(s). Signals: agent-coding-quality/native-idiom.manual-transform-loop.
+Help: Public function 'transform' uses 1 manual transform loop(s). Criteria: software-criterion/native-idiom.manual-transform-loop.
 Contract: Split broad public TypeScript functions into small named helpers or pipeline steps so agents can edit one algorithm responsibility at a time.
 
 [TS-AGENT-R008] Info: Public function owns a broad linear algorithm surface
-src/quality.ts:50:17
+src/criterion.ts:50:17
 > export function broad(value: number): number {
 public function broad linear algorithm
-Help: Public function 'broad' spans 95 lines with 93 statements and a 93-statement block. Signals: agent-coding-quality/control-flow.broad-linear-phase.
+Help: Public function 'broad' spans 95 lines with 93 statements and a 93-statement block. Criteria: software-criterion/control-flow.broad-linear-phase.
 Contract: Split broad public TypeScript functions into small named helpers or pipeline steps so agents can edit one algorithm responsibility at a time.

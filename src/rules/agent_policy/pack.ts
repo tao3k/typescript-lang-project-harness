@@ -20,10 +20,10 @@ import {
   CONTROL_FLOW_DECISION_STACK,
   CONTROL_FLOW_LITERAL_DISPATCH_CHAIN,
   CONTROL_FLOW_TRAVERSAL_KNOT,
-  formatAgentQualitySignals,
+  formatAgentSoftwareCriteria,
   NATIVE_IDIOM_MANUAL_TRANSFORM_LOOP,
-  withAgentQualitySignals,
-} from "./quality_signals.js";
+  withAgentSoftwareCriteria,
+} from "./software_criteria.js";
 
 const TS_AGENT_R001: TypeScriptHarnessRule = {
   ruleId: "TS-AGENT-R001",
@@ -373,24 +373,24 @@ function evaluateNativeAlgorithmShapeAdvice(
 function nestedAlgorithmAdvice(
   controlFlow: TypeScriptPublicFunctionControlFlowFact,
 ): TypeScriptHarnessFinding[] {
-  const signals = nestedAlgorithmSignals(controlFlow);
-  if (signals.length === 0) {
+  const criteria = nestedAlgorithmCriteria(controlFlow);
+  if (criteria.length === 0) {
     return [];
   }
   const rule = TS_AGENT_R007;
-  const signalIds = nestedAlgorithmQualitySignals(signals);
+  const criterionIds = nestedAlgorithmSoftwareCriteria(criteria);
   return [
     {
       ruleId: rule.ruleId,
       packId: rule.packId,
       severity: rule.severity,
       title: rule.title,
-      summary: `Public function '${controlFlow.functionName}' hides algorithm shape. Signals: ${formatAgentQualitySignals(signalIds)}.`,
+      summary: `Public function '${controlFlow.functionName}' hides algorithm shape. Criteria: ${formatAgentSoftwareCriteria(criterionIds)}.`,
       location: controlFlow.location,
       requirement: rule.requirement,
       ...sourceLineField(controlFlow.sourceLine),
       label: "public function nested algorithm",
-      labels: withAgentQualitySignals(rule.labels, signalIds),
+      labels: withAgentSoftwareCriteria(rule.labels, criterionIds),
     },
   ];
 }
@@ -398,8 +398,8 @@ function nestedAlgorithmAdvice(
 function broadLinearAlgorithmAdvice(
   controlFlow: TypeScriptPublicFunctionControlFlowFact,
 ): TypeScriptHarnessFinding[] {
-  const signals = broadLinearAlgorithmSignals(controlFlow);
-  if (signals.length === 0) {
+  const criteria = broadLinearAlgorithmCriteria(controlFlow);
+  if (criteria.length === 0) {
     return [];
   }
   const rule = TS_AGENT_R008;
@@ -409,12 +409,12 @@ function broadLinearAlgorithmAdvice(
       packId: rule.packId,
       severity: rule.severity,
       title: rule.title,
-      summary: `Public function '${controlFlow.functionName}' spans ${controlFlow.lineSpan} lines with ${controlFlow.statementCount} statements and a ${controlFlow.maxBlockStatementCount}-statement block. Signals: ${formatAgentQualitySignals([CONTROL_FLOW_BROAD_LINEAR_PHASE])}.`,
+      summary: `Public function '${controlFlow.functionName}' spans ${controlFlow.lineSpan} lines with ${controlFlow.statementCount} statements and a ${controlFlow.maxBlockStatementCount}-statement block. Criteria: ${formatAgentSoftwareCriteria([CONTROL_FLOW_BROAD_LINEAR_PHASE])}.`,
       location: controlFlow.location,
       requirement: rule.requirement,
       ...sourceLineField(controlFlow.sourceLine),
       label: "public function broad linear algorithm",
-      labels: withAgentQualitySignals(rule.labels, [CONTROL_FLOW_BROAD_LINEAR_PHASE]),
+      labels: withAgentSoftwareCriteria(rule.labels, [CONTROL_FLOW_BROAD_LINEAR_PHASE]),
     },
   ];
 }
@@ -432,17 +432,17 @@ function manualTransformLoopAdvice(
       packId: rule.packId,
       severity: rule.severity,
       title: rule.title,
-      summary: `Public function '${controlFlow.functionName}' uses ${controlFlow.manualTransformLoopCount} manual transform loop(s). Signals: ${formatAgentQualitySignals([NATIVE_IDIOM_MANUAL_TRANSFORM_LOOP])}.`,
+      summary: `Public function '${controlFlow.functionName}' uses ${controlFlow.manualTransformLoopCount} manual transform loop(s). Criteria: ${formatAgentSoftwareCriteria([NATIVE_IDIOM_MANUAL_TRANSFORM_LOOP])}.`,
       location: controlFlow.location,
       requirement: rule.requirement,
       ...sourceLineField(controlFlow.sourceLine),
       label: "public function manual transform loop",
-      labels: withAgentQualitySignals(rule.labels, [NATIVE_IDIOM_MANUAL_TRANSFORM_LOOP]),
+      labels: withAgentSoftwareCriteria(rule.labels, [NATIVE_IDIOM_MANUAL_TRANSFORM_LOOP]),
     },
   ];
 }
 
-function nestedAlgorithmSignals(
+function nestedAlgorithmCriteria(
   controlFlow: TypeScriptPublicFunctionControlFlowFact,
 ): readonly string[] {
   return [
@@ -457,21 +457,21 @@ function nestedAlgorithmSignals(
   ].filter((signal): signal is string => signal !== undefined);
 }
 
-function nestedAlgorithmQualitySignals(signals: readonly string[]): readonly string[] {
-  const signalIds: string[] = [];
-  for (const signal of signals) {
+function nestedAlgorithmSoftwareCriteria(criteria: readonly string[]): readonly string[] {
+  const criterionIds: string[] = [];
+  for (const signal of criteria) {
     if (
       signal === "deep control-flow nesting" ||
       signal === "large branch surface without dispatch table"
     ) {
-      pushUnique(signalIds, CONTROL_FLOW_DECISION_STACK);
+      pushUnique(criterionIds, CONTROL_FLOW_DECISION_STACK);
     } else if (signal === "nested loops mixed with branches") {
-      pushUnique(signalIds, CONTROL_FLOW_TRAVERSAL_KNOT);
+      pushUnique(criterionIds, CONTROL_FLOW_TRAVERSAL_KNOT);
     } else if (signal === "literal dispatch chain without switch") {
-      pushUnique(signalIds, CONTROL_FLOW_LITERAL_DISPATCH_CHAIN);
+      pushUnique(criterionIds, CONTROL_FLOW_LITERAL_DISPATCH_CHAIN);
     }
   }
-  return signalIds;
+  return criterionIds;
 }
 
 function pushUnique(values: string[], value: string): void {
@@ -480,7 +480,7 @@ function pushUnique(values: string[], value: string): void {
   }
 }
 
-function broadLinearAlgorithmSignals(
+function broadLinearAlgorithmCriteria(
   controlFlow: TypeScriptPublicFunctionControlFlowFact,
 ): readonly string[] {
   if (controlFlow.maxNestingDepth > 2) {

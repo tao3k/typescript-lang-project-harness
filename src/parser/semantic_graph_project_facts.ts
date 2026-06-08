@@ -59,12 +59,12 @@ interface PackageJsonShape {
 }
 
 function readPackageJson(manifestPath: string): PackageJsonShape | undefined {
-  try {
-    const parsed = JSON.parse(fs.readFileSync(manifestPath, "utf8")) as unknown;
-    return typeof parsed === "object" && parsed !== null ? (parsed as PackageJsonShape) : undefined;
-  } catch {
+  const readResult = ts.readConfigFile(manifestPath, ts.sys.readFile);
+  if (readResult.error !== undefined) {
     return undefined;
   }
+  const parsed = readResult.config as unknown;
+  return typeof parsed === "object" && parsed !== null ? (parsed as PackageJsonShape) : undefined;
 }
 
 function dependencyFacts(
