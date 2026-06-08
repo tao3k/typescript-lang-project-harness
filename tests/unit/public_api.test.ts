@@ -291,6 +291,7 @@ test("public facade exposes the stable M13 runtime surface", () => {
     "planTypeScriptProjectVerificationWithConfig",
     "readProjectScope",
     "renderAssertionMessage",
+    "renderTypeScriptHarnessRulesMarkdown",
     "renderTypeScriptProjectHarness",
     "renderTypeScriptProjectHarnessAdvice",
     "renderTypeScriptProjectHarnessAgentCompactText",
@@ -312,6 +313,7 @@ test("public facade exposes the stable M13 runtime surface", () => {
     "runTypeScriptProjectHarnessAgentSnapshot",
     "typeScriptAgentPolicyRules",
     "typeScriptExtensionPolicyRules",
+    "typeScriptHarnessRulesMarkdown",
     "typeScriptModularityRules",
     "typeScriptProjectPolicyRules",
     "typeScriptRulePackDescriptors",
@@ -336,6 +338,7 @@ test("public facade exposes the stable M13 runtime surface", () => {
     "withTypeScriptVerificationSkillDescriptor",
     "withTypeScriptVerificationTaskContract",
     "withTypeScriptVerificationWaiver",
+    "writeTypeScriptHarnessRulesToUnitTests",
     "writeTypeScriptVerificationReports",
   ]);
   assert.equal("buildTypeScriptReasoningTree" in api, false);

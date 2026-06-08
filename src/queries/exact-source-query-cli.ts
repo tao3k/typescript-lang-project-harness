@@ -3,23 +3,23 @@ import path from "node:path";
 import { renderExactSourceWindowCode } from "./exact-source-window.js";
 import { ownerPathFromQuerySelector, selectorHasLineRange } from "./source-selector.js";
 
-export interface FastQueryCliStreams {
+export interface ExactSourceQueryCliStreams {
   readonly stdout: { write(chunk: string): unknown };
 }
 
-interface FastQueryArgs {
+interface ExactSourceQueryArgs {
   readonly selector: string;
   readonly ownerPath: string;
   readonly projectRoot: string | undefined;
   readonly packagePath: string | undefined;
 }
 
-export function tryRunFastQueryCli(
+export function tryRunExactSourceQueryCli(
   argv: readonly string[],
-  streams: FastQueryCliStreams,
+  streams: ExactSourceQueryCliStreams,
   cwd: string,
 ): number | undefined {
-  const args = parseFastExactSourceQueryArgs(argv);
+  const args = parseExactSourceQueryArgs(argv);
   if (args === undefined) return undefined;
   let projectRoot = path.resolve(cwd, args.projectRoot ?? ".");
   if (args.packagePath !== undefined) {
@@ -31,7 +31,7 @@ export function tryRunFastQueryCli(
   return 0;
 }
 
-function parseFastExactSourceQueryArgs(argv: readonly string[]): FastQueryArgs | undefined {
+function parseExactSourceQueryArgs(argv: readonly string[]): ExactSourceQueryArgs | undefined {
   if (argv[0] !== "query") return undefined;
   let codeOnly = false;
   let json = false;

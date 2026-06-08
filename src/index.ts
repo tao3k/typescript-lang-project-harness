@@ -160,6 +160,11 @@ export {
   typeScriptTestLayoutRules,
 } from "./rules.js";
 export {
+  renderTypeScriptHarnessRulesMarkdown,
+  typeScriptHarnessRulesMarkdown,
+  writeTypeScriptHarnessRulesToUnitTests,
+} from "./rules/harness-rules.js";
+export {
   activeTypeScriptVerificationProfileCandidates,
   activeTypeScriptVerificationProfileHints,
   buildTypeScriptVerificationPerformanceIndex,

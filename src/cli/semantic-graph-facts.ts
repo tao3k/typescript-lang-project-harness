@@ -324,6 +324,24 @@ function factMatchesQuery(fact: LocatedTypeScriptSemanticGraphFieldFact, query: 
     "tuple",
     "tuples",
   ]);
+  const contextTerms = new Set([
+    "concurrency",
+    "concurrent",
+    "cancellation",
+    "interruption",
+    "resource",
+    "resources",
+    "leak",
+    "leaks",
+    "queue",
+    "queues",
+    "stream",
+    "streams",
+    "scope",
+    "scopes",
+    "fiber",
+    "fibers",
+  ]);
   const haystack = [
     fact.path,
     fact.containerKind,
@@ -334,8 +352,15 @@ function factMatchesQuery(fact: LocatedTypeScriptSemanticGraphFieldFact, query: 
   ]
     .join(" ")
     .toLowerCase();
-  const textTerms = terms.filter((term) => !shapeTerms.has(term) && !collectionTerms.has(term));
-  if (textTerms.length > 0 && !textTerms.some((term) => haystack.includes(term))) {
+  const hasContextTerm = terms.some((term) => contextTerms.has(term));
+  const textTerms = terms.filter(
+    (term) => !shapeTerms.has(term) && !collectionTerms.has(term) && !contextTerms.has(term),
+  );
+  if (
+    textTerms.length > 0 &&
+    !hasContextTerm &&
+    !textTerms.some((term) => haystack.includes(term))
+  ) {
     return false;
   }
   if (terms.some((term) => term === "collection" || term === "collections")) {

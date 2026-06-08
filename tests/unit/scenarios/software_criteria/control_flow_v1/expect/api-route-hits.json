@@ -14,9 +14,7 @@
     "fields": {
       "source": "native-parser",
       "apiKind": "function",
-      "params": [
-        "kind:string"
-      ],
+      "params": ["kind:string"],
       "paramCount": 1,
       "lineSpan": 12,
       "statements": 9,

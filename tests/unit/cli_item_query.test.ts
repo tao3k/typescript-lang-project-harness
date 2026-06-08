@@ -59,6 +59,77 @@ test("owner items --query emits compact item locators", () => {
   assert.doesNotMatch(result.stdout, / text=/u);
   assert.doesNotMatch(result.stdout, /function beta/u);
 });
+
+test("query --names-only exact owner emits locator-only output", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-query-names-only-"));
+  writeTsProject(
+    root,
+    "query-names-only-fixture",
+    readTextFixture("compact-query/sources/owner-item-demo.ts"),
+  );
+
+  const result = runCliCapture(
+    ["query", "src/demo.ts", "--term", "alpha", "--names-only", "--workspace", "."],
+    root,
+  );
+
+  assert.equal(result.exitCode, 0, result.stderr);
+  assert.match(result.stdout, /^\[search-owner\].*item=1.*itemQuery=alpha.*output=names/mu);
+  assert.match(
+    result.stdout,
+    /\|query itemQuery=alpha status=hit match=exact item=1 reason=parser-item-query output=names next=query-code/u,
+  );
+  assert.match(
+    result.stdout,
+    /\|item function alpha owner=src\/demo\.ts column=0 exported=true read=src\/demo\.ts:1:4/u,
+  );
+  assert.doesNotMatch(result.stdout, /\|code | text=|function beta/u);
+});
+
+test("query --names-only --json exact owner emits query packet without code", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-query-names-only-json-"));
+  writeTsProject(
+    root,
+    "query-names-only-json-fixture",
+    readTextFixture("compact-query/sources/owner-item-demo.ts"),
+  );
+
+  const result = runCliCapture(
+    ["query", "src/demo.ts", "--term", "alpha", "--names-only", "--json", "--workspace", "."],
+    root,
+  );
+
+  assert.equal(result.exitCode, 0, result.stderr);
+  const packet = JSON.parse(result.stdout) as {
+    readonly method: string;
+    readonly ownerPath: string;
+    readonly outputMode: string;
+    readonly syntaxQueryRef: string;
+    readonly queryCoverage: readonly {
+      readonly value: string;
+      readonly status: string;
+      readonly match: string;
+    }[];
+    readonly matches: readonly {
+      readonly name: string;
+      readonly kind: string;
+      readonly code?: string;
+      readonly fields: { readonly exported: boolean };
+    }[];
+  };
+  assert.equal(packet.method, "query/owner-items");
+  assert.equal(packet.ownerPath, "src/demo.ts");
+  assert.equal(packet.outputMode, "names");
+  assert.equal(packet.queryCoverage[0]!.value, "alpha");
+  assert.equal(packet.queryCoverage[0]!.status, "hit");
+  assert.equal(packet.queryCoverage[0]!.match, "exact");
+  assert.match(packet.syntaxQueryRef, /^semantic-tree-sitter-query\/typescript-owner-items:/u);
+  assert.equal(packet.matches[0]!.name, "alpha");
+  assert.equal(packet.matches[0]!.kind, "function");
+  assert.equal(packet.matches[0]!.fields.exported, true);
+  assert.equal(Object.hasOwn(packet.matches[0]!, "code"), false);
+});
+
 test("owner items --json emits parser nodes and node expand actions", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-owner-item-json-"));
   writeTsProject(

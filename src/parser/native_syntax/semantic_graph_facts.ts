@@ -123,6 +123,13 @@ function collectionKindForType(
     }
     return undefined;
   }
+  if (ts.isFunctionTypeNode(typeNode)) {
+    for (const parameter of typeNode.parameters) {
+      const collectionKind = collectionKindForType(parameter.type, sourceFile);
+      if (collectionKind !== undefined) return collectionKind;
+    }
+    return collectionKindForType(typeNode.type, sourceFile);
+  }
   if (ts.isTypeReferenceNode(typeNode)) {
     const typeName = typeNode.typeName.getText(sourceFile);
     if (typeName === "Readonly") {

@@ -151,6 +151,80 @@ test("semantic graph facts renders field type and collection graph facts", () =>
   assert.ok(payload.edges.some((edge) => edge.relation === "collection_of"));
 });
 
+test("semantic graph facts preserves candidate-owner facts for concurrency API queries", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-semantic-graph-context-facts-"));
+  fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ name: "fixture" }));
+  fs.writeFileSync(
+    path.join(root, "service.ts"),
+    [
+      "interface RuntimeOptions {",
+      "  readonly storeId: string;",
+      "  readonly handlers: Array<(input: string) => void>;",
+      "  readonly embedMany: (input: ReadonlyArray<string>, options?: { readonly concurrency?: number }) => Effect.Effect<Array<Array<number>>, Error>;",
+      "}",
+      "",
+      "export const makeService = Effect.gen(function* () {",
+      "  const stream = Stream.empty;",
+      "  return { stream };",
+      "});",
+    ].join("\n"),
+  );
+
+  const result = runCliCapture(
+    ["search", "semantic-facts", "Effect concurrency Fiber Queue Stream Scope", "--json", "."],
+    root,
+    "service.ts:6:1:Effect\nservice.ts:7:1:Stream\n",
+  );
+
+  assert.equal(result.exitCode, 0, result.stderr);
+  const payload = JSON.parse(result.stdout) as {
+    readonly nodes: readonly {
+      readonly id: string;
+      readonly kind: string;
+      readonly value?: string;
+      readonly fields?: Record<string, unknown>;
+    }[];
+    readonly edges: readonly {
+      readonly source?: string;
+      readonly relation: string;
+    }[];
+  };
+  assert.ok(
+    payload.nodes.some(
+      (node) =>
+        node.kind === "field" &&
+        node.value === "handlers: Array<(input: string) => void>" &&
+        node.fields?.containerName === "RuntimeOptions",
+    ),
+    "expected candidate owner field fact",
+  );
+  assert.ok(
+    payload.nodes.some(
+      (node) => node.kind === "type" && node.value === "Array<(input: string) => void>",
+    ),
+    "expected candidate owner type fact",
+  );
+  const embedMany = payload.nodes.find(
+    (node) =>
+      node.kind === "field" &&
+      node.value?.startsWith(
+        "embedMany: (input: ReadonlyArray<string>, options?: { readonly concurrency?: number })",
+      ) &&
+      node.fields?.collectionKind === "array",
+  );
+  assert.ok(embedMany, "expected function field collection fact");
+  assert.ok(
+    payload.nodes.some((node) => node.kind === "collection" && node.value === "array"),
+    "expected candidate owner collection fact",
+  );
+  assert.ok(payload.edges.some((edge) => edge.relation === "has_type"));
+  assert.ok(payload.edges.some((edge) => edge.relation === "collection_of"));
+  assert.ok(
+    payload.edges.some((edge) => edge.relation === "collection_of" && edge.source === embedMany.id),
+    "expected function field collection edge",
+  );
+});
+
 test("semantic graph facts renders package build dependency and test facts", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-semantic-project-facts-"));
   fs.mkdirSync(path.join(root, "tests"), { recursive: true });

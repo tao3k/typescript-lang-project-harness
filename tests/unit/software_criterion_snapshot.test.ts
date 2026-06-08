@@ -58,15 +58,13 @@ test("agent software criterion control-flow v1 scenario snapshot", () => {
     renderTypeScriptProjectHarness({ ...report, findings }),
     expectTextFile("rendered.txt"),
   );
-  assert.equal(
-    stableJson(
-      payload.hits.map((hit) => ({
-        symbol: hit.symbol,
-        reason: hit.reason,
-        fields: hit.fields,
-      })),
-    ),
-    expectFile("api-route-hits.json"),
+  assert.deepEqual(
+    payload.hits.map((hit) => ({
+      symbol: hit.symbol,
+      reason: hit.reason,
+      fields: hit.fields,
+    })),
+    expectJsonFile("api-route-hits.json"),
   );
 });
 
@@ -97,6 +95,10 @@ function expectFile(name: string): string {
 
 function expectTextFile(name: string): string {
   return expectFile(name).replace(/\n$/u, "");
+}
+
+function expectJsonFile(name: string): unknown {
+  return JSON.parse(expectFile(name));
 }
 
 function stableJson(value: unknown): string {

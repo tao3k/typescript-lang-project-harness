@@ -4,10 +4,10 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
-import { tryRunFastQueryCli } from "../../src/queries/fast-query-cli.js";
+import { tryRunExactSourceQueryCli } from "../../src/queries/exact-source-query-cli.js";
 
-test("fast query exact selector emits source window without protocol dispatch", () => {
-  const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), "ts-query-fast-path-"));
+test("exact source query emits selector source window without protocol dispatch", () => {
+  const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), "ts-exact-source-query-"));
   fs.mkdirSync(path.join(projectRoot, "src"));
   fs.writeFileSync(
     path.join(projectRoot, "src", "sample.ts"),
@@ -21,7 +21,7 @@ test("fast query exact selector emits source window without protocol dispatch", 
     ].join("\n"),
   );
   let stdout = "";
-  const status = tryRunFastQueryCli(
+  const status = tryRunExactSourceQueryCli(
     ["query", "--selector", "src/sample.ts:2-4", "--term", "contentBlocks", "--code", "."],
     { stdout: { write: (chunk: string) => void (stdout += chunk) } },
     projectRoot,
@@ -31,13 +31,13 @@ test("fast query exact selector emits source window without protocol dispatch", 
   assert.equal(stdout, "  const contentBlocks = [];\n  contentBlocks.push('ok');\n}\n");
 });
 
-test("fast query declines non-code and json query shapes", () => {
-  const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), "ts-query-fast-path-decline-"));
+test("exact source query declines non-code and json query shapes", () => {
+  const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), "ts-exact-source-query-decline-"));
   fs.mkdirSync(path.join(projectRoot, "src"));
   fs.writeFileSync(path.join(projectRoot, "src", "sample.ts"), "export const value = 1;\n");
 
   assert.equal(
-    tryRunFastQueryCli(
+    tryRunExactSourceQueryCli(
       ["query", "--selector", "src/sample.ts:1-1", "--term", "value", "."],
       { stdout: { write: () => undefined } },
       projectRoot,
@@ -45,7 +45,7 @@ test("fast query declines non-code and json query shapes", () => {
     undefined,
   );
   assert.equal(
-    tryRunFastQueryCli(
+    tryRunExactSourceQueryCli(
       ["query", "--selector", "src/sample.ts:1-1", "--term", "value", "--code", "--json", "."],
       { stdout: { write: () => undefined } },
       projectRoot,

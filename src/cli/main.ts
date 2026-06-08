@@ -4,7 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { tryRunFastQueryCli } from "../queries/fast-query-cli.js";
+import { tryRunExactSourceQueryCli } from "../queries/exact-source-query-cli.js";
 
 export interface CliStreams {
   readonly stdout: { write(chunk: string): unknown };
@@ -141,8 +141,8 @@ export async function runCli(
   streams: CliStreams,
   cwd: string,
 ): Promise<number> {
-  const fastQueryStatus = tryRunFastQueryCli(argv, streams, cwd);
-  if (fastQueryStatus !== undefined) return fastQueryStatus;
+  const exactSourceStatus = tryRunExactSourceQueryCli(argv, streams, cwd);
+  if (exactSourceStatus !== undefined) return exactSourceStatus;
   if (argv.length === 0 || argv[0] === "--help" || argv[0] === "-h") {
     streams.stdout.write(HELP_TEXT);
     return 0;
