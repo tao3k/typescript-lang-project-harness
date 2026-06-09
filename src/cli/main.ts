@@ -124,7 +124,7 @@ export async function runCliFromEnv(): Promise<number> {
       {
         stdout: process.stdout,
         stderr: process.stderr,
-        stdin: process.stdin.isTTY ? "" : fs.readFileSync(0, "utf8"),
+        stdin: await readStdin(),
       },
       cwd,
     );
@@ -134,6 +134,16 @@ export async function runCliFromEnv(): Promise<number> {
     finishDevCommandLog(log, 2);
     throw error;
   }
+}
+
+async function readStdin(): Promise<string> {
+  if (process.stdin.isTTY) return "";
+  process.stdin.setEncoding("utf8");
+  let text = "";
+  for await (const chunk of process.stdin) {
+    text += chunk;
+  }
+  return text;
 }
 
 export async function runCli(
