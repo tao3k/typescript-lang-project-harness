@@ -2,6 +2,10 @@
  * Packet payload builders for dependency and deps semantic-search views.
  */
 
+import crypto from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
+
 import type { TypeScriptHarnessReport } from "../../model.js";
 import {
   dependencyApiHit,
@@ -25,7 +29,12 @@ import {
   ownersForHits,
   packageRootFromSpecifier,
 } from "./hits.js";
-import type { SemanticSearchBuildOptions, SemanticSearchPacketPayload } from "./types.js";
+import type {
+  SemanticSearchBuildOptions,
+  SemanticSearchCache,
+  SemanticSearchHit,
+  SemanticSearchPacketPayload,
+} from "./types.js";
 
 export function buildDependencyPacketPayload(
   report: TypeScriptHarnessReport,
@@ -45,6 +54,7 @@ export function buildDependencyPacketPayload(
     report,
     matches.map((match) => dependencyHit(report, match)),
   );
+  const cache = dependencySearchCache(report, hits);
   return {
     header: {
       kind: "search-dependency",
@@ -64,6 +74,7 @@ export function buildDependencyPacketPayload(
     ],
     edges,
     owners,
+    ...(cache ? { cache } : {}),
     hits,
     findings: [],
     nextActions: [
@@ -134,6 +145,11 @@ export function buildDepsPacketPayload(
         ];
   const edges = matches.map((match) => dependencyEdge(report, match));
   const owners = ownersForHits(report, hits);
+  const cache = dependencySearchCache(
+    report,
+    hits,
+    dependencyWorkspaceVersionPaths(workspaceVersion.workspaceVersionSource),
+  );
   return {
     header: {
       kind: "search-deps",
@@ -174,6 +190,7 @@ export function buildDepsPacketPayload(
           ],
     edges,
     owners,
+    ...(cache ? { cache } : {}),
     hits,
     findings: [],
     nextActions:
@@ -221,4 +238,60 @@ export function buildDepsPacketPayload(
       },
     ],
   };
+}
+
+function dependencySearchCache(
+  report: TypeScriptHarnessReport,
+  hits: readonly SemanticSearchHit[],
+  extraPaths: readonly string[] = [],
+): SemanticSearchCache | undefined {
+  const paths = new Set<string>();
+  for (const hit of hits) {
+    paths.add(hit.location.path);
+  }
+  for (const extraPath of extraPaths) {
+    paths.add(extraPath);
+  }
+  const fileHashes = [...paths].sort().flatMap((relativePath) => {
+    const fileHash = hashWorkspaceFile(report.reasoningTree.projectRoot, relativePath);
+    return fileHash === undefined ? [] : [fileHash];
+  });
+  if (fileHashes.length === 0) return undefined;
+  return { fileHashes, rawSourceStored: false };
+}
+
+function dependencyWorkspaceVersionPaths(
+  source: "package-lock" | "package-json" | undefined,
+): readonly string[] {
+  switch (source) {
+    case "package-lock":
+      return ["package-lock.json"];
+    case "package-json":
+      return ["package.json"];
+    default:
+      return [];
+  }
+}
+
+function hashWorkspaceFile(
+  projectRoot: string,
+  relativePath: string,
+): { readonly path: string; readonly sha256: string } | undefined {
+  const normalizedPath = relativePath.split(path.sep).join("/");
+  if (!isSafeRelativePath(normalizedPath)) return undefined;
+  const root = path.resolve(projectRoot);
+  const absolutePath = path.resolve(root, normalizedPath);
+  if (absolutePath !== root && !absolutePath.startsWith(`${root}${path.sep}`)) {
+    return undefined;
+  }
+  if (!fs.existsSync(absolutePath) || !fs.statSync(absolutePath).isFile()) {
+    return undefined;
+  }
+  const sha256 = crypto.createHash("sha256").update(fs.readFileSync(absolutePath)).digest("hex");
+  return { path: normalizedPath, sha256 };
+}
+
+function isSafeRelativePath(value: string): boolean {
+  if (value === "" || value.startsWith("/") || value.includes("\0")) return false;
+  return value.split("/").every((segment) => segment !== "" && segment !== "." && segment !== "..");
 }

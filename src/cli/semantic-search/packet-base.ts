@@ -65,6 +65,7 @@ export function basePacket(
     ...(packet.avoidNextActions ? { avoidNextActions: packet.avoidNextActions } : {}),
     ...(options.runtimeCost ? { runtimeCost: options.runtimeCost } : {}),
     ...(packet.runtimeCost ? { runtimeCost: packet.runtimeCost } : {}),
+    ...(packet.cache ? { cache: packet.cache } : {}),
     header: packet.header,
     ...(packet.inputDetection ? { inputDetection: packet.inputDetection } : {}),
     ...(packet.packages ? { packages: packet.packages } : {}),

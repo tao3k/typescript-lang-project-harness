@@ -68,6 +68,7 @@ export interface SemanticSearchPacket {
   readonly searchSynthesis?: SemanticSearchSynthesis;
   readonly avoidNextActions?: readonly SemanticSearchAvoidNextAction[];
   readonly runtimeCost?: SemanticSearchRuntimeCost;
+  readonly cache?: SemanticSearchCache;
   readonly header: SemanticSearchHeader;
   readonly inputDetection?: SemanticSearchInputDetection;
   readonly packages?: readonly SemanticSearchFact[];
@@ -94,6 +95,7 @@ export interface SemanticSearchPacketPayload {
   readonly searchSynthesis?: SemanticSearchSynthesis;
   readonly avoidNextActions?: readonly SemanticSearchAvoidNextAction[];
   readonly runtimeCost?: SemanticSearchRuntimeCost;
+  readonly cache?: SemanticSearchCache;
   readonly nodes: readonly SemanticSearchNode[];
   readonly edges: readonly SemanticSearchEdge[];
   readonly owners: readonly SemanticSearchOwner[];
@@ -252,6 +254,16 @@ export interface SemanticSearchRuntimeCost {
   readonly indexId?: string;
   readonly reason?: string;
   readonly fields?: SemanticSearchFields;
+}
+
+export interface SemanticSearchCache {
+  readonly fileHashes: readonly SemanticSearchFileHash[];
+  readonly rawSourceStored?: false;
+}
+
+export interface SemanticSearchFileHash {
+  readonly path: string;
+  readonly sha256: string;
 }
 
 export type SemanticSearchFieldValue =

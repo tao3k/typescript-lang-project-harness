@@ -219,6 +219,10 @@ test("CLI searches external dependency usage", () => {
         readonly versionScope?: string;
       };
     }[];
+    readonly cache?: {
+      readonly rawSourceStored?: false;
+      readonly fileHashes: readonly { readonly path: string; readonly sha256: string }[];
+    };
   };
   assert.equal(depsPacket.method, "search/deps");
   assert.equal(depsPacket.view, "deps");
@@ -244,6 +248,15 @@ test("CLI searches external dependency usage", () => {
         hit.fields.versionStatus === "matched" &&
         hit.fields.versionScope === "current",
     ),
+  );
+  assert.equal(depsPacket.cache?.rawSourceStored, false);
+  assert.deepEqual(depsPacket.cache?.fileHashes.map((fileHash) => fileHash.path).sort(), [
+    "package-lock.json",
+    "package.json",
+    "src/index.ts",
+  ]);
+  assert.ok(
+    depsPacket.cache?.fileHashes.every((fileHash) => /^[a-f0-9]{64}$/u.test(fileHash.sha256)),
   );
 
   const mismatch = runCliCapture(["search", "deps", "react@18.0.0::jsx", "--json", "."], root);

@@ -73,6 +73,9 @@ export function assertSemanticSearchPacket(
   if (packet.searchSynthesis !== undefined) {
     assertSearchSynthesis(record(packet.searchSynthesis), record(defs.searchSynthesis));
   }
+  if (packet.cache !== undefined) {
+    assertCache(record(packet.cache), record(defs.cache));
+  }
   assertArray(packet.packages, "packet.packages", (fact, context) =>
     assertFact(fact, record(defs.fact), context),
   );
@@ -176,6 +179,19 @@ function assertSearchSynthesis(searchSynthesis: JsonObject, schema: JsonObject):
   );
   if (searchSynthesis.fields !== undefined) {
     assertFields(searchSynthesis.fields, "searchSynthesis.fields");
+  }
+}
+
+function assertCache(cache: JsonObject, schema: JsonObject): void {
+  assertSchemaObject(cache, schema, "cache");
+  assertArray(cache.fileHashes, "cache.fileHashes", (fileHash, context) => {
+    const entry = record(fileHash, context);
+    assertString(entry.path, `${context}.path`);
+    assertString(entry.sha256, `${context}.sha256`);
+    assert.match(String(entry.sha256), /^[a-f0-9]{64}$/u, `${context}.sha256 must be sha256`);
+  });
+  if (cache.rawSourceStored !== undefined) {
+    assert.equal(cache.rawSourceStored, false, "cache.rawSourceStored must be false");
   }
 }
 
