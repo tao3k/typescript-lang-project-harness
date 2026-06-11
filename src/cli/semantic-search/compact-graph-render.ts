@@ -63,9 +63,10 @@ export function renderCompactGraphPacket(
 
 function spawnGraphRenderer(command: string, args: readonly string[], input: string) {
   if (process.platform === "win32" && isWindowsBatchCommand(command)) {
-    return spawnSync("cmd.exe", ["/d", "/s", "/c", quoteWindowsCommand(command, args)], {
+    return spawnSync(command, args, {
       encoding: "utf8",
       input,
+      shell: true,
     });
   }
   return spawnSync(command, args, {
@@ -77,8 +78,4 @@ function spawnGraphRenderer(command: string, args: readonly string[], input: str
 function isWindowsBatchCommand(command: string): boolean {
   const extension = path.extname(command).toLowerCase();
   return extension === ".cmd" || extension === ".bat";
-}
-
-function quoteWindowsCommand(command: string, args: readonly string[]): string {
-  return [command, ...args].map((part) => `"${part.replaceAll('"', '""')}"`).join(" ");
 }

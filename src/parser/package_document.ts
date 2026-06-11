@@ -1,6 +1,7 @@
 import ts from "typescript";
 
 import type { SourceLocation } from "../model.js";
+import { slashPath } from "../reasoning/path_utils.js";
 import {
   locationForNode,
   nativeDiagnosticFromTsDiagnostic,
@@ -12,14 +13,15 @@ export function parsePackageJsonDocument(
   packagePath: string,
   sourceText: string,
 ): ParsedPackageJsonDocument {
-  const sourceFile = ts.parseJsonText(packagePath, sourceText);
+  const tsPackagePath = slashPath(packagePath);
+  const sourceFile = ts.parseJsonText(tsPackagePath, sourceText);
   const converted = ts.convertToObject(sourceFile, []) as unknown;
   const packageJson =
     converted !== null && typeof converted === "object" && !Array.isArray(converted)
       ? converted
       : {};
   const diagnostics = parseDiagnosticsForSourceFile(sourceFile).map((diagnostic) =>
-    nativeDiagnosticFromTsDiagnostic(diagnostic, packagePath, sourceText),
+    nativeDiagnosticFromTsDiagnostic(diagnostic, tsPackagePath, sourceText),
   );
   const rootObject = rootPackageJsonObject(sourceFile);
   const document = {

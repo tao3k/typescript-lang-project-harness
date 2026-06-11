@@ -1,6 +1,7 @@
 import type { TsCompactFinding } from "../model.js";
 import { lineAt } from "./helpers.js";
 import type { TsRule } from "./types.js";
+import { slashPath } from "../../reasoning/path_utils.js";
 
 export function blockingRules(): readonly TsRule[] {
   return [tsSynR001, tsProjR001, tsProjR002, tsProjR003, tsModR001, tsModR002];
@@ -79,7 +80,7 @@ const tsProjR003: TsRule = {
   },
   evaluate(modules) {
     const indexModule = modules.find(
-      (m) => m.path.endsWith("/index.ts") || m.path.endsWith("/index.tsx"),
+      (m) => slashPath(m.path).endsWith("/index.ts") || slashPath(m.path).endsWith("/index.tsx"),
     );
     if (indexModule === undefined) return [];
 

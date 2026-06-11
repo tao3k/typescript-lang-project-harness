@@ -3,6 +3,7 @@ import path from "node:path";
 import ts from "typescript";
 
 import type { TypeScriptProjectConfigFacts, TypeScriptProjectHarnessScope } from "../model.js";
+import { slashPath } from "../reasoning/path_utils.js";
 import {
   compilerOptionFacts,
   defaultCompilerOptionFacts,
@@ -14,6 +15,7 @@ import type { TypeScriptProgramInputs } from "./types.js";
 
 export function readTypeScriptConfigFacts(projectRoot: string): TypeScriptProjectConfigFacts {
   const configPath = path.join(projectRoot, "tsconfig.json");
+  const tsConfigPath = slashPath(configPath);
   if (!ts.sys.fileExists(configPath)) {
     return {
       fileNames: [],
@@ -24,7 +26,7 @@ export function readTypeScriptConfigFacts(projectRoot: string): TypeScriptProjec
       diagnostics: [],
     };
   }
-  const readResult = ts.readConfigFile(configPath, ts.sys.readFile);
+  const readResult = ts.readConfigFile(tsConfigPath, ts.sys.readFile);
   if (readResult.error !== undefined) {
     return {
       configPath,
@@ -33,15 +35,15 @@ export function readTypeScriptConfigFacts(projectRoot: string): TypeScriptProjec
       projectReferencePackages: [],
       pathAliases: [],
       compilerOptions: defaultCompilerOptionFacts(),
-      diagnostics: [nativeDiagnosticFromTsDiagnostic(readResult.error, configPath)],
+      diagnostics: [nativeDiagnosticFromTsDiagnostic(readResult.error, tsConfigPath)],
     };
   }
   const parsed = ts.parseJsonConfigFileContent(
     readResult.config,
     ts.sys,
-    path.dirname(configPath),
+    path.dirname(tsConfigPath),
     undefined,
-    configPath,
+    tsConfigPath,
   );
   const baseUrl =
     parsed.options.baseUrl === undefined ? undefined : path.resolve(parsed.options.baseUrl);
@@ -56,7 +58,7 @@ export function readTypeScriptConfigFacts(projectRoot: string): TypeScriptProjec
     pathAliases: pathAliasFacts(parsed.options.paths, baseUrl ?? path.dirname(configPath)),
     compilerOptions: compilerOptionFacts(parsed.options),
     diagnostics: parsed.errors.map((diagnostic) =>
-      nativeDiagnosticFromTsDiagnostic(diagnostic, configPath),
+      nativeDiagnosticFromTsDiagnostic(diagnostic, tsConfigPath),
     ),
   };
   return baseUrl === undefined ? configFacts : { ...configFacts, baseUrl };
@@ -69,16 +71,17 @@ export function readTypeScriptProgramInputs(
   if (configPath === undefined) {
     return { options: {} };
   }
-  const readResult = ts.readConfigFile(configPath, ts.sys.readFile);
+  const tsConfigPath = slashPath(configPath);
+  const readResult = ts.readConfigFile(tsConfigPath, ts.sys.readFile);
   if (readResult.error !== undefined) {
     return { options: {} };
   }
   const parsed = ts.parseJsonConfigFileContent(
     readResult.config,
     ts.sys,
-    path.dirname(configPath),
+    path.dirname(tsConfigPath),
     undefined,
-    configPath,
+    tsConfigPath,
   );
   const programInputs: TypeScriptProgramInputs = {
     options: parsed.options,

@@ -1,6 +1,7 @@
 import type { TsCompactFinding } from "../model.js";
 import { sourceOf, lineAt } from "./helpers.js";
 import type { TsRule } from "./types.js";
+import { slashPath } from "../../reasoning/path_utils.js";
 
 export function advisoryRules(): readonly TsRule[] {
   return [agentTsR001, agentTsR003, agentTsR006, agentTsR008, agentTsR009, agentTsR012];
@@ -67,7 +68,7 @@ const agentTsR003: TsRule = {
   evaluate(modules) {
     const findings: TsCompactFinding[] = [];
     for (const mod of modules) {
-      const segments = mod.path.split("/");
+      const segments = slashPath(mod.path).split("/");
       const dir = segments.length >= 2 ? segments[segments.length - 2] : "";
       if (dir !== undefined && GENERIC_BUCKETS.has(dir)) {
         findings.push({

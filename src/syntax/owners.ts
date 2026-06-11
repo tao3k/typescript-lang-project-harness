@@ -54,7 +54,10 @@ export function moduleOwner(projectRoot: string, modulePath: string): string {
 
 function selectPrimary(mods: readonly TsParsedModule[]): TsParsedModule {
   // Prefer index.ts, then the one with most exports
-  const index = mods.find((m) => m.path.endsWith("/index.ts") || m.path.endsWith("/index.tsx"));
+  const index = mods.find((m) => {
+    const modulePath = slashPath(m.path);
+    return modulePath.endsWith("/index.ts") || modulePath.endsWith("/index.tsx");
+  });
   if (index !== undefined) return index;
 
   // Most exports

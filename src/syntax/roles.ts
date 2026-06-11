@@ -6,6 +6,7 @@ import type {
   TsPublicItemFact,
   TsReactFact,
 } from "./model.js";
+import { slashPath } from "../reasoning/path_utils.js";
 
 export function classifyRole(mod: TsParsedModule): TsModuleRole {
   return (
@@ -18,10 +19,11 @@ export function classifyRole(mod: TsParsedModule): TsModuleRole {
 }
 
 function classifyTestRole(mod: TsParsedModule): TsModuleRole | undefined {
+  const modulePath = slashPath(mod.path);
   if (
-    mod.path.includes(".test.") ||
-    mod.path.includes("/__tests__/") ||
-    mod.path.includes(".spec.")
+    modulePath.includes(".test.") ||
+    modulePath.includes("/__tests__/") ||
+    modulePath.includes(".spec.")
   ) {
     return "test-entrypoint";
   }
@@ -69,7 +71,7 @@ function isFacade(reexportCount: number, starCount: number, mod: TsParsedModule)
 }
 
 function isEntrypointName(mod: TsParsedModule): boolean {
-  const basename = mod.path.split("/").at(-1)?.toLowerCase() ?? "";
+  const basename = slashPath(mod.path).split("/").at(-1)?.toLowerCase() ?? "";
   return (
     basename === "main.ts" ||
     basename === "main.tsx" ||
@@ -81,7 +83,7 @@ function isEntrypointName(mod: TsParsedModule): boolean {
 }
 
 function isConfigFile(mod: TsParsedModule): boolean {
-  const basename = mod.path.split("/").at(-1)?.toLowerCase() ?? "";
+  const basename = slashPath(mod.path).split("/").at(-1)?.toLowerCase() ?? "";
   return basename.includes("config") || basename.includes(".config");
 }
 

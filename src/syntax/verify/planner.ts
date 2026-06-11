@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import type { TsParsedModule } from "../model.js";
 import type { VerifyPlan, VerifyTask, VerifyTaskKind } from "./types.js";
+import { slashPath } from "../../reasoning/path_utils.js";
 
 export function planVerification(modules: readonly TsParsedModule[]): readonly VerifyPlan[] {
   return modules.filter((m) => m.isValid).map((mod) => planModule(mod));
@@ -52,7 +53,8 @@ function hasPerformanceRisk(mod: TsParsedModule): boolean {
 }
 
 function isPackageEntry(mod: TsParsedModule): boolean {
-  return mod.path.endsWith("/index.ts") || mod.path.endsWith("/index.tsx");
+  const modulePath = slashPath(mod.path);
+  return modulePath.endsWith("/index.ts") || modulePath.endsWith("/index.tsx");
 }
 
 // ── Fingerprint ────────────────────────────────────────────
