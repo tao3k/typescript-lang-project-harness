@@ -5,6 +5,7 @@ import path from "node:path";
 import test from "node:test";
 
 import { renderTypeScriptReasoningTree, runTypeScriptProjectHarness } from "../../src/index.js";
+import { relativePath } from "./path_helpers.js";
 
 test("project runner preserves tsconfig allowJs native file selection", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-allow-js-"));
@@ -44,7 +45,7 @@ test("project runner preserves tsconfig allowJs native file selection", () => {
 
   assert.deepEqual(
     report.modules.map((moduleReport) => ({
-      path: path.relative(root, moduleReport.path),
+      path: relativePath(root, moduleReport.path),
       scriptKind: moduleReport.scriptKind,
     })),
     [
@@ -58,7 +59,7 @@ test("project runner preserves tsconfig allowJs native file selection", () => {
   );
   const roleByPath = new Map(
     report.reasoningTree.modules.map((moduleReport) => [
-      path.relative(root, moduleReport.path),
+      relativePath(root, moduleReport.path),
       moduleReport.role,
     ]),
   );

@@ -2,6 +2,14 @@ import path from "node:path";
 
 import { MODULE_FILE_EXTENSIONS } from "./constants.js";
 
+export function slashPath(value: string): string {
+  return value.replaceAll("\\", "/");
+}
+
+export function relativeProjectPath(root: string, filePath: string): string {
+  return slashPath(path.relative(root, filePath)) || ".";
+}
+
 export function isInsideAny(filePath: string, roots: readonly string[]): boolean {
   return roots.some((root) => {
     const relativePath = path.relative(root, filePath);

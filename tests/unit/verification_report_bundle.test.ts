@@ -24,6 +24,7 @@ import {
   type TypeScriptVerificationProfileHint,
   type TypeScriptVerificationSkillDescriptor,
 } from "../../src/index.js";
+import { relativePath } from "./path_helpers.js";
 
 test("verification report bundle renders active plan and configured task index artifacts", () => {
   const root = writeReportBundleProject("active", "export const api = 1;\n");
@@ -103,7 +104,7 @@ test("verification report bundle renders active plan and configured task index a
     pendingIndex.records.map((record) => ({
       kind: record.kind,
       state: record.state,
-      owner: path.relative(root, record.ownerPath),
+      owner: relativePath(root, record.ownerPath),
       skill: record.skill,
       contractRef: record.contractRef,
     })),
@@ -120,7 +121,7 @@ test("verification report bundle renders active plan and configured task index a
   assert.deepEqual(
     pendingPerformanceIndex.records.map((record) => ({
       state: record.state,
-      owner: path.relative(root, record.ownerPath),
+      owner: relativePath(root, record.ownerPath),
       missing: record.requiredEvidenceKeys,
     })),
     [
@@ -234,7 +235,7 @@ test("verification report writer splits source baseline and runtime cache artifa
   });
 
   assert.deepEqual(
-    receipt.sourceBaselinePaths.map((candidate) => path.relative(root, candidate)).sort(),
+    receipt.sourceBaselinePaths.map((candidate) => relativePath(root, candidate)).sort(),
     [
       ".verification/source/performance_index.json",
       ".verification/source/task_index.json",
@@ -242,7 +243,7 @@ test("verification report writer splits source baseline and runtime cache artifa
     ],
   );
   assert.deepEqual(
-    receipt.runtimeCachePaths.map((candidate) => path.relative(root, candidate)).sort(),
+    receipt.runtimeCachePaths.map((candidate) => relativePath(root, candidate)).sort(),
     [
       ".verification/cache/verification_plan.json",
       ".verification/cache/verification_report_manifest.json",

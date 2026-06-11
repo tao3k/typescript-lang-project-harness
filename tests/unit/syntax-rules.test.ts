@@ -1,4 +1,5 @@
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { evaluateRules } from "../../src/syntax/rules/catalog.js";
@@ -8,10 +9,10 @@ import { renderCompactFindings } from "../../src/syntax/render-finding.js";
 // Use URL-based resolution to find fixtures in the source tree.
 // Compiled: dist/tests/unit/ → go up 3 to project root → tests/fixtures/syntax_rules/
 const POS = path.resolve(
-  new URL("../../../tests/fixtures/syntax_rules/pos", import.meta.url).pathname,
+  fileURLToPath(new URL("../../../tests/fixtures/syntax_rules/pos", import.meta.url)),
 );
 const NEG = path.resolve(
-  new URL("../../../tests/fixtures/syntax_rules/neg", import.meta.url).pathname,
+  fileURLToPath(new URL("../../../tests/fixtures/syntax_rules/neg", import.meta.url)),
 );
 
 describe("rule packs", () => {

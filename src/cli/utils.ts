@@ -9,14 +9,14 @@
  */
 
 import fs from "node:fs";
-import path from "node:path";
 import type { TypeScriptHarnessReport, TypeScriptReasoningTree } from "../model.js";
+import { relativeProjectPath } from "../reasoning/path_utils.js";
 
 // ── Path utilities ────────────────────────────────────────
 
 /** Path relative to project root. */
 export function relativeTo(tree: TypeScriptReasoningTree, filePath: string): string {
-  return path.relative(tree.projectRoot, filePath) || ".";
+  return relativeProjectPath(tree.projectRoot, filePath);
 }
 
 // ── Topology computation ──────────────────────────────────

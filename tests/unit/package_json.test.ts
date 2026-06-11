@@ -12,6 +12,7 @@ import {
   runTypeScriptProjectHarness,
   typeScriptProjectPolicyRules,
 } from "../../src/index.js";
+import { relativePath } from "./path_helpers.js";
 
 test("project harness reports malformed package json without throwing", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-package-json-"));
@@ -43,7 +44,7 @@ test("project harness reports malformed package json without throwing", () => {
   assert.deepEqual(
     report.reasoningTree.diagnostics.map((diagnostic) => ({
       phase: diagnostic.phase,
-      ownerPath: path.relative(root, diagnostic.ownerPath),
+      ownerPath: relativePath(root, diagnostic.ownerPath),
     })),
     [{ phase: "package-json", ownerPath: "package.json" }],
   );
@@ -84,7 +85,7 @@ test("project harness reports malformed project reference package json without t
   );
   assert.deepEqual(
     report.projectScope?.config.projectReferencePackages.map((referencePackage) => ({
-      path: path.relative(root, referencePackage.path),
+      path: relativePath(root, referencePackage.path),
       diagnostics: referencePackage.diagnostics.length,
     })),
     [{ path: "packages/broken", diagnostics: 1 }],
@@ -92,7 +93,7 @@ test("project harness reports malformed project reference package json without t
   assert.deepEqual(
     report.reasoningTree.diagnostics.map((diagnostic) => ({
       phase: diagnostic.phase,
-      ownerPath: path.relative(root, diagnostic.ownerPath),
+      ownerPath: relativePath(root, diagnostic.ownerPath),
     })),
     [{ phase: "package-json", ownerPath: "packages/broken/package.json" }],
   );
@@ -122,7 +123,7 @@ test("project parser records package dependency facts from package json", () => 
       name: dependency.name,
       versionRange: dependency.versionRange,
       source: dependency.source,
-      path: path.relative(root, dependency.location.path ?? ""),
+      path: relativePath(root, dependency.location.path ?? ""),
     })),
     [
       {
@@ -191,7 +192,7 @@ test("project policy reports referenced package config shape as advice", () => {
   );
   assert.deepEqual(
     report.projectScope?.config.projectReferencePackages.map((referencePackage) => ({
-      path: path.relative(root, referencePackage.path),
+      path: relativePath(root, referencePackage.path),
       composite: referencePackage.compilerOptions?.composite,
       declaration: referencePackage.compilerOptions?.declaration,
     })),
@@ -285,7 +286,7 @@ test("project harness reports malformed workspace package json without throwing"
   );
   assert.deepEqual(
     report.projectScope?.packageJson.workspacePackages.map((workspacePackage) => ({
-      path: path.relative(root, workspacePackage.path),
+      path: relativePath(root, workspacePackage.path),
       diagnostics: workspacePackage.diagnostics.length,
     })),
     [{ path: "packages/broken", diagnostics: 1 }],
@@ -293,7 +294,7 @@ test("project harness reports malformed workspace package json without throwing"
   assert.deepEqual(
     report.reasoningTree.diagnostics.map((diagnostic) => ({
       phase: diagnostic.phase,
-      ownerPath: path.relative(root, diagnostic.ownerPath),
+      ownerPath: relativePath(root, diagnostic.ownerPath),
     })),
     [{ phase: "package-json", ownerPath: "packages/broken/package.json" }],
   );
@@ -351,9 +352,9 @@ test("project harness discovers workspace package facts from package json", () =
   assert.deepEqual(
     packageJson.workspacePackages.map((workspacePackage) => ({
       name: workspacePackage.name,
-      path: path.relative(root, workspacePackage.path),
+      path: relativePath(root, workspacePackage.path),
       pattern: workspacePackage.pattern,
-      configPath: path.relative(root, workspacePackage.configPath ?? ""),
+      configPath: relativePath(root, workspacePackage.configPath ?? ""),
       locationLine: workspacePackage.location.line,
     })),
     [
@@ -368,10 +369,10 @@ test("project harness discovers workspace package facts from package json", () =
   );
   assert.deepEqual(
     report.reasoningTree.packageImportOwners.map((owner) => ({
-      fromPath: path.relative(root, owner.fromPath),
+      fromPath: relativePath(root, owner.fromPath),
       moduleSpecifier: owner.moduleSpecifier,
       packageName: owner.packageName,
-      packagePath: path.relative(root, owner.packagePath),
+      packagePath: relativePath(root, owner.packagePath),
       ownerKind: owner.ownerKind,
       via: owner.via,
     })),
@@ -427,7 +428,7 @@ test("project harness discovers pnpm workspace package facts", () => {
   assert.deepEqual(
     packageJson.workspaces.map((workspace) => ({
       pattern: workspace.pattern,
-      path: path.relative(root, workspace.location.path ?? ""),
+      path: relativePath(root, workspace.location.path ?? ""),
       line: workspace.location.line,
     })),
     [
@@ -439,7 +440,7 @@ test("project harness discovers pnpm workspace package facts", () => {
   assert.deepEqual(
     packageJson.workspacePackages.map((workspacePackage) => ({
       name: workspacePackage.name,
-      path: path.relative(root, workspacePackage.path),
+      path: relativePath(root, workspacePackage.path),
       pattern: workspacePackage.pattern,
     })),
     [

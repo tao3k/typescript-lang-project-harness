@@ -5,6 +5,7 @@ import path from "node:path";
 import test from "node:test";
 
 import { renderTypeScriptReasoningTree, runTypeScriptProjectHarness } from "../../src/index.js";
+import { relativePath } from "./path_helpers.js";
 
 test("reasoning tree renders tsconfig paths, package entries, roles, and import edges", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-reasoning-"));
@@ -143,9 +144,9 @@ test("reasoning tree renders tsconfig paths, package entries, roles, and import 
   assert.deepEqual(
     tree.workspacePackages.map((workspacePackage) => ({
       name: workspacePackage.name,
-      path: path.relative(root, workspacePackage.path),
+      path: relativePath(root, workspacePackage.path),
       pattern: workspacePackage.pattern,
-      configPath: path.relative(root, workspacePackage.configPath ?? ""),
+      configPath: relativePath(root, workspacePackage.configPath ?? ""),
     })),
     [
       {
@@ -157,14 +158,14 @@ test("reasoning tree renders tsconfig paths, package entries, roles, and import 
     ],
   );
   assert.deepEqual(
-    tree.projectReferences.map((reference) => path.relative(root, reference)),
+    tree.projectReferences.map((reference) => relativePath(root, reference)),
     ["packages/core"],
   );
   assert.deepEqual(
     tree.projectReferencePackages.map((referencePackage) => ({
       name: referencePackage.name,
-      path: path.relative(root, referencePackage.path),
-      configPath: path.relative(root, referencePackage.configPath ?? ""),
+      path: relativePath(root, referencePackage.path),
+      configPath: relativePath(root, referencePackage.configPath ?? ""),
     })),
     [
       {
@@ -176,9 +177,9 @@ test("reasoning tree renders tsconfig paths, package entries, roles, and import 
   );
   assert.deepEqual(
     tree.projectReferenceResolutions.map((reference) => ({
-      referencePath: path.relative(root, reference.referencePath),
+      referencePath: relativePath(root, reference.referencePath),
       packageName: reference.packageName,
-      packagePath: path.relative(root, reference.packagePath ?? ""),
+      packagePath: relativePath(root, reference.packagePath ?? ""),
     })),
     [
       {
@@ -190,7 +191,7 @@ test("reasoning tree renders tsconfig paths, package entries, roles, and import 
   );
   assert.deepEqual(
     tree.packageImportOwners.map((owner) => ({
-      fromPath: path.relative(root, owner.fromPath),
+      fromPath: relativePath(root, owner.fromPath),
       moduleSpecifier: owner.moduleSpecifier,
       packageName: owner.packageName,
       ownerKind: owner.ownerKind,
@@ -209,7 +210,7 @@ test("reasoning tree renders tsconfig paths, package entries, roles, and import 
   assert.equal(tree.compilerOptions.declaration, true);
 
   const roleByPath = new Map(
-    tree.modules.map((moduleReport) => [path.relative(root, moduleReport.path), moduleReport.role]),
+    tree.modules.map((moduleReport) => [relativePath(root, moduleReport.path), moduleReport.role]),
   );
   assert.equal(roleByPath.get("src/index.ts"), "facade");
   assert.equal(roleByPath.get("src/consumer.ts"), "entrypoint");
@@ -227,12 +228,12 @@ test("reasoning tree renders tsconfig paths, package entries, roles, and import 
         b.roles.includes("root") || b.roles.includes("facade") || b.roles.includes("entrypoint"),
     )
     .map((branch) => ({
-      path: path.relative(root, branch.path),
+      path: relativePath(root, branch.path),
       ownerNamespace: branch.ownerNamespace,
       roles: branch.roles,
       externalImports: branch.importSummary.externalImports,
       childEdges: branch.childEdges.map(
-        (edge) => `${edge.kind}:${path.relative(root, edge.toPath ?? "")}`,
+        (edge) => `${edge.kind}:${relativePath(root, edge.toPath ?? "")}`,
       ),
     }));
 
@@ -254,16 +255,16 @@ test("reasoning tree renders tsconfig paths, package entries, roles, and import 
   ]);
   // Non-root source branches are present
   assert.ok(
-    tree.ownerBranches.some((b) => path.relative(root, b.path) === "generated/generated.ts"),
+    tree.ownerBranches.some((b) => relativePath(root, b.path) === "generated/generated.ts"),
   );
-  assert.ok(tree.ownerBranches.some((b) => path.relative(root, b.path) === "src/domain.ts"));
+  assert.ok(tree.ownerBranches.some((b) => relativePath(root, b.path) === "src/domain.ts"));
   assert.ok(
     tree.ownerDependencies.some(
       (dependency) =>
-        path.relative(root, dependency.fromPath) === "src/consumer.ts" &&
+        relativePath(root, dependency.fromPath) === "src/consumer.ts" &&
         dependency.resolution === "path-alias" &&
         dependency.kind === "import" &&
-        path.relative(root, dependency.toPath ?? "") === "src/domain.ts",
+        relativePath(root, dependency.toPath ?? "") === "src/domain.ts",
     ),
   );
   assert.equal(
@@ -315,7 +316,7 @@ test("reasoning tree reports shadowed TypeScript source owner shapes", () => {
   assert.deepEqual(
     tree.shadowedSourceOwners.map((shadow) => ({
       ownerNamespace: shadow.ownerNamespace,
-      paths: shadow.paths.map((filePath) => path.relative(root, filePath)),
+      paths: shadow.paths.map((filePath) => relativePath(root, filePath)),
     })),
     [
       {
@@ -375,7 +376,7 @@ test("reasoning tree reports orphaned TypeScript source files from entry roots",
   const rendered = renderTypeScriptReasoningTree(report);
 
   assert.deepEqual(
-    tree.orphanedSourceFiles.map((filePath) => path.relative(root, filePath)),
+    tree.orphanedSourceFiles.map((filePath) => relativePath(root, filePath)),
     ["src/forgotten.ts"],
   );
   assert.match(rendered, /^Modules: .*orphaned=1/mu);

@@ -1,6 +1,7 @@
 import path from "node:path";
 import type { TsOwnerBranch, TsParsedModule } from "./model.js";
 import { classifyRole } from "./roles.js";
+import { slashPath } from "../reasoning/path_utils.js";
 
 export function buildOwnerBranches(
   projectRoot: string,
@@ -37,7 +38,7 @@ export function buildOwnerBranches(
 
 /** Compute the owner namespace from a module path. */
 export function moduleOwner(projectRoot: string, modulePath: string): string {
-  const relative = path.relative(projectRoot, modulePath);
+  const relative = slashPath(path.relative(projectRoot, modulePath));
   // Strip src/ prefix if present
   const stripped = relative.startsWith("src/") ? relative.slice(4) : relative;
   // Remove the filename to get the directory

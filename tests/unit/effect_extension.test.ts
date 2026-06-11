@@ -14,6 +14,7 @@ import {
   typeScriptExtensionPolicyRules,
   withDisabledTypeScriptRulePack,
 } from "../../src/index.js";
+import { relativePath } from "./path_helpers.js";
 
 test("Effect dependency activates extension snapshot and async domain advice", () => {
   const root = effectProject("dependency-active", {
@@ -312,7 +313,7 @@ test("Effect runtime execution advice treats React Query callbacks as runtime bo
         [
           finding.ruleId,
           finding.severity,
-          path.relative(root, finding.location.path ?? ""),
+          relativePath(root, finding.location.path ?? ""),
           finding.labels.runtime_calls ?? "",
         ].join(":"),
       ),
@@ -352,7 +353,7 @@ test("Effect policy treats package script TypeScript targets as entrypoint adapt
   const report = runTypeScriptProjectHarness(root);
   const roleByPath = new Map(
     report.reasoningTree.modules.map((moduleReport) => [
-      path.relative(root, moduleReport.path),
+      relativePath(root, moduleReport.path),
       moduleReport.role,
     ]),
   );
@@ -368,7 +369,7 @@ test("Effect policy treats package script TypeScript targets as entrypoint adapt
         [
           finding.ruleId,
           finding.severity,
-          path.relative(root, finding.location.path ?? ""),
+          relativePath(root, finding.location.path ?? ""),
           finding.labels.module_role ?? "",
         ].join(":"),
       ),
@@ -412,7 +413,7 @@ test("Effect policy treats parser-visible HTTP middleware adapters as entrypoint
   const report = runTypeScriptProjectHarness(root);
   const roleByPath = new Map(
     report.reasoningTree.modules.map((moduleReport) => [
-      path.relative(root, moduleReport.path),
+      relativePath(root, moduleReport.path),
       moduleReport.role,
     ]),
   );
@@ -426,7 +427,7 @@ test("Effect policy treats parser-visible HTTP middleware adapters as entrypoint
         [
           finding.ruleId,
           finding.severity,
-          path.relative(root, finding.location.path ?? ""),
+          relativePath(root, finding.location.path ?? ""),
           finding.labels.module_role ?? "",
         ].join(":"),
       ),
@@ -489,7 +490,7 @@ test("Effect object config remains project-wide and does not suppress modules", 
         [
           finding.ruleId,
           finding.severity,
-          path.relative(root, finding.location.path ?? ""),
+          relativePath(root, finding.location.path ?? ""),
           finding.labels.module_role ?? "",
         ].join(":"),
       ),

@@ -1,4 +1,5 @@
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { parseProject, discoverModules } from "../../src/syntax/parse-project.js";
@@ -12,7 +13,9 @@ import { buildCompactFindings } from "../../src/syntax/findings.js";
 import { renderCompactFindings } from "../../src/syntax/render-finding.js";
 
 // Fixtures — dist/tests/unit/ → ../../../tests/fixtures/syntax/
-const FIXTURES = path.resolve(new URL("../../../tests/fixtures/syntax", import.meta.url).pathname);
+const FIXTURES = path.resolve(
+  fileURLToPath(new URL("../../../tests/fixtures/syntax", import.meta.url)),
+);
 
 describe("parser-naive MVP", () => {
   it("parses a simple module with imports, exports, and functions", () => {

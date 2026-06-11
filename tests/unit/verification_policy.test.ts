@@ -19,6 +19,7 @@ import {
   type TypeScriptVerificationProfileHint,
   type TypeScriptVerificationSkillDescriptor,
 } from "../../src/index.js";
+import { relativePath } from "./path_helpers.js";
 
 test("verification policy plans compact external-skill tasks from profile hints", () => {
   const root = writeVerificationProject("profile-plan", "export const api = 1;\n");
@@ -34,7 +35,7 @@ test("verification policy plans compact external-skill tasks from profile hints"
   };
 
   assert.deepEqual(
-    plan.tasks.map((task) => `${task.kind}:${task.state}:${path.relative(root, task.ownerPath)}`),
+    plan.tasks.map((task) => `${task.kind}:${task.state}:${relativePath(root, task.ownerPath)}`),
     ["performance:pending:src/index.ts", "stress:pending:src/index.ts"],
   );
   assert.match(rendered, /^\[verify\] src\/index\.ts/u);

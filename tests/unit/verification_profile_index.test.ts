@@ -16,6 +16,7 @@ import {
   withTypeScriptVerificationProfileHint,
   type TypeScriptVerificationProfileHint,
 } from "../../src/index.js";
+import { relativePath } from "./path_helpers.js";
 
 test("verification profile index suggests missing owner hints from parser facts", () => {
   const root = writeProfileProject(
@@ -36,7 +37,7 @@ test("verification profile index suggests missing owner hints from parser facts"
   assert.equal(typeScriptVerificationProfileIndexIsClear(index), false);
   assert.deepEqual(
     index.candidates.map((candidate) => ({
-      owner: path.relative(root, candidate.ownerPath),
+      owner: relativePath(root, candidate.ownerPath),
       state: candidate.state,
       responsibilities: candidate.suggestedResponsibilities,
       taskKinds: candidate.suggestedTaskKinds,

@@ -10,6 +10,7 @@ import {
   parseTypeScriptSourceFile,
   readProjectScope,
 } from "../../src/index.js";
+import { relativePath } from "./path_helpers.js";
 
 test("parser extracts native import and export facts", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-parser-"));
@@ -652,8 +653,8 @@ test("project parser reads tsconfig compiler and package metadata facts", () => 
     scope.config.projectReferencePackages.map((referencePackage) => ({
       name: referencePackage.name,
       packageType: referencePackage.packageType,
-      path: path.relative(root, referencePackage.path),
-      configPath: path.relative(root, referencePackage.configPath ?? ""),
+      path: relativePath(root, referencePackage.path),
+      configPath: relativePath(root, referencePackage.configPath ?? ""),
     })),
     [
       {
@@ -676,13 +677,13 @@ test("project parser reads tsconfig compiler and package metadata facts", () => 
   assert.equal(scope.config.compilerOptions.declaration, true);
   assert.equal(scope.config.compilerOptions.declarationMap, true);
   assert.equal(scope.config.compilerOptions.sourceMap, true);
-  assert.equal(path.relative(root, scope.config.compilerOptions.outDir ?? ""), "dist");
+  assert.equal(relativePath(root, scope.config.compilerOptions.outDir ?? ""), "dist");
   assert.deepEqual(
-    scope.config.compilerOptions.rootDirs.map((dir) => path.relative(root, dir)),
+    scope.config.compilerOptions.rootDirs.map((dir) => relativePath(root, dir)),
     ["generated", "src"],
   );
   assert.deepEqual(
-    scope.config.projectReferences.map((dir) => path.relative(root, dir)),
+    scope.config.projectReferences.map((dir) => relativePath(root, dir)),
     ["packages/app"],
   );
 
@@ -696,7 +697,7 @@ test("project parser reads tsconfig compiler and package metadata facts", () => 
       resolvedPath:
         resolution.resolvedPath === undefined
           ? undefined
-          : path.relative(root, resolution.resolvedPath),
+          : relativePath(root, resolution.resolvedPath),
     })),
     [
       {

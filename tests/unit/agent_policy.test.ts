@@ -15,6 +15,7 @@ import {
   typeScriptSemanticRules,
   typeScriptTestLayoutRules,
 } from "../../src/index.js";
+import { relativePath } from "./path_helpers.js";
 
 test("rule catalog keeps deterministic pack order and agent advice severity", () => {
   assert.deepEqual(
@@ -244,7 +245,7 @@ test("agent policy reports missing module docs for broad public surfaces only", 
   const missingDocPaths = report.findings
     .filter((finding) => finding.ruleId === "TS-AGENT-R013")
     .flatMap((finding) =>
-      finding.location.path === undefined ? [] : [path.relative(root, finding.location.path)],
+      finding.location.path === undefined ? [] : [relativePath(root, finding.location.path)],
     )
     .sort();
 

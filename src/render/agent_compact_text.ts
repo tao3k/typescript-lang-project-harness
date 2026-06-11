@@ -1,5 +1,3 @@
-import path from "node:path";
-
 import { advisoryFindings, blockingFindings } from "../model.js";
 import type {
   TypeScriptHarnessFinding,
@@ -18,6 +16,7 @@ import {
   reactParserEvidenceText,
   reactProblemText,
 } from "./react_agent_compact_text.js";
+import { relativeProjectPath } from "../reasoning/path_utils.js";
 
 const MAX_ADVICE_ACTIONS = 8;
 const MAX_TARGET_EXAMPLES = 4;
@@ -264,8 +263,8 @@ function targetOwnerPath(
   if (rawPath === undefined) {
     return "<project>";
   }
-  const relativePath = path.relative(report.reasoningTree.projectRoot, rawPath) || ".";
-  const parts = relativePath.split(path.sep).filter((part) => part.length > 0);
+  const relativePath = relativeProjectPath(report.reasoningTree.projectRoot, rawPath);
+  const parts = relativePath.split("/").filter((part) => part.length > 0);
   return parts.length <= 3 ? relativePath : parts.slice(0, 3).join("/");
 }
 
@@ -519,7 +518,7 @@ function renderLocation(
   const displayPath =
     rawPath === "<project>"
       ? rawPath
-      : path.relative(report.reasoningTree.projectRoot, rawPath) || ".";
+      : relativeProjectPath(report.reasoningTree.projectRoot, rawPath);
   return `${displayPath}:${finding.location.line}:${finding.location.column + 1}`;
 }
 

@@ -9,7 +9,7 @@ import type {
   TypeScriptReasoningModule,
 } from "../model.js";
 import { CONFIG_FILE_STEMS, MODULE_FILE_EXTENSIONS } from "./constants.js";
-import { isInsideAny } from "./path_utils.js";
+import { isInsideAny, relativeProjectPath } from "./path_utils.js";
 
 export function reasoningModules(
   scope: TypeScriptProjectHarnessScope,
@@ -113,29 +113,20 @@ function moduleLayer(
   modulePath: string,
   role: TypeScriptModuleRole,
 ): TypeScriptModuleLayer {
-  const relativePath = path.relative(projectRoot, modulePath);
+  const relativePath = relativeProjectPath(projectRoot, modulePath);
   if (role === "test") {
     return "test";
   }
   if (role === "config") {
     return "config";
   }
-  if (
-    relativePath === "src/parser.ts" ||
-    relativePath.startsWith(`src${path.sep}parser${path.sep}`)
-  ) {
+  if (relativePath === "src/parser.ts" || relativePath.startsWith("src/parser/")) {
     return "parser";
   }
-  if (
-    relativePath === "src/reasoning.ts" ||
-    relativePath.startsWith(`src${path.sep}reasoning${path.sep}`)
-  ) {
+  if (relativePath === "src/reasoning.ts" || relativePath.startsWith("src/reasoning/")) {
     return "reasoning";
   }
-  if (
-    relativePath === "src/rules.ts" ||
-    relativePath.startsWith(`src${path.sep}rules${path.sep}`)
-  ) {
+  if (relativePath === "src/rules.ts" || relativePath.startsWith("src/rules/")) {
     return "policy";
   }
   if (relativePath === "src/render.ts") {
@@ -143,12 +134,12 @@ function moduleLayer(
   }
   if (
     relativePath === "src/model.ts" ||
-    relativePath.startsWith(`src${path.sep}model${path.sep}`) ||
-    (relativePath.startsWith(`src${path.sep}`) && path.basename(relativePath) === "model.ts")
+    relativePath.startsWith("src/model/") ||
+    (relativePath.startsWith("src/") && path.basename(relativePath) === "model.ts")
   ) {
     return "model";
   }
-  if (relativePath.startsWith(`src${path.sep}`)) {
+  if (relativePath.startsWith("src/")) {
     return "harness";
   }
   return "unknown";
@@ -262,8 +253,8 @@ function packageEntrypointOwnerRoots(
 ): string[] {
   const roots = new Set<string>();
   for (const ownerPath of entrypointOwnerPaths) {
-    const relativePath = path.relative(projectRoot, ownerPath);
-    const parts = relativePath.split(path.sep);
+    const relativePath = relativeProjectPath(projectRoot, ownerPath);
+    const parts = relativePath.split("/");
     if (parts[0] === "src" && parts[1] === "bin") {
       roots.add(path.join(projectRoot, "src", "bin"));
     }

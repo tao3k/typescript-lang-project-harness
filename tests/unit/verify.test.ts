@@ -1,4 +1,5 @@
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { parseModule } from "../../src/syntax/parse-module.js";
@@ -7,7 +8,9 @@ import { createReceipt, receiptMatches, applyReceipts } from "../../src/syntax/v
 import { createWaiver, applyWaivers, authorityRank } from "../../src/syntax/verify/waiver.js";
 import { renderVerifyPlans, renderVerifyClean } from "../../src/syntax/verify/render.js";
 
-const FIXTURES = path.resolve(new URL("../../../tests/fixtures/verify", import.meta.url).pathname);
+const FIXTURES = path.resolve(
+  fileURLToPath(new URL("../../../tests/fixtures/verify", import.meta.url)),
+);
 
 describe("verification planner", () => {
   it("plans typecheck + snapshot for all modules", () => {

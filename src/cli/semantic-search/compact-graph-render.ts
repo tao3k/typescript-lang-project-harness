@@ -5,6 +5,7 @@
  * binary owns graph projection and line rendering so providers do not drift.
  */
 import { spawnSync } from "node:child_process";
+import path from "node:path";
 
 import type { SemanticSearchFieldValue, SemanticSearchPacket } from "./types.js";
 
@@ -33,14 +34,17 @@ export function renderCompactGraphPacket(
   seedLimit = DEFAULT_GRAPH_SEED_LIMIT,
 ): string {
   const command = process.env[SEMANTIC_AGENT_PROTOCOL_BIN_ENV] ?? "asp";
-  const result = spawnSync(
-    command,
-    ["graph", "render", "--packet", "-", "--view", "seeds", "--seeds", String(seedLimit)],
-    {
-      encoding: "utf8",
-      input: JSON.stringify(packet),
-    },
-  );
+  const args = [
+    "graph",
+    "render",
+    "--packet",
+    "-",
+    "--view",
+    "seeds",
+    "--seeds",
+    String(seedLimit),
+  ];
+  const result = spawnGraphRenderer(command, args, JSON.stringify(packet));
   if (result.error !== undefined) {
     throw new CompactGraphRenderError(
       `asp graph renderer not found; set ${SEMANTIC_AGENT_PROTOCOL_BIN_ENV} or install asp on PATH`,
@@ -55,4 +59,26 @@ export function renderCompactGraphPacket(
     );
   }
   return result.stdout;
+}
+
+function spawnGraphRenderer(command: string, args: readonly string[], input: string) {
+  if (process.platform === "win32" && isWindowsBatchCommand(command)) {
+    return spawnSync("cmd.exe", ["/d", "/s", "/c", quoteWindowsCommand(command, args)], {
+      encoding: "utf8",
+      input,
+    });
+  }
+  return spawnSync(command, args, {
+    encoding: "utf8",
+    input,
+  });
+}
+
+function isWindowsBatchCommand(command: string): boolean {
+  const extension = path.extname(command).toLowerCase();
+  return extension === ".cmd" || extension === ".bat";
+}
+
+function quoteWindowsCommand(command: string, args: readonly string[]): string {
+  return [command, ...args].map((part) => `"${part.replaceAll('"', '""')}"`).join(" ");
 }

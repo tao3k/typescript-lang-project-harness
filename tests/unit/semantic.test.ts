@@ -10,6 +10,7 @@ import {
   renderTypeScriptReasoningTree,
   runTypeScriptProjectHarness,
 } from "../../src/index.js";
+import { relativePath } from "./path_helpers.js";
 
 test("project parser exposes native TypeScript semantic diagnostics as non-blocking advice", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-semantic-"));
@@ -50,13 +51,13 @@ test("project parser exposes native TypeScript semantic diagnostics as non-block
       phase: diagnostic.phase,
       category: diagnostic.category,
       code: diagnostic.code,
-      ownerPath: path.relative(root, diagnostic.ownerPath),
+      ownerPath: relativePath(root, diagnostic.ownerPath),
     })),
     [{ phase: "semantic", category: "error", code: 2322, ownerPath: "src/index.ts" }],
   );
   assert.deepEqual(
     report.reasoningTree.modules.map((moduleReport) => ({
-      path: path.relative(root, moduleReport.path),
+      path: relativePath(root, moduleReport.path),
       isValid: moduleReport.isValid,
       semanticDiagnosticCount: moduleReport.semanticDiagnosticCount,
       syntaxDiagnosticCount: moduleReport.syntaxDiagnosticCount,

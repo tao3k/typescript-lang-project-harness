@@ -1,11 +1,10 @@
-import path from "node:path";
-
 import type {
   SourceLocation,
   TypeScriptHarnessFinding,
   TypeScriptHarnessRule,
   TypeScriptReasoningTree,
 } from "../model.js";
+import { relativeProjectPath } from "../reasoning/path_utils.js";
 
 export interface DiagnosticFactLike {
   readonly code: number;
@@ -39,7 +38,7 @@ export function relativeToProject(
   reasoningTree: TypeScriptReasoningTree,
   filePath: string,
 ): string {
-  return path.relative(reasoningTree.projectRoot, filePath) || ".";
+  return relativeProjectPath(reasoningTree.projectRoot, filePath);
 }
 
 function diagnosticSummary(diagnostic: DiagnosticFactLike): string {

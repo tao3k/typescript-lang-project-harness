@@ -2,12 +2,13 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import test from "node:test";
 
 import { runCliCapture } from "./cli_helpers.js";
 
 function fixturePath(relativePath: string): string {
-  return path.resolve(new URL(`../../../tests/fixtures/${relativePath}`, import.meta.url).pathname);
+  return fileURLToPath(new URL(`../../../tests/fixtures/${relativePath}`, import.meta.url));
 }
 
 function readTextFixture(relativePath: string): string {

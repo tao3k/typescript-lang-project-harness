@@ -12,6 +12,7 @@ import {
   runTypeScriptLangHarness,
   runTypeScriptProjectHarness,
 } from "../../src/index.js";
+import { relativePath } from "./path_helpers.js";
 
 test("project runner uses tsconfig native file selection", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-project-"));
@@ -30,7 +31,7 @@ test("project runner uses tsconfig native file selection", () => {
   assert.equal(report.reasoningTree.runMode, report.runMode);
   assert.equal(isTypeScriptHarnessClean(report), true);
   assert.deepEqual(
-    report.modules.map((moduleReport) => path.relative(root, moduleReport.path)),
+    report.modules.map((moduleReport) => relativePath(root, moduleReport.path)),
     ["src/index.ts"],
   );
   assert.match(renderTypeScriptProjectHarness(report), /^\[ok\] typescript/u);
@@ -52,7 +53,7 @@ test("project runner anchors project scope at nearest package json", () => {
   assert.equal(report.projectScope?.projectRoot, root);
   assert.deepEqual(report.rootPaths, [root]);
   assert.deepEqual(
-    report.modules.map((moduleReport) => path.relative(root, moduleReport.path)),
+    report.modules.map((moduleReport) => relativePath(root, moduleReport.path)),
     ["src/index.ts"],
   );
   assert.match(snapshot, /^Modules: source=1 branches=1/u);
@@ -78,7 +79,7 @@ test("project runner does not inherit parent tsconfig across a package json anch
 
   assert.equal(report.reasoningTree.configPath, undefined);
   assert.deepEqual(
-    report.modules.map((moduleReport) => path.relative(packageRoot, moduleReport.path)),
+    report.modules.map((moduleReport) => relativePath(packageRoot, moduleReport.path)),
     ["src/index.ts"],
   );
   assert.match(snapshot, /^Modules: source=1 branches=1 findings=1/u);
@@ -125,7 +126,7 @@ test("project runner renders native syntax findings", () => {
     report.reasoningTree.diagnostics.map((diagnostic) => ({
       phase: diagnostic.phase,
       code: diagnostic.code,
-      path: path.relative(root, diagnostic.ownerPath),
+      path: relativePath(root, diagnostic.ownerPath),
     })),
     [{ phase: "syntax", code: 1109, path: "src/index.ts" }],
   );
@@ -154,7 +155,7 @@ test("project runner routes tsconfig diagnostics through reasoning facts", () =>
   assert.deepEqual(
     report.reasoningTree.diagnostics.map((diagnostic) => ({
       phase: diagnostic.phase,
-      ownerPath: path.relative(root, diagnostic.ownerPath),
+      ownerPath: relativePath(root, diagnostic.ownerPath),
     })),
     [{ phase: "config", ownerPath: "tsconfig.json" }],
   );
@@ -184,13 +185,13 @@ test("explicit-path runner routes syntax diagnostics through reasoning facts", (
     report.reasoningTree.diagnostics.map((diagnostic) => ({
       phase: diagnostic.phase,
       code: diagnostic.code,
-      ownerPath: path.relative(root, diagnostic.ownerPath),
+      ownerPath: relativePath(root, diagnostic.ownerPath),
     })),
     [{ phase: "syntax", code: 1109, ownerPath: "broken.ts" }],
   );
   assert.deepEqual(
     report.reasoningTree.modules.map((moduleReport) => ({
-      path: path.relative(root, moduleReport.path),
+      path: relativePath(root, moduleReport.path),
       isValid: moduleReport.isValid,
     })),
     [{ path: "broken.ts", isValid: false }],

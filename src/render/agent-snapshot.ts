@@ -16,6 +16,7 @@ import {
   type TypeScriptReasoningOwnerDependencyFact,
   type TypeScriptReasoningTree,
 } from "../model.js";
+import { relativeProjectPath, slashPath } from "../reasoning/path_utils.js";
 
 export interface TypeScriptRenderOptions {
   readonly includeAdvice?: boolean;
@@ -202,13 +203,14 @@ function renderLocation(
   const displayPath =
     rawPath === "<project>"
       ? rawPath
-      : path.relative(report.reasoningTree.projectRoot, rawPath) || ".";
+      : relativeProjectPath(report.reasoningTree.projectRoot, rawPath);
   return `${displayPath}:${finding.location.line}:${finding.location.column + 1}`;
 }
 
 function compactProjectRootMentions(tree: TypeScriptReasoningTree, text: string): string {
   const projectRoot = path.resolve(tree.projectRoot);
-  return text.split(`${projectRoot}${path.sep}`).join("").split(projectRoot).join(".");
+  const compacted = text.split(`${projectRoot}${path.sep}`).join("").split(projectRoot).join(".");
+  return slashPath(compacted);
 }
 
 function renderModuleSummary(
@@ -524,7 +526,7 @@ function renderFindingGroups(
 }
 
 function relativeToTree(tree: TypeScriptReasoningTree, pathValue: string): string {
-  return path.relative(tree.projectRoot, pathValue) || ".";
+  return relativeProjectPath(tree.projectRoot, pathValue);
 }
 
 function packageConditionsLabel(conditions: readonly string[]): string {
