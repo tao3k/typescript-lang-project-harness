@@ -161,7 +161,10 @@ interface SemanticQueryExpandAction {
   readonly kind: "exact-read" | "node-query" | "hot-block" | "owner-names";
   readonly target: string;
   readonly read?: string;
-  readonly argv?: readonly string[];
+  readonly capabilityId?: string;
+  readonly selector?: string;
+  readonly languageId?: string;
+  readonly workspacePolicy?: string;
   readonly reason?: string;
 }
 
@@ -507,10 +510,6 @@ function compactExpandActions(
     if (actions.length >= 8) break;
   }
   return actions;
-}
-
-function directReadArgv(selector: string): readonly string[] {
-  return ["ts-harness", "query", "--from-hook", "direct-source-read", "--selector", selector, "."];
 }
 
 function ownerItemSyntaxRefs(
