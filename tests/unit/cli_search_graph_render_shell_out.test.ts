@@ -15,15 +15,7 @@ test("compact graph renderer shells out to canonical asp by default", (t) => {
   const dir = mkdtempSync(path.join(tmpdir(), "ts-graph-render-"));
   const argvPath = path.join(dir, "argv.txt");
   const stdinPath = path.join(dir, "stdin.json");
-  const aspBin = path.join(dir, "asp");
-  writeFileSync(
-    aspBin,
-    "#!/bin/sh\n" +
-      'printf "%s\\n" "$@" > "$ASP_ARGV_PATH"\n' +
-      'cat > "$ASP_STDIN_PATH"\n' +
-      'printf "[search-fzf] q=test\\n"\n',
-  );
-  chmodSync(aspBin, 0o755);
+  writeAspFixture(dir);
   const oldBin = process.env[SEMANTIC_AGENT_PROTOCOL_BIN_ENV];
   const oldPath = process.env.PATH;
   const oldArgvPath = process.env.ASP_ARGV_PATH;
@@ -78,4 +70,33 @@ function restoreEnv(name: string, value: string | undefined): void {
     return;
   }
   process.env[name] = value;
+}
+
+function writeAspFixture(dir: string): void {
+  const aspScript = path.join(dir, "asp-fixture.mjs");
+  writeFileSync(
+    aspScript,
+    [
+      'import { writeFileSync } from "node:fs";',
+      "let input = '';",
+      "process.stdin.setEncoding('utf8');",
+      "for await (const chunk of process.stdin) input += chunk;",
+      "writeFileSync(process.env.ASP_ARGV_PATH, process.argv.slice(2).join('\\n'));",
+      "writeFileSync(process.env.ASP_STDIN_PATH, input);",
+      "process.stdout.write('[search-fzf] q=test\\n');",
+      "",
+    ].join("\n"),
+  );
+
+  if (process.platform === "win32") {
+    writeFileSync(
+      path.join(dir, "asp.cmd"),
+      `@echo off\r\n"${process.execPath}" "${aspScript}" %*\r\n`,
+    );
+    return;
+  }
+
+  const aspBin = path.join(dir, "asp");
+  writeFileSync(aspBin, `#!/bin/sh\nexec "${process.execPath}" "${aspScript}" "$@"\n`);
+  chmodSync(aspBin, 0o755);
 }

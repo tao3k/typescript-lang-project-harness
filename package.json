@@ -22,7 +22,7 @@
   },
   "scripts": {
     "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
-    "build": "npm run clean && tsc -p tsconfig.json && chmod +x dist/src/cli/main.js",
+    "build": "npm run clean && tsc -p tsconfig.json && node -e \"require('node:fs').chmodSync('dist/src/cli/main.js', 0o755)\"",
     "check": "npm run check:implementation",
     "check:implementation": "tsc -p tsconfig.json --noEmit",
     "check:policy": "npm run build && node --test \"dist/tests/unit/self_policy.test.js\"",
@@ -31,9 +31,9 @@
     "format:check": "oxfmt --check .",
     "lint": "oxlint .",
     "test": "npm run test:implementation && npm run test:policy",
-    "test:implementation": "npm run build && SEMANTIC_AGENT_PROTOCOL_BIN=\"$PWD/tests/fixtures/bin/asp\" sh -c 'find dist/tests -name \"*.test.js\" ! -name \"self_policy.test.js\" -print | xargs node --test --test-concurrency=1'",
+    "test:implementation": "npm run build && node scripts/run-node-tests.mjs implementation",
     "test:perf": "npm run build && node --test dist/tests/perf/query-search.microbench.js",
-    "test:policy": "npm run build && SEMANTIC_AGENT_PROTOCOL_BIN=\"$PWD/tests/fixtures/bin/asp\" node --test \"dist/tests/unit/self_policy.test.js\"",
+    "test:policy": "npm run build && node scripts/run-node-tests.mjs policy",
     "harness": "npm run build && node dist/src/cli/main.js check --full ."
   },
   "dependencies": {
