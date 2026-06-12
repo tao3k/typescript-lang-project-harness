@@ -177,7 +177,12 @@ function finalizeTreeSitterQueryArgs(state: TreeSitterQueryParseState): TreeSitt
   if (json && codeOnly) {
     return { kind: "error", message: "--code cannot be combined with --json" };
   }
-  if (positionals.length > 0) {
+  const positionalWorkspace = positionalWorkspaceRoot(positionals, workspaceRoot);
+  if ("kind" in positionalWorkspace) {
+    return positionalWorkspace;
+  }
+  const projectRoot = workspaceRoot ?? positionalWorkspace.value;
+  if (positionals.length > 0 && workspaceRoot !== undefined) {
     return {
       kind: "error",
       message: "query does not accept positional WORKSPACE; use --workspace <workspace-root>",
@@ -190,11 +195,29 @@ function finalizeTreeSitterQueryArgs(state: TreeSitterQueryParseState): TreeSitt
     terms,
     selector,
     aspSyntaxQueryPlan,
-    projectRoot: workspaceRoot,
+    projectRoot,
     packagePath,
-    workspace,
+    workspace: workspace || projectRoot !== undefined,
     json,
     codeOnly,
+  };
+}
+
+function positionalWorkspaceRoot(
+  positionals: readonly string[],
+  workspaceRoot: string | undefined,
+): { readonly value: string | undefined } | { readonly kind: "error"; readonly message: string } {
+  if (positionals.length === 0) return { value: undefined };
+  if (workspaceRoot !== undefined) {
+    return {
+      kind: "error",
+      message: "query does not accept positional WORKSPACE; use --workspace <workspace-root>",
+    };
+  }
+  if (positionals.length === 1) return { value: positionals[0] };
+  return {
+    kind: "error",
+    message: "query accepts at most one positional WORKSPACE",
   };
 }
 

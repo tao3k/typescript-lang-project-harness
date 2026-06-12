@@ -71,7 +71,13 @@ export function parseFlowLiteQueryArgs(argv: readonly string[]): FlowLiteQueryPa
   if (state.catalogId !== FLOW_LITE_CATALOG_ID) {
     return { kind: "error", message: "query flow-lite dispatch requires --catalog flow-lite" };
   }
-  if (state.positionals.length > 0) {
+  const positionalWorkspace = positionalFlowLiteWorkspaceRoot(
+    state.positionals,
+    state.workspaceRoot,
+  );
+  if ("kind" in positionalWorkspace) return positionalWorkspace;
+  const projectRoot = state.workspaceRoot ?? positionalWorkspace.value;
+  if (state.positionals.length > 0 && state.workspaceRoot !== undefined) {
     return {
       kind: "error",
       message:
@@ -87,9 +93,28 @@ export function parseFlowLiteQueryArgs(argv: readonly string[]): FlowLiteQueryPa
     kind: "flow-lite-query",
     catalogId: state.catalogId,
     where,
-    projectRoot: state.workspaceRoot,
-    workspace: state.workspace,
+    projectRoot,
+    workspace: state.workspace || projectRoot !== undefined,
     json: state.json,
+  };
+}
+
+function positionalFlowLiteWorkspaceRoot(
+  positionals: readonly string[],
+  workspaceRoot: string | undefined,
+): { readonly value: string | undefined } | FlowLiteParseError {
+  if (positionals.length === 0) return { value: undefined };
+  if (workspaceRoot !== undefined) {
+    return {
+      kind: "error",
+      message:
+        "query --catalog flow-lite does not accept positional WORKSPACE; use --workspace <workspace-root>",
+    };
+  }
+  if (positionals.length === 1) return { value: positionals[0] };
+  return {
+    kind: "error",
+    message: "query --catalog flow-lite accepts at most one positional WORKSPACE",
   };
 }
 

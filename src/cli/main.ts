@@ -17,8 +17,8 @@ export const HELP_TEXT = `ts-harness — TypeScript semantic search and project 
 Usage:
   ts-harness search <view> ... [--json] [--code] [--package <path>] [--workspace <workspace-root>]
   ts-harness query <owner-path> --term <symbol> [--term <symbol>] [--workspace <workspace-root>] [--names-only | --code]
-  ts-harness query (--catalog <id> | --treesitter-query <s-expression>) [--workspace <workspace-root>] [--selector <path[:start[:end]]>] [--code] [--json]
-  ts-harness query --catalog flow-lite --where 'source.call=NAME sink.constructs=TYPE scope.fn=FUNCTION' [--json] [--workspace <workspace-root>]
+  ts-harness query (--catalog <id> | --treesitter-query <s-expression>) [<workspace-root>] [--workspace <workspace-root>] [--selector <path[:start[:end]]>] [--code] [--json]
+  ts-harness query --catalog flow-lite --where 'source.call=NAME sink.constructs=TYPE scope.fn=FUNCTION' [<workspace-root>] [--json] [--workspace <workspace-root>]
   ts-harness ast-patch dry-run --packet <semantic-ast-patch.json|->
   ts-harness check [--changed | --full] [--json]
   ts-harness agent doctor [--json]
