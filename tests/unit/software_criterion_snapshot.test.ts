@@ -6,6 +6,7 @@ import test from "node:test";
 
 import { buildApiPacketPayload } from "../../src/cli/semantic-search/api.js";
 import { renderTypeScriptProjectHarness, runTypeScriptProjectHarness } from "../../src/index.js";
+import { slashPath } from "../../src/reasoning/path_utils.js";
 
 const SCENARIO = path.join(
   process.cwd(),
@@ -20,7 +21,7 @@ test("agent software criterion control-flow v1 scenario snapshot", () => {
   const root = setupScenario("ts-criterion-snapshot-");
   const report = runTypeScriptProjectHarness(root);
   const criterionModule = report.reasoningTree.modules.find((moduleReport) =>
-    moduleReport.path.endsWith("src/criterion.ts"),
+    slashPath(moduleReport.path).endsWith("src/criterion.ts"),
   );
   const findings = report.findings.filter(
     (finding) => finding.ruleId === "TS-AGENT-R007" || finding.ruleId === "TS-AGENT-R008",

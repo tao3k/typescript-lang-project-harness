@@ -70,7 +70,7 @@ function second(): void {
   assert.doesNotMatch(stdout, /const decision = classifyHook/u);
 });
 
-test("query --code rejects trailing project root", () => {
+test("query --code rejects positional workspace", () => {
   const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-query-code-reject-"));
   fs.mkdirSync(path.join(projectRoot, "src"));
   fs.writeFileSync(
@@ -103,6 +103,6 @@ test("query --code rejects trailing project root", () => {
   for (const argv of cases) {
     const args = parseProtocolArgs(argv);
     assert.equal(args?.kind, "error");
-    assert.match(args.message, /does not accept a trailing PROJECT_ROOT/u);
+    assert.match(args.message, /does not accept positional WORKSPACE/u);
   }
 });

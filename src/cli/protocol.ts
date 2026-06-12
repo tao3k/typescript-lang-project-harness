@@ -399,7 +399,7 @@ function parseQueryArgs(argv: readonly string[]): ProtocolArgs {
     } else if (arg === "--workspace") {
       const value = argv[index + 1];
       if (value === undefined || value.startsWith("-")) {
-        return { kind: "error", message: "--workspace requires a project root" };
+        return { kind: "error", message: "--workspace requires a workspace root" };
       }
       workspace = true;
       workspaceRoot = value;
@@ -428,25 +428,21 @@ function parseQueryArgs(argv: readonly string[]): ProtocolArgs {
     return { kind: "error", message: "--view read-packet requires --json" };
   }
   const ownerPath = selector === undefined ? positionals[0] : ownerPathFromQuerySelector(selector);
-  const positionalProjectRoot = selector === undefined ? positionals[1] : positionals[0];
-  const projectRoot = workspaceRoot ?? positionalProjectRoot;
+  if (positionals.length > (selector === undefined ? 1 : 0)) {
+    return {
+      kind: "error",
+      message: "query does not accept positional WORKSPACE; use --workspace <workspace-root>",
+    };
+  }
   if (ownerPath === undefined) {
+    if (namesOnly && terms.length > 0) {
+      return {
+        kind: "error",
+        message:
+          "query --names-only requires an owner selector; workspace term discovery is `search fzf '<term>' owner --view seeds --workspace <workspace-root>`",
+      };
+    }
     return { kind: "error", message: "query requires an owner path" };
-  }
-  if (workspaceRoot !== undefined && positionalProjectRoot !== undefined) {
-    return {
-      kind: "error",
-      message: "query accepts project root via --workspace or positional PROJECT_ROOT, not both",
-    };
-  }
-  if (codeOnly && positionalProjectRoot !== undefined) {
-    return {
-      kind: "error",
-      message: "query --code does not accept a trailing PROJECT_ROOT; use --workspace PROJECT_ROOT",
-    };
-  }
-  if (positionals.length > (selector === undefined ? 2 : 1)) {
-    return { kind: "error", message: "expected owner path and optional PROJECT_ROOT" };
   }
   if (terms.length === 0 && fromHook !== "direct-source-read") {
     return { kind: "error", message: "query requires at least one --term" };
@@ -471,7 +467,7 @@ function parseQueryArgs(argv: readonly string[]): ProtocolArgs {
     ownerPath,
     selector,
     terms,
-    projectRoot,
+    projectRoot: workspaceRoot,
     packagePath,
     workspace,
     json,
@@ -488,7 +484,7 @@ function parseSearchArgs(argv: readonly string[]): ProtocolArgs {
     return {
       kind: "error",
       message:
-        "usage: ts-harness search <workspace|prime|owner|dependency|deps|docs|api|public-external-types|policy|symbol|callsite|import|tests|fzf|reasoning|text|ingest|query> ... [--json] [--code] [--package PATH] [PROJECT_ROOT]",
+        "usage: ts-harness search <workspace|prime|owner|dependency|deps|docs|api|public-external-types|policy|symbol|callsite|import|tests|fzf|reasoning|text|ingest|query> ... [--json] [--code] [--package PATH] [--workspace <workspace-root>]",
     };
   }
   if (viewValue === "query") return parseSearchQueryArgs(argv.slice(1));
@@ -532,7 +528,7 @@ function parseSearchArgs(argv: readonly string[]): ProtocolArgs {
     } else if (arg === "--workspace") {
       const value = argv[index + 1];
       if (value === undefined || value.startsWith("-")) {
-        return { kind: "error", message: "--workspace requires a project root" };
+        return { kind: "error", message: "--workspace requires a workspace root" };
       }
       workspace = true;
       workspaceRoot = value;
@@ -611,17 +607,10 @@ function parseSearchArgs(argv: readonly string[]): ProtocolArgs {
     if (error !== undefined) {
       return { kind: "error", message: error };
     }
-    if (workspaceRoot !== undefined && projectRoot !== undefined) {
+    if (projectRoot !== undefined) {
       return {
         kind: "error",
-        message: "search accepts project root via --workspace or positional PROJECT_ROOT, not both",
-      };
-    }
-    if (codeOnly && projectRoot !== undefined) {
-      return {
-        kind: "error",
-        message:
-          "search --code does not accept a trailing PROJECT_ROOT; use --workspace PROJECT_ROOT",
+        message: "search does not accept positional WORKSPACE; use --workspace <workspace-root>",
       };
     }
     return {
@@ -629,7 +618,7 @@ function parseSearchArgs(argv: readonly string[]): ProtocolArgs {
       view: searchView.view,
       query,
       ...(itemQuery !== undefined ? { itemQuery } : {}),
-      projectRoot: workspaceRoot ?? projectRoot,
+      projectRoot: workspaceRoot,
       packagePath,
       workspace,
       ownerPath,
@@ -650,17 +639,17 @@ function parseSearchArgs(argv: readonly string[]): ProtocolArgs {
   if (error !== undefined) {
     return { kind: "error", message: error };
   }
-  if (workspaceRoot !== undefined && projectRoot !== undefined) {
+  if (projectRoot !== undefined) {
     return {
       kind: "error",
-      message: "search accepts project root via --workspace or positional PROJECT_ROOT, not both",
+      message: "search does not accept positional WORKSPACE; use --workspace <workspace-root>",
     };
   }
   return {
     kind: "search",
     view: searchView.view,
     query: undefined,
-    projectRoot: workspaceRoot ?? projectRoot,
+    projectRoot: workspaceRoot,
     packagePath,
     workspace,
     ownerPath: undefined,
@@ -741,7 +730,7 @@ function parseSearchQueryArgs(argv: readonly string[]): ProtocolArgs {
     } else if (arg === "--workspace") {
       const value = argv[index + 1];
       if (value === undefined || value.startsWith("-")) {
-        return { kind: "error", message: "--workspace requires a project root" };
+        return { kind: "error", message: "--workspace requires a workspace root" };
       }
       workspace = true;
       workspaceRoot = value;
@@ -758,13 +747,11 @@ function parseSearchQueryArgs(argv: readonly string[]): ProtocolArgs {
   if (terms.length === 0) {
     return { kind: "error", message: "search query requires at least one --term" };
   }
-  if (positionals.length > 1) {
-    return { kind: "error", message: "expected at most one PROJECT_ROOT argument" };
-  }
-  if (workspaceRoot !== undefined && positionals.length > 0) {
+  if (positionals.length > 0) {
     return {
       kind: "error",
-      message: "search accepts project root via --workspace or positional PROJECT_ROOT, not both",
+      message:
+        "search query does not accept positional WORKSPACE; use --workspace <workspace-root>",
     };
   }
   return {
@@ -774,7 +761,7 @@ function parseSearchQueryArgs(argv: readonly string[]): ProtocolArgs {
     ...(fromHook !== undefined ? { fromHook } : {}),
     ...(selector !== undefined ? { selector } : {}),
     ...(intent !== undefined ? { intent } : {}),
-    projectRoot: workspaceRoot ?? positionals[0],
+    projectRoot: workspaceRoot,
     packagePath,
     workspace,
     ownerPath: ownerPathFromQuerySelector(selector),
@@ -793,7 +780,7 @@ function resolveProviderProjectRoot(
   >,
 ): string {
   const projectRoot = path.resolve(cwd, args.projectRoot ?? ".");
-  if (args.packagePath !== undefined && !args.workspace) {
+  if (args.packagePath !== undefined) {
     return path.resolve(projectRoot, args.packagePath);
   }
   return projectRoot;
@@ -870,8 +857,8 @@ function parseSearchPipePositionals(
       projectRoot: remaining[0],
       error:
         acceptedPipes.length === 0 || !looksLikeOutOfOrderPipe
-          ? "expected at most one PROJECT_ROOT argument"
-          : `expected pipes (${acceptedPipes.join(",")}) before PROJECT_ROOT`,
+          ? "search does not accept positional WORKSPACE; use --workspace <workspace-root>"
+          : `expected pipes (${acceptedPipes.join(",")}) before workspace selector`,
     };
   }
   return { pipes, projectRoot: remaining[0] };

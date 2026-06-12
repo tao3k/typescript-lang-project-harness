@@ -45,7 +45,7 @@ test("owner items --query emits compact item locators", () => {
   );
 
   const result = runCliCapture(
-    ["search", "owner", "src/demo.ts", "items", "--query", "alpha", "."],
+    ["search", "owner", "src/demo.ts", "items", "--query", "alpha", "--workspace", "."],
     root,
   );
 
@@ -139,7 +139,10 @@ test("owner items --json emits parser nodes and node expand actions", () => {
     readTextFixture("compact-query/sources/ts-alpha.ts"),
   );
 
-  const result = runCliCapture(["query", "src/demo.ts", "--term", "alpha", "--json", "."], root);
+  const result = runCliCapture(
+    ["query", "src/demo.ts", "--term", "alpha", "--json", "--workspace", "."],
+    root,
+  );
 
   assert.equal(result.exitCode, 0, result.stderr);
   const packet = JSON.parse(result.stdout) as {

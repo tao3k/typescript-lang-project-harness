@@ -138,7 +138,16 @@ describe("benchmark: CLI query/search stable paths", () => {
 
     const elapsed = bestOf(3, () => {
       const result = runCliCapture(
-        ["query", "--selector", "src/sample.ts:2-5", "--term", "contentBlocks", "--code", "."],
+        [
+          "query",
+          "--selector",
+          "src/sample.ts:2-5",
+          "--term",
+          "contentBlocks",
+          "--code",
+          "--workspace",
+          ".",
+        ],
         dir,
       );
       assert.equal(result.exitCode, 0, result.stderr);
@@ -171,7 +180,7 @@ describe("benchmark: CLI query/search stable paths", () => {
 
     const elapsed = bestOf(3, () => {
       const result = runCliCapture(
-        ["search", "fzf", "contentBlocks", "owner", "tests", "--view", "seeds", "."],
+        ["search", "fzf", "contentBlocks", "owner", "tests", "--view", "seeds", "--workspace", "."],
         dir,
       );
       assert.equal(result.exitCode, 0, result.stderr);

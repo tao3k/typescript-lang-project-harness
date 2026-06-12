@@ -62,7 +62,17 @@ test("CLI executes TypeScript reasoning profiles", () => {
   const root = writeReasoningFixture();
 
   const ownerTests = runCliCapture(
-    ["search", "reasoning", "owner-tests", "--owner", "src/service.ts", "--view", "seeds", root],
+    [
+      "search",
+      "reasoning",
+      "owner-tests",
+      "--owner",
+      "src/service.ts",
+      "--view",
+      "seeds",
+      "--workspace",
+      root,
+    ],
     root,
   );
   assert.equal(ownerTests.exitCode, 0, ownerTests.stderr);
@@ -82,6 +92,7 @@ test("CLI executes TypeScript reasoning profiles", () => {
       "renderOrderStatus",
       "--view",
       "seeds",
+      "--workspace",
       root,
     ],
     root,
@@ -100,6 +111,7 @@ test("CLI executes TypeScript reasoning profiles", () => {
       "react",
       "--view",
       "seeds",
+      "--workspace",
       root,
     ],
     root,

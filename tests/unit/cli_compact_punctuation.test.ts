@@ -46,7 +46,7 @@ test("compact code omits standalone punctuation layout lines", () => {
   writeProject(root);
 
   const result = runCliCapture(
-    ["search", "owner", "src/chain.ts", "items", "--query", "build", "--json", "."],
+    ["search", "owner", "src/chain.ts", "items", "--query", "build", "--json", "--workspace", "."],
     root,
   );
 

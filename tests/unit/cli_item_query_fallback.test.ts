@@ -22,7 +22,7 @@ test("owner item query falls back to bounded top-level items on miss", () => {
     ].join("\n"),
   );
   const result = runCliCapture(
-    ["search", "owner", "src/types.ts", "items", "--query", "types|Types", "."],
+    ["search", "owner", "src/types.ts", "items", "--query", "types|Types", "--workspace", "."],
     root,
   );
   assert.equal(result.exitCode, 0);
@@ -54,7 +54,17 @@ test("owner item query fallback emits JSON packet evidence", () => {
   );
 
   const result = runCliCapture(
-    ["search", "owner", "src/types.ts", "items", "--query", "types|Types", "--json", "."],
+    [
+      "search",
+      "owner",
+      "src/types.ts",
+      "items",
+      "--query",
+      "types|Types",
+      "--json",
+      "--workspace",
+      ".",
+    ],
     root,
   );
 

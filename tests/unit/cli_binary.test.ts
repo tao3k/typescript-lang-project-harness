@@ -14,7 +14,7 @@ import {
 
 test("CLI documents ts-harness as the primary binary", () => {
   assert.match(HELP_TEXT, /^ts-harness — TypeScript semantic search/u);
-  assert.match(HELP_TEXT, /ts-harness search prime \./u);
+  assert.match(HELP_TEXT, /ts-harness search prime --workspace \./u);
   assert.doesNotMatch(HELP_TEXT, /ts-harnesss/u);
   assert.doesNotMatch(HELP_TEXT, new RegExp(["typescript", "project", "harness"].join("-"), "u"));
 });

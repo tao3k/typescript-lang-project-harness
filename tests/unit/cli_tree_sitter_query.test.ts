@@ -298,6 +298,7 @@ test("direct provider inline tree-sitter query requires ASP compiled plan", () =
       "query",
       "--treesitter-query",
       "(function_declaration name: (identifier) @function.name)",
+      "--workspace",
       ".",
     ],
     root,
@@ -308,7 +309,10 @@ test("direct provider inline tree-sitter query requires ASP compiled plan", () =
 
 test("query --catalog declarations uses embedded canonical catalog", () => {
   const root = treeSitterQueryFixture();
-  const result = runCliCapture(["query", "--catalog", "declarations", "--json", "."], root);
+  const result = runCliCapture(
+    ["query", "--catalog", "declarations", "--json", "--workspace", "."],
+    root,
+  );
   assert.equal(result.exitCode, 0, result.stderr);
   const packet = JSON.parse(result.stdout) as JsonObject;
   const query = record(packet.query, "packet.query");
@@ -374,6 +378,7 @@ test("query --catalog flow-lite rejects code output and open where keys", () => 
       "flow-lite",
       "--where",
       "source.call=payload sink.constructs=Action scope.fn=collectToolActions guard.eq=isSafe",
+      "--workspace",
       ".",
     ],
     root,
@@ -454,7 +459,7 @@ function functionNameTreeSitterQueryArgs(
   planArgs: readonly string[] = [],
   query = "(function_declaration name: (identifier) @function.name)",
 ): readonly string[] {
-  const rootArgs = extraArgs.includes("--code") ? ["--workspace", "."] : ["."];
+  const rootArgs = ["--workspace", "."];
   return [
     "query",
     "--treesitter-query",
@@ -472,7 +477,7 @@ function functionNameTreeSitterQueryArgs(
 }
 
 function flowLiteQueryArgs(extraArgs: readonly string[] = []): readonly string[] {
-  const rootArgs = extraArgs.includes("--code") ? ["--workspace", "."] : ["."];
+  const rootArgs = ["--workspace", "."];
   return [
     "query",
     "--catalog",

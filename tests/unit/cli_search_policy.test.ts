@@ -9,7 +9,7 @@ import { runCliCapture } from "./cli_helpers.js";
 test("search policy returns provider-owned owner and test handles", () => {
   const root = policySearchFixture();
   const result = runCliCapture(
-    ["search", "policy", "TS-AGENT-R001", "owner", "tests", "--view", "seeds", "."],
+    ["search", "policy", "TS-AGENT-R001", "owner", "tests", "--view", "seeds", "--workspace", "."],
     root,
   );
   assert.equal(result.exitCode, 0, result.stderr);
@@ -24,7 +24,7 @@ test("search policy returns provider-owned owner and test handles", () => {
 test("search policy JSON exposes semanticHandles", () => {
   const root = policySearchFixture();
   const result = runCliCapture(
-    ["search", "policy", "TS-PROJ-R001", "owner", "tests", "--json", "."],
+    ["search", "policy", "TS-PROJ-R001", "owner", "tests", "--json", "--workspace", "."],
     root,
   );
   assert.equal(result.exitCode, 0, result.stderr);

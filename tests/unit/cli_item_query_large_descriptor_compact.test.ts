@@ -95,6 +95,7 @@ test("item query compacts descriptor arrays and object maps structurally", () =>
       "--term",
       "typescriptViewDescriptors|typescriptViewIndex",
       "--json",
+      "--workspace",
       root,
     ],
     root,

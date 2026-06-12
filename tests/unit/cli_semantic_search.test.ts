@@ -97,7 +97,7 @@ test("CLI exposes semantic-search protocol commands", () => {
     "export const schemaFixture = true;\n",
   );
 
-  const prime = runCliCapture(["search", "prime", "."], root);
+  const prime = runCliCapture(["search", "prime", "--workspace", "."], root);
   assert.equal(prime.exitCode, 0);
   assert.match(prime.stdout, /^\[search-prime\] /u);
   assert.match(prime.stdout, /\bsourceFiles=\d+\b/u);
@@ -116,7 +116,10 @@ test("CLI exposes semantic-search protocol commands", () => {
   assert.match(prime.stdout, /\|synthesis .*algorithm=owner-rank-frontier/u);
   assert.match(prime.stdout, /\|owner src\/index\.ts/u);
 
-  const primeSeeds = runCliCapture(["search", "prime", "--view", "seeds", "."], root);
+  const primeSeeds = runCliCapture(
+    ["search", "prime", "--view", "seeds", "--workspace", "."],
+    root,
+  );
   assert.equal(primeSeeds.exitCode, 0);
   assert.match(primeSeeds.stdout, /^\[search-prime\] /u);
   assert.match(primeSeeds.stdout, /alg=(owner-rank-frontier|budgeted-prime-frontier-v1)/u);
@@ -126,14 +129,14 @@ test("CLI exposes semantic-search protocol commands", () => {
   assert.doesNotMatch(primeSeeds.stdout, /\|flow |\|synthesis |\|seed /u);
   assert.doesNotMatch(primeSeeds.stdout, /\|owner /u);
 
-  const workspace = runCliCapture(["search", "workspace", "."], root);
+  const workspace = runCliCapture(["search", "workspace", "--workspace", "."], root);
   assert.equal(workspace.exitCode, 0);
   assert.match(workspace.stdout, /^\[search-workspace\] /u);
   assert.match(workspace.stdout, /\bmode=workspace-index\b/u);
   assert.match(workspace.stdout, /\|package packages\/core /u);
   assert.doesNotMatch(workspace.stdout, /\|edge /u);
 
-  const workspaceJson = runCliCapture(["search", "workspace", "--json", "."], root);
+  const workspaceJson = runCliCapture(["search", "workspace", "--json", "--workspace", "."], root);
   assert.equal(workspaceJson.exitCode, 0);
   const workspacePacket = JSON.parse(workspaceJson.stdout) as {
     readonly method: string;
@@ -150,14 +153,17 @@ test("CLI exposes semantic-search protocol commands", () => {
     ),
   );
 
-  const packagePrime = runCliCapture(["search", "prime", "--package", "packages/core", "."], root);
+  const packagePrime = runCliCapture(
+    ["search", "prime", "--package", "packages/core", "--workspace", "."],
+    root,
+  );
   assert.equal(packagePrime.exitCode, 0);
   assert.match(packagePrime.stdout, /^\[search-prime\] /u);
   assert.match(packagePrime.stdout, /\bpackage=@example\/core\b/u);
   assert.match(packagePrime.stdout, /\|owner src\/index\.ts/u);
 
   const packagePrimeJson = runCliCapture(
-    ["search", "prime", "--package", "packages/core", "--json", "."],
+    ["search", "prime", "--package", "packages/core", "--json", "--workspace", "."],
     root,
   );
   assert.equal(packagePrimeJson.exitCode, 0);
@@ -193,7 +199,7 @@ test("CLI exposes semantic-search protocol commands", () => {
   assert.equal(workspaceDirectRead.exitCode, 0);
   assert.equal(workspaceDirectRead.stdout, "export interface Core { readonly ok: true; }\n");
 
-  const primeJson = runCliCapture(["search", "prime", "--json", "."], root);
+  const primeJson = runCliCapture(["search", "prime", "--json", "--workspace", "."], root);
   assert.equal(primeJson.exitCode, 0);
   const packet = JSON.parse(primeJson.stdout) as {
     readonly schemaId: string;
@@ -272,7 +278,7 @@ test("CLI exposes semantic-search protocol commands", () => {
   assert.ok(packet.searchSynthesis?.highImpactOwners?.includes("src/index.ts"));
   assert.equal(packet.owners.length, 2);
 
-  const text = runCliCapture(["search", "fzf", "OrderStatus", "."], root);
+  const text = runCliCapture(["search", "fzf", "OrderStatus", "--workspace", "."], root);
   assert.equal(text.exitCode, 0);
   assert.match(text.stdout, /^\[search-fzf\] /u);
   assert.match(text.stdout, /\|hit path=src\/index\.ts\b/u);
@@ -281,7 +287,7 @@ test("CLI exposes semantic-search protocol commands", () => {
   assert.match(text.stdout, /\bsymbol=findOrderStatus\b/u);
 
   const textOwnerTestsPipe = runCliCapture(
-    ["search", "fzf", "findOrderStatus", "owner", "tests", "."],
+    ["search", "fzf", "findOrderStatus", "owner", "tests", "--workspace", "."],
     root,
   );
   assert.equal(textOwnerTestsPipe.exitCode, 0);
@@ -295,7 +301,7 @@ test("CLI exposes semantic-search protocol commands", () => {
   );
 
   const textOwnerTestsPipeSeeds = runCliCapture(
-    ["search", "fzf", "findOrderStatus", "owner", "tests", "--view", "seeds", "."],
+    ["search", "fzf", "findOrderStatus", "owner", "tests", "--view", "seeds", "--workspace", "."],
     root,
   );
   assert.equal(textOwnerTestsPipeSeeds.exitCode, 0);
@@ -322,6 +328,7 @@ test("CLI exposes semantic-search protocol commands", () => {
       "tests",
       "--view",
       "seeds",
+      "--workspace",
       ".",
     ],
     root,
@@ -348,6 +355,7 @@ test("CLI exposes semantic-search protocol commands", () => {
       "--owner",
       "src/consumer.ts",
       "--json",
+      "--workspace",
       ".",
     ],
     root,
@@ -395,7 +403,7 @@ test("CLI exposes semantic-search protocol commands", () => {
   ]);
 
   const flagLikeTextQuery = runCliCapture(
-    ["search", "fzf", "--json", "--view", "seeds", "."],
+    ["search", "fzf", "--json", "--view", "seeds", "--workspace", "."],
     root,
   );
   assert.equal(flagLikeTextQuery.exitCode, 0);
@@ -406,7 +414,7 @@ test("CLI exposes semantic-search protocol commands", () => {
   assert.doesNotMatch(flagLikeTextQuery.stdout, /^\{/u);
 
   const testOnlyTextPipe = runCliCapture(
-    ["search", "fzf", "testOnlyMarker", "owner", "tests", "."],
+    ["search", "fzf", "testOnlyMarker", "owner", "tests", "--workspace", "."],
     root,
   );
   assert.equal(testOnlyTextPipe.exitCode, 0);
@@ -419,19 +427,22 @@ test("CLI exposes semantic-search protocol commands", () => {
   assert.doesNotMatch(testOnlyTextPipe.stdout, /\|owner src\/index\.ts/u);
   assert.doesNotMatch(testOnlyTextPipe.stdout, /\|edge O:src\/index\.ts -test->/u);
 
-  const specText = runCliCapture(["search", "fzf", "specOnlyMarker", "."], root);
+  const specText = runCliCapture(["search", "fzf", "specOnlyMarker", "--workspace", "."], root);
   assert.equal(specText.exitCode, 0);
   assert.match(specText.stdout, /\|hit path=tests\/flow\.spec\.ts lineRange=1:1\b/u);
   assert.match(specText.stdout, /\blayer=test\b/u);
 
   const invalidTextPipe = runCliCapture(
-    ["search", "fzf", "findOrderStatus", "tests", "owner", "."],
+    ["search", "fzf", "findOrderStatus", "tests", "owner", "--workspace", "."],
     root,
   );
   assert.equal(invalidTextPipe.exitCode, 2);
-  assert.match(invalidTextPipe.stderr, /expected pipes \(owner,tests\) before PROJECT_ROOT/u);
+  assert.match(invalidTextPipe.stderr, /expected pipes \(owner,tests\) before workspace selector/u);
 
-  const sourceText = runCliCapture(["search", "fzf", "internalOrderToken", "."], root);
+  const sourceText = runCliCapture(
+    ["search", "fzf", "internalOrderToken", "--workspace", "."],
+    root,
+  );
   assert.equal(sourceText.exitCode, 0);
   assert.match(sourceText.stdout, /^\[search-fzf\] /u);
   assert.match(sourceText.stdout, /\|hit path=src\/consumer\.ts lineRange=3:3\b/u);
@@ -439,7 +450,10 @@ test("CLI exposes semantic-search protocol commands", () => {
   assert.match(sourceText.stdout, /\breason=source-text\b/u);
   assert.match(sourceText.stdout, /\bsource=parser-visible-source\b/u);
 
-  const recencyText = runCliCapture(["search", "fzf", "sharedMtimeNeedle", "."], root);
+  const recencyText = runCliCapture(
+    ["search", "fzf", "sharedMtimeNeedle", "--workspace", "."],
+    root,
+  );
   assert.equal(recencyText.exitCode, 0);
   assert.match(recencyText.stdout, /^\[search-fzf\] /u);
   assert.match(recencyText.stdout, /\|hit path=src\/z-new\.ts lineRange=2:2\b/u);
@@ -450,13 +464,13 @@ test("CLI exposes semantic-search protocol commands", () => {
     recencyText.stdout,
   );
 
-  const symbol = runCliCapture(["search", "symbol", "findOrderStatus", "."], root);
+  const symbol = runCliCapture(["search", "symbol", "findOrderStatus", "--workspace", "."], root);
   assert.equal(symbol.exitCode, 0);
   assert.match(symbol.stdout, /^\[search-symbol\] /u);
   assert.match(symbol.stdout, /\|hit path=src\/index\.ts lineRange=1:1\b/u);
   assert.match(symbol.stdout, /kind=symbol/u);
 
-  const api = runCliCapture(["search", "api", "findOrderStatus", "."], root);
+  const api = runCliCapture(["search", "api", "findOrderStatus", "--workspace", "."], root);
   assert.equal(api.exitCode, 0);
   assert.match(api.stdout, /^\[search-api\] /u);
   assert.match(api.stdout, /\bsource=native-parser\b/u);
@@ -468,13 +482,16 @@ test("CLI exposes semantic-search protocol commands", () => {
   assert.match(api.stdout, /\breturns=object\b/u);
   assert.match(api.stdout, /\bfields=status,strict\b/u);
 
-  const externalApi = runCliCapture(["search", "api", "react@18.0.0::jsx", "."], root);
+  const externalApi = runCliCapture(
+    ["search", "api", "react@18.0.0::jsx", "--workspace", "."],
+    root,
+  );
   assert.equal(externalApi.exitCode, 0);
   assert.match(externalApi.stdout, /^\[search-api\] /u);
   assert.match(externalApi.stdout, /\bsource=external-provider-missing\b/u);
   assert.match(externalApi.stdout, /external docs\/API provider/u);
 
-  const docs = runCliCapture(["search", "docs", "searchSynthesis", "."], root);
+  const docs = runCliCapture(["search", "docs", "searchSynthesis", "--workspace", "."], root);
   assert.equal(docs.exitCode, 0);
   assert.match(docs.stdout, /^\[search-docs\] /u);
   assert.match(docs.stdout, /\bsurface=schema-json\b/u);
@@ -483,19 +500,22 @@ test("CLI exposes semantic-search protocol commands", () => {
   assert.match(docs.stdout, /\bsource=schema-json\b/u);
   assert.match(docs.stdout, /\bpointer=.*searchSynthesis/u);
 
-  const callsite = runCliCapture(["search", "callsite", "findOrderStatus", "."], root);
+  const callsite = runCliCapture(
+    ["search", "callsite", "findOrderStatus", "--workspace", "."],
+    root,
+  );
   assert.equal(callsite.exitCode, 0);
   assert.match(callsite.stdout, /^\[search-callsite\] /u);
   assert.match(callsite.stdout, /\|hit path=src\/consumer\.ts lineRange=1:1\b/u);
   assert.match(callsite.stdout, /reason=import-owner/u);
 
-  const imports = runCliCapture(["search", "import", "./index", "."], root);
+  const imports = runCliCapture(["search", "import", "./index", "--workspace", "."], root);
   assert.equal(imports.exitCode, 0);
   assert.match(imports.stdout, /^\[search-import\] /u);
   assert.match(imports.stdout, /\|hit path=src\/consumer\.ts lineRange=1:1\b/u);
   assert.match(imports.stdout, /\|edge O:src\/consumer\.ts -import-> O:src\/index\.ts/u);
 
-  const tests = runCliCapture(["search", "tests", "src/index.ts", "."], root);
+  const tests = runCliCapture(["search", "tests", "src/index.ts", "--workspace", "."], root);
   assert.equal(tests.exitCode, 0);
   assert.match(tests.stdout, /^\[search-tests\] /u);
   assert.match(tests.stdout, /\|hit path=tests\/index\.test\.ts lineRange=1:1\b/u);
@@ -525,7 +545,7 @@ test("CLI exposes semantic-search protocol commands", () => {
     'import { runCli } from "../../src/cli/main.js";\nrunCli();\n',
   );
   const transitiveTests = runCliCapture(
-    ["search", "tests", "src/cli/agent-hooks.ts", "."],
+    ["search", "tests", "src/cli/agent-hooks.ts", "--workspace", "."],
     transitiveTestsRoot,
   );
   assert.equal(transitiveTests.exitCode, 0);
@@ -536,7 +556,7 @@ test("CLI exposes semantic-search protocol commands", () => {
   );
 
   const ownerSeeds = runCliCapture(
-    ["search", "owner", "src/index.ts", "--view", "seeds", "."],
+    ["search", "owner", "src/index.ts", "--view", "seeds", "--workspace", "."],
     root,
   );
   assert.equal(ownerSeeds.exitCode, 0);
@@ -562,7 +582,7 @@ test("CLI exposes semantic-search protocol commands", () => {
   );
 
   const ownerItemsText = runCliCapture(
-    ["search", "owner", "src/protocol-types.ts", "items", "."],
+    ["search", "owner", "src/protocol-types.ts", "items", "--workspace", "."],
     root,
   );
   assert.equal(ownerItemsText.exitCode, 0);
@@ -588,7 +608,7 @@ test("CLI exposes semantic-search protocol commands", () => {
   assert.doesNotMatch(ownerItemsText.stdout, /\|edge /u);
 
   const ownerItemsSeeds = runCliCapture(
-    ["search", "owner", "src/protocol-types.ts", "items", "--view", "seeds", "."],
+    ["search", "owner", "src/protocol-types.ts", "items", "--view", "seeds", "--workspace", "."],
     root,
   );
   assert.equal(ownerItemsSeeds.exitCode, 0);
@@ -606,7 +626,7 @@ test("CLI exposes semantic-search protocol commands", () => {
   assert.doesNotMatch(ownerItemsSeeds.stdout, /^\|item /u);
 
   const ownerItemsJson = runCliCapture(
-    ["search", "owner", "src/protocol-types.ts", "items", "--json", "."],
+    ["search", "owner", "src/protocol-types.ts", "items", "--json", "--workspace", "."],
     root,
   );
   assert.equal(ownerItemsJson.exitCode, 0);
@@ -631,7 +651,7 @@ test("CLI exposes semantic-search protocol commands", () => {
   assert.equal(ownerItemsPacket.items?.[0]?.fields.exported, true);
 
   const parserVisibleTestOwner = runCliCapture(
-    ["search", "owner", "tests/index.test.ts", "."],
+    ["search", "owner", "tests/index.test.ts", "--workspace", "."],
     root,
   );
   assert.equal(parserVisibleTestOwner.exitCode, 0);
@@ -649,7 +669,7 @@ test("CLI exposes semantic-search protocol commands", () => {
   assert.doesNotMatch(parserVisibleTestOwner.stdout, /\|next ingest:tests\/index\.test\.ts/u);
 
   const pathOnlyOwner = runCliCapture(
-    ["search", "owner", "test-fixtures/semantic_search_schema.test.ts", "."],
+    ["search", "owner", "test-fixtures/semantic_search_schema.test.ts", "--workspace", "."],
     root,
   );
   assert.equal(pathOnlyOwner.exitCode, 0);
@@ -665,7 +685,14 @@ test("CLI exposes semantic-search protocol commands", () => {
   assert.match(pathOnlyOwner.stdout, /path exists but is not parser-visible/u);
 
   const pathOnlyOwnerJson = runCliCapture(
-    ["search", "owner", "test-fixtures/semantic_search_schema.test.ts", "--json", "."],
+    [
+      "search",
+      "owner",
+      "test-fixtures/semantic_search_schema.test.ts",
+      "--json",
+      "--workspace",
+      ".",
+    ],
     root,
   );
   assert.equal(pathOnlyOwnerJson.exitCode, 0);
@@ -685,7 +712,10 @@ test("CLI exposes semantic-search protocol commands", () => {
     { kind: "ingest", target: "test-fixtures/semantic_search_schema.test.ts" },
   ]);
 
-  const textMiss = runCliCapture(["search", "fzf", "semantic-search-packet", "."], root);
+  const textMiss = runCliCapture(
+    ["search", "fzf", "semantic-search-packet", "--workspace", "."],
+    root,
+  );
   assert.equal(textMiss.exitCode, 0);
   assert.match(
     textMiss.stdout,
@@ -694,13 +724,17 @@ test("CLI exposes semantic-search protocol commands", () => {
   assert.match(textMiss.stdout, /pipe rg output to search ingest/u);
   assert.match(textMiss.stdout, /\|next ingest:semantic-search-packet/u);
 
-  const ingest = runCliCapture(["search", "ingest", "."], root, "src/index.ts:1:findOrderStatus\n");
+  const ingest = runCliCapture(
+    ["search", "ingest", "--workspace", "."],
+    root,
+    "src/index.ts:1:findOrderStatus\n",
+  );
   assert.equal(ingest.exitCode, 0);
   assert.match(ingest.stdout, /^\[search-ingest\] src=rg-n/u);
   assert.match(ingest.stdout, /\|hit path=src\/index\.ts lineRange=1:1\b/u);
 
   const recencyIngest = runCliCapture(
-    ["search", "ingest", "."],
+    ["search", "ingest", "--workspace", "."],
     root,
     "src/a-old.ts:2:sharedMtimeNeedle\nsrc/z-new.ts:2:sharedMtimeNeedle\n",
   );

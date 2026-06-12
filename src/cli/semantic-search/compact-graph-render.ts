@@ -5,7 +5,6 @@
  * binary owns graph projection and line rendering so providers do not drift.
  */
 import { spawnSync } from "node:child_process";
-import path from "node:path";
 
 import type { SemanticSearchFieldValue, SemanticSearchPacket } from "./types.js";
 
@@ -62,20 +61,9 @@ export function renderCompactGraphPacket(
 }
 
 function spawnGraphRenderer(command: string, args: readonly string[], input: string) {
-  if (process.platform === "win32" && isWindowsBatchCommand(command)) {
-    return spawnSync(command, args, {
-      encoding: "utf8",
-      input,
-      shell: true,
-    });
-  }
   return spawnSync(command, args, {
     encoding: "utf8",
     input,
+    shell: process.platform === "win32",
   });
-}
-
-function isWindowsBatchCommand(command: string): boolean {
-  const extension = path.extname(command).toLowerCase();
-  return extension === ".cmd" || extension === ".bat";
 }

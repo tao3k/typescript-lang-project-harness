@@ -31,7 +31,7 @@ test("compact graph entries use rendered aliases", async () => {
   );
 
   const result = await runCliCapture(
-    ["search", "fzf", "describe", "owner", "tests", "--view", "seeds", root],
+    ["search", "fzf", "describe", "owner", "tests", "--view", "seeds", "--workspace", root],
     process.cwd(),
   );
 

@@ -48,7 +48,7 @@ async function runSearch(root: string, itemQuery: string): Promise<string> {
   let stdout = "";
   let stderr = "";
   const exitCode = await runCli(
-    ["search", "owner", "src/item-query.ts", "items", "--query", itemQuery, "."],
+    ["search", "owner", "src/item-query.ts", "items", "--query", itemQuery, "--workspace", "."],
     {
       stdout: { write: (chunk: string) => (stdout += chunk) },
       stderr: { write: (chunk: string) => (stderr += chunk) },

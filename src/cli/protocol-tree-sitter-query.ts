@@ -111,7 +111,7 @@ function parseTreeSitterQueryOptions(argv: readonly string[]): TreeSitterQueryOp
     } else if (arg === "--workspace") {
       const value = argv[index + 1];
       if (value === undefined || value.startsWith("-")) {
-        return { kind: "error", message: "--workspace requires a project root" };
+        return { kind: "error", message: "--workspace requires a workspace root" };
       }
       state.workspace = true;
       state.workspaceRoot = value;
@@ -177,20 +177,11 @@ function finalizeTreeSitterQueryArgs(state: TreeSitterQueryParseState): TreeSitt
   if (json && codeOnly) {
     return { kind: "error", message: "--code cannot be combined with --json" };
   }
-  if (workspaceRoot !== undefined && positionals.length > 0) {
+  if (positionals.length > 0) {
     return {
       kind: "error",
-      message: "query accepts project root via --workspace or positional PROJECT_ROOT, not both",
+      message: "query does not accept positional WORKSPACE; use --workspace <workspace-root>",
     };
-  }
-  if (codeOnly && positionals.length > 0) {
-    return {
-      kind: "error",
-      message: "query --code does not accept a trailing PROJECT_ROOT; use --workspace PROJECT_ROOT",
-    };
-  }
-  if (positionals.length > 1) {
-    return { kind: "error", message: "expected at most one PROJECT_ROOT argument" };
   }
   return {
     kind: "tree-sitter-query",
@@ -199,7 +190,7 @@ function finalizeTreeSitterQueryArgs(state: TreeSitterQueryParseState): TreeSitt
     terms,
     selector,
     aspSyntaxQueryPlan,
-    projectRoot: workspaceRoot ?? positionals[0],
+    projectRoot: workspaceRoot,
     packagePath,
     workspace,
     json,

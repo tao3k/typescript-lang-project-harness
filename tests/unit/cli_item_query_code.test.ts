@@ -27,7 +27,7 @@ test("help advertises --code as an explicit owner item output mode", () => {
   assert.match(top.stdout, /ts-harness search <view> \.\.\. \[--json\] \[--code\]/u);
   assert.match(
     top.stdout,
-    /ts-harness query <owner-path> --term <symbol> \[--term <symbol>\] \[--workspace <project-root>\] \[--names-only \| --code\]/u,
+    /ts-harness query <owner-path> --term <symbol> \[--term <symbol>\] \[--workspace <workspace-root>\] \[--names-only \| --code\]/u,
   );
 
   const search = runCliCapture(["search", "--help"], packageRoot);
@@ -41,7 +41,7 @@ test("help advertises --code as an explicit owner item output mode", () => {
   assert.equal(query.exitCode, 0, query.stderr);
   assert.match(
     query.stdout,
-    /query <owner-path> --term <symbol> \[--term <symbol>\] \[--workspace <project-root>\] \[--names-only \| --code\]/u,
+    /query <owner-path> --term <symbol> \[--term <symbol>\] \[--workspace <workspace-root>\] \[--names-only \| --code\]/u,
   );
 });
 

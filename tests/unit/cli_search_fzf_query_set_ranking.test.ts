@@ -75,6 +75,7 @@ test("fzf query-set ranks owner-local exported item matches before broad declara
     "tests",
     "--view",
     "seeds",
+    "--workspace",
     root,
   ]);
 

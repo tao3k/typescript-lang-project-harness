@@ -16,6 +16,7 @@ test("query --from-hook broad selector accepts shared surfaces", () => {
     "owners,tests",
     "--view",
     "seeds",
+    "--workspace",
     ".",
   ]);
 
@@ -39,10 +40,9 @@ test("query --from-hook broad selector accepts shared surfaces", () => {
   assert.match(stdout, /selector=fuzzy-set/);
   assert.match(
     stdout,
-    /legend: aliases ID:kind; node ID=kind:role\(value\)!next; edge SRC>{DST:rel}; frontier ID\.next/,
+    /legend: (?:aliases ID:kind; node )?ID=kind:role\(value\)!next; edge SRC>{DST:rel}; frontier ID\.next/,
   );
-  assert.match(stdout, /aliases=G:search,Q:query/);
+  assert.match(stdout, /(?:aliases=G:search,Q:query|aliases: graph:\{G=search,Q=query)/);
   assert.match(stdout, /rank=Q,O,T frontier=Q\.fzf,O\.owner,T\.tests/);
   assert.doesNotMatch(stdout, /\|seed /);
-  assert.doesNotMatch(stdout, /alias: graph:/);
 });

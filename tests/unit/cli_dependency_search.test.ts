@@ -43,7 +43,7 @@ test("CLI searches external dependency usage", () => {
     ].join("\n"),
   );
 
-  const dependency = runCliCapture(["search", "dependency", "react", "."], root);
+  const dependency = runCliCapture(["search", "dependency", "react", "--workspace", "."], root);
   assert.equal(dependency.exitCode, 0);
   assert.match(dependency.stdout, /^\[search-dependency\] /u);
   assert.match(
@@ -55,7 +55,10 @@ test("CLI searches external dependency usage", () => {
   assert.match(dependency.stdout, /moduleSpecifier=react/u);
   assert.match(dependency.stdout, /\|edge O:src\/index\.ts -dependency-> C:react/u);
 
-  const dependencyJson = runCliCapture(["search", "dependency", "react", "--json", "."], root);
+  const dependencyJson = runCliCapture(
+    ["search", "dependency", "react", "--json", "--workspace", "."],
+    root,
+  );
   assert.equal(dependencyJson.exitCode, 0);
   const packet = JSON.parse(dependencyJson.stdout) as {
     readonly method: string;
@@ -75,7 +78,7 @@ test("CLI searches external dependency usage", () => {
   assert.ok(packet.hits.some((hit) => hit.reason === "manifest-package-exact"));
 
   const publicExternalTypes = runCliCapture(
-    ["search", "public-external-types", "react", "."],
+    ["search", "public-external-types", "react", "--workspace", "."],
     root,
   );
   assert.equal(publicExternalTypes.exitCode, 0);
@@ -90,7 +93,7 @@ test("CLI searches external dependency usage", () => {
   assert.match(publicExternalTypes.stdout, /\bconfidence=possible\b/u);
 
   const publicExternalTypesJson = runCliCapture(
-    ["search", "public-external-types", "react", "--json", "."],
+    ["search", "public-external-types", "react", "--json", "--workspace", "."],
     root,
   );
   assert.equal(publicExternalTypesJson.exitCode, 0);
@@ -169,7 +172,10 @@ test("CLI searches external dependency usage", () => {
     ),
   );
 
-  const deps = runCliCapture(["search", "deps", "react/jsx-runtime@19.0.0::jsx", "."], root);
+  const deps = runCliCapture(
+    ["search", "deps", "react/jsx-runtime@19.0.0::jsx", "--workspace", "."],
+    root,
+  );
   assert.equal(deps.exitCode, 0);
   assert.match(deps.stdout, /^\[search-deps\] /u);
   assert.match(deps.stdout, /\bpackage=react\b/u);
@@ -185,7 +191,7 @@ test("CLI searches external dependency usage", () => {
   );
 
   const depsJson = runCliCapture(
-    ["search", "deps", "react/jsx-runtime@19.0.0::jsx", "--json", "."],
+    ["search", "deps", "react/jsx-runtime@19.0.0::jsx", "--json", "--workspace", "."],
     root,
   );
   assert.equal(depsJson.exitCode, 0);
@@ -259,7 +265,10 @@ test("CLI searches external dependency usage", () => {
     depsPacket.cache?.fileHashes.every((fileHash) => /^[a-f0-9]{64}$/u.test(fileHash.sha256)),
   );
 
-  const mismatch = runCliCapture(["search", "deps", "react@18.0.0::jsx", "--json", "."], root);
+  const mismatch = runCliCapture(
+    ["search", "deps", "react@18.0.0::jsx", "--json", "--workspace", "."],
+    root,
+  );
   assert.equal(mismatch.exitCode, 0);
   const mismatchPacket = JSON.parse(mismatch.stdout) as {
     readonly header: {
@@ -309,7 +318,10 @@ test("CLI deps search handles scoped packages and range-only versions", () => {
     ].join("\n"),
   );
 
-  const scoped = runCliCapture(["search", "deps", "@scope/sdk/client@2.0.0::Client", "."], root);
+  const scoped = runCliCapture(
+    ["search", "deps", "@scope/sdk/client@2.0.0::Client", "--workspace", "."],
+    root,
+  );
   assert.equal(scoped.exitCode, 0);
   assert.match(scoped.stdout, /^\[search-deps\] /u);
   assert.match(scoped.stdout, /\bpackage=@scope\/sdk\b/u);
@@ -325,7 +337,7 @@ test("CLI deps search handles scoped packages and range-only versions", () => {
   );
 
   const scopedJson = runCliCapture(
-    ["search", "deps", "@scope/range-sdk/client::RangeClient", "--json", "."],
+    ["search", "deps", "@scope/range-sdk/client::RangeClient", "--json", "--workspace", "."],
     root,
   );
   assert.equal(scopedJson.exitCode, 0);

@@ -77,6 +77,7 @@ test("search query maps hook selector terms into query-set owner and test seeds"
       "owner,tests",
       "--view",
       "seeds",
+      "--workspace",
       ".",
     ],
     root,
@@ -100,14 +101,32 @@ test("search query maps hook selector terms into query-set owner and test seeds"
 test("search query validates hook selector and terms", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-search-query-errors-"));
   const missingSelector = runCliCapture(
-    ["search", "query", "--from-hook", "direct-source-read", "--term", "parseSearchArgs", "."],
+    [
+      "search",
+      "query",
+      "--from-hook",
+      "direct-source-read",
+      "--term",
+      "parseSearchArgs",
+      "--workspace",
+      ".",
+    ],
     root,
   );
   assert.equal(missingSelector.exitCode, 2);
   assert.match(missingSelector.stderr, /--from-hook requires --selector/u);
 
   const missingTerms = runCliCapture(
-    ["search", "query", "--from-hook", "direct-source-read", "--selector", "**/*.ts", "."],
+    [
+      "search",
+      "query",
+      "--from-hook",
+      "direct-source-read",
+      "--selector",
+      "**/*.ts",
+      "--workspace",
+      ".",
+    ],
     root,
   );
   assert.equal(missingTerms.exitCode, 2);

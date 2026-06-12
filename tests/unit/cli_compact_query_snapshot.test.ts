@@ -77,7 +77,10 @@ function writeSnapshotProject(
 }
 
 function queryPacket(root: string, ownerPath: string, term: string): CompactSnapshotPacket {
-  const result = runCliCapture(["query", ownerPath, "--term", term, "--json", "."], root);
+  const result = runCliCapture(
+    ["query", ownerPath, "--term", term, "--json", "--workspace", "."],
+    root,
+  );
   assert.equal(result.exitCode, 0, result.stderr);
   return JSON.parse(result.stdout) as CompactSnapshotPacket;
 }

@@ -74,7 +74,15 @@ export function semanticSearchFixture(): string {
 }
 
 export function jsonPacket(root: string, argv: readonly string[], stdin = ""): JsonObject {
-  const result = runCliCapture(argv, root, stdin);
+  const result = runCliCapture(schemaTestWorkspaceArgs(argv), root, stdin);
   assert.equal(result.exitCode, 0, result.stderr);
   return JSON.parse(result.stdout) as JsonObject;
+}
+
+function schemaTestWorkspaceArgs(argv: readonly string[]): readonly string[] {
+  if (argv.includes("--workspace")) return argv;
+  const command = argv[0];
+  if (command !== "search" && command !== "query") return argv;
+  if (argv.at(-1) !== ".") return argv;
+  return [...argv.slice(0, -1), "--workspace", "."];
 }

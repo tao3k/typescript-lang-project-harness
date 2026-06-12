@@ -40,7 +40,14 @@ test("semantic graph facts renders field type and collection graph facts", () =>
     ].join("\n"),
   );
 
-  const command = ["search", "semantic-facts", "array collection fields", "--json", "."];
+  const command = [
+    "search",
+    "semantic-facts",
+    "array collection fields",
+    "--json",
+    "--workspace",
+    ".",
+  ];
   const result = runCliCapture(command, root, "model.ts:2:1:names\n");
 
   assert.equal(result.exitCode, 0, result.stderr);
@@ -171,7 +178,14 @@ test("semantic graph facts preserves candidate-owner facts for concurrency API q
   );
 
   const result = runCliCapture(
-    ["search", "semantic-facts", "Effect concurrency Fiber Queue Stream Scope", "--json", "."],
+    [
+      "search",
+      "semantic-facts",
+      "Effect concurrency Fiber Queue Stream Scope",
+      "--json",
+      "--workspace",
+      ".",
+    ],
     root,
     "service.ts:6:1:Effect\nservice.ts:7:1:Stream\n",
   );
@@ -243,7 +257,7 @@ test("semantic graph facts renders package build dependency and test facts", () 
   fs.writeFileSync(path.join(root, "model.ts"), "interface Cache {\n  entries: string[];\n}\n");
 
   const result = runCliCapture(
-    ["search", "semantic-facts", "field", "--json", "."],
+    ["search", "semantic-facts", "field", "--json", "--workspace", "."],
     root,
     "model.ts:2:1:entries\n",
   );

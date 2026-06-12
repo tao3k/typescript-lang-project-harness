@@ -11,7 +11,6 @@ interface ExactSourceQueryArgs {
   readonly selector: string;
   readonly ownerPath: string;
   readonly projectRoot: string | undefined;
-  readonly packagePath: string | undefined;
 }
 
 export function tryRunExactSourceQueryCli(
@@ -21,10 +20,7 @@ export function tryRunExactSourceQueryCli(
 ): number | undefined {
   const args = parseExactSourceQueryArgs(argv);
   if (args === undefined) return undefined;
-  let projectRoot = path.resolve(cwd, args.projectRoot ?? ".");
-  if (args.packagePath !== undefined) {
-    projectRoot = path.resolve(projectRoot, args.packagePath);
-  }
+  const projectRoot = path.resolve(cwd, args.projectRoot ?? ".");
   const output = renderExactSourceWindowCode(projectRoot, args.ownerPath, args.selector);
   if (output === undefined) return undefined;
   streams.stdout.write(`${output}\n`);
@@ -38,7 +34,7 @@ function parseExactSourceQueryArgs(argv: readonly string[]): ExactSourceQueryArg
   let namesOnly = false;
   let fromHook: string | undefined;
   let selector: string | undefined;
-  let packagePath: string | undefined;
+  let workspaceRoot: string | undefined;
   let hasTerm = false;
   const positionals: string[] = [];
   for (let index = 1; index < argv.length; index++) {
@@ -64,7 +60,11 @@ function parseExactSourceQueryArgs(argv: readonly string[]): ExactSourceQueryArg
     } else if (arg === "--package") {
       const value = argv[index + 1];
       if (value === undefined || value.startsWith("-")) return undefined;
-      packagePath = value;
+      index += 1;
+    } else if (arg === "--workspace") {
+      const value = argv[index + 1];
+      if (value === undefined || value.startsWith("-")) return undefined;
+      workspaceRoot = value;
       index += 1;
     } else if (arg === "--from-hook") {
       const value = argv[index + 1];
@@ -93,13 +93,12 @@ function parseExactSourceQueryArgs(argv: readonly string[]): ExactSourceQueryArg
   if (!codeOnly || json || namesOnly || selector === undefined) return undefined;
   if (fromHook !== undefined && fromHook !== "direct-source-read") return undefined;
   if (!hasTerm && fromHook !== "direct-source-read") return undefined;
-  if (positionals.length > 1) return undefined;
+  if (positionals.length > 0) return undefined;
   const ownerPath = ownerPathFromQuerySelector(selector);
   if (ownerPath === undefined || !selectorHasLineRange(selector, ownerPath)) return undefined;
   return {
     selector,
     ownerPath,
-    projectRoot: positionals[0],
-    packagePath,
+    projectRoot: workspaceRoot,
   };
 }

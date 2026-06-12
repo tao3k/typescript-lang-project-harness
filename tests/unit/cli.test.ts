@@ -58,7 +58,7 @@ test("CLI search uses fast syntax reasoning while check keeps semantic diagnosti
   );
   fs.writeFileSync(path.join(root, "src", "index.ts"), "export const value: string = 1;\n");
 
-  const search = runCliCapture(["search", "prime", "--json", "."], root);
+  const search = runCliCapture(["search", "prime", "--json", "--workspace", "."], root);
   assert.equal(search.exitCode, 0);
   const packet = JSON.parse(search.stdout) as {
     readonly findings: readonly { readonly ruleId: string }[];
@@ -128,6 +128,7 @@ test("fzf query-set explains fixture paths and synthesizes real owners", () => {
       "owner",
       "tests",
       "--json",
+      "--workspace",
       ".",
     ],
     root,
@@ -217,6 +218,7 @@ test("fzf query-set explains fixture paths and synthesizes real owners", () => {
       "tests",
       "--view",
       "seeds",
+      "--workspace",
       ".",
     ],
     root,
@@ -271,6 +273,7 @@ test("fzf search prefilter scopes parser input and keeps requested owner", () =>
       "--package",
       "packages/feature",
       "--json",
+      "--workspace",
       ".",
     ],
     root,
@@ -334,7 +337,7 @@ test("CLI ranks workspace packages before test fixtures", () => {
     );
   }
 
-  const workspace = runCliCapture(["search", "workspace", "."], root);
+  const workspace = runCliCapture(["search", "workspace", "--workspace", "."], root);
 
   assert.equal(workspace.exitCode, 0);
   assert.match(workspace.stdout, /\bmode=workspace-index\b/u);
@@ -390,7 +393,10 @@ test("CLI reports root asp owner for hook install and runtime", () => {
     /\|route syntax-code selectors=S:tree-sitter-query,R:exact-selector returns=code code=pure/u,
   );
   assert.match(guide.stdout, /\|route query-code selectors=O:owner,Q:symbol/u);
-  assert.match(guide.stdout, /\|cmd prime=asp typescript search prime --view seeds \./u);
+  assert.match(
+    guide.stdout,
+    /\|cmd prime=asp typescript search prime --view seeds --workspace <workspace-root>/u,
+  );
   assert.match(guide.stdout, /asp typescript search fzf <query> owner tests --view seeds/u);
   assert.doesNotMatch(guide.stdout, /\|cmd prime=asp typescript search prime --view seeds \//u);
   assert.match(guide.stdout, /agent hook install\/runtime is owned by asp/u);

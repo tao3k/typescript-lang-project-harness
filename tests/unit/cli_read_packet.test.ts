@@ -40,6 +40,7 @@ test("query direct-source-read emits semantic read packet", () => {
       "--selector",
       "owner:src/demo.ts:1:3",
       "--json",
+      "--workspace",
       ".",
     ],
     root,
@@ -141,7 +142,15 @@ test("query direct-source-read read-packet preserves exact non-item source windo
 test("query direct-source-read line selector emits bounded source window", () => {
   const root = readPacketFixture();
   const result = runCliCapture(
-    ["query", "--from-hook", "direct-source-read", "--selector", "src/demo.ts:2:2", "."],
+    [
+      "query",
+      "--from-hook",
+      "direct-source-read",
+      "--selector",
+      "src/demo.ts:2:2",
+      "--workspace",
+      ".",
+    ],
     root,
   );
 
@@ -196,7 +205,16 @@ test("query direct-source-read wide selector emits source windows", () => {
   assert.equal(windows[1]?.text, "export interface Beta {\n  readonly value: string;\n}");
 
   const lineResult = runCliCapture(
-    ["query", "--from-hook", "direct-source-read", "--selector", "src/demo.ts:1-80", "--code", "."],
+    [
+      "query",
+      "--from-hook",
+      "direct-source-read",
+      "--selector",
+      "src/demo.ts:1-80",
+      "--code",
+      "--workspace",
+      ".",
+    ],
     root,
   );
   assert.equal(lineResult.exitCode, 0, lineResult.stderr);

@@ -67,7 +67,8 @@ test("owner items render as compact item inventory", () => {
         target: "SemanticReadPacket",
         ownerPath: "src/cli/semantic-search/item-query.ts",
         fields: {
-          command: "ts-harness search fzf --query-set SemanticReadPacket owner --view seeds .",
+          command:
+            "ts-harness search fzf --query-set SemanticReadPacket owner --view seeds --workspace .",
         },
       },
     ],

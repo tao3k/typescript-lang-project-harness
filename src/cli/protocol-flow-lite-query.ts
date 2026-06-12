@@ -39,6 +39,7 @@ interface FlowLiteQueryParseState {
   catalogId: string | undefined;
   whereExpr: string | undefined;
   workspace: boolean;
+  workspaceRoot: string | undefined;
   json: boolean;
   positionals: string[];
 }
@@ -56,6 +57,7 @@ export function parseFlowLiteQueryArgs(argv: readonly string[]): FlowLiteQueryPa
     catalogId: undefined,
     whereExpr: undefined,
     workspace: false,
+    workspaceRoot: undefined,
     json: false,
     positionals: [],
   };
@@ -69,8 +71,12 @@ export function parseFlowLiteQueryArgs(argv: readonly string[]): FlowLiteQueryPa
   if (state.catalogId !== FLOW_LITE_CATALOG_ID) {
     return { kind: "error", message: "query flow-lite dispatch requires --catalog flow-lite" };
   }
-  if (state.positionals.length > 1) {
-    return { kind: "error", message: "query --catalog flow-lite accepts at most one project root" };
+  if (state.positionals.length > 0) {
+    return {
+      kind: "error",
+      message:
+        "query --catalog flow-lite does not accept positional WORKSPACE; use --workspace <workspace-root>",
+    };
   }
   if (state.whereExpr === undefined) {
     return { kind: "error", message: "query --catalog flow-lite requires --where" };
@@ -81,7 +87,7 @@ export function parseFlowLiteQueryArgs(argv: readonly string[]): FlowLiteQueryPa
     kind: "flow-lite-query",
     catalogId: state.catalogId,
     where,
-    projectRoot: state.positionals[0],
+    projectRoot: state.workspaceRoot,
     workspace: state.workspace,
     json: state.json,
   };
@@ -122,8 +128,13 @@ function consumeFlowLiteArg(
     return { kind: "ok", nextIndex: index };
   }
   if (arg === "--workspace") {
+    const value = argv[index + 1];
+    if (value === undefined || value.startsWith("-")) {
+      return { kind: "error", message: "--workspace requires a workspace root" };
+    }
     state.workspace = true;
-    return { kind: "ok", nextIndex: index };
+    state.workspaceRoot = value;
+    return { kind: "ok", nextIndex: index + 1 };
   }
   if (arg === "--code") {
     return {

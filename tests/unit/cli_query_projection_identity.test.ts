@@ -71,7 +71,10 @@ test("query projection exposes unique parser-owned rendered node ids", () => {
   const root = mkdtempSync(join(tmpdir(), "ts-projection-identity-"));
   writeProject(root);
 
-  const packet = runCliJson(["query", "src/projection.ts", "--term", "build", "--json", "."], root);
+  const packet = runCliJson(
+    ["query", "src/projection.ts", "--term", "build", "--json", "--workspace", "."],
+    root,
+  );
   const projection = firstProjection(packet);
   const nodes = projection.nodes;
   const renderedNodeIds = projection.renderedNodeIds;

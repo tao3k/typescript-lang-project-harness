@@ -15,14 +15,14 @@ export interface CliStreams {
 export const HELP_TEXT = `ts-harness — TypeScript semantic search and project harness
 
 Usage:
-  ts-harness search <view> ... [--json] [--code] [--package <path>] [project-root]
-  ts-harness query <owner-path> --term <symbol> [--term <symbol>] [--workspace <project-root>] [--names-only | --code]
-  ts-harness query (--catalog <id> | --treesitter-query <s-expression>) [--workspace <project-root>] [--selector <path[:start[:end]]>] [--code] [--json]
-  ts-harness query --catalog flow-lite --where 'source.call=NAME sink.constructs=TYPE scope.fn=FUNCTION' [--json] [project-root]
-  ts-harness ast-patch dry-run --packet <semantic-ast-patch.json|-> [project-root]
-  ts-harness check [--changed | --full] [--json] [project-root]
-  ts-harness agent doctor [--json] [project-root]
-  ts-harness agent guide [project-root]
+  ts-harness search <view> ... [--json] [--code] [--package <path>] [--workspace <workspace-root>]
+  ts-harness query <owner-path> --term <symbol> [--term <symbol>] [--workspace <workspace-root>] [--names-only | --code]
+  ts-harness query (--catalog <id> | --treesitter-query <s-expression>) [--workspace <workspace-root>] [--selector <path[:start[:end]]>] [--code] [--json]
+  ts-harness query --catalog flow-lite --where 'source.call=NAME sink.constructs=TYPE scope.fn=FUNCTION' [--json] [--workspace <workspace-root>]
+  ts-harness ast-patch dry-run --packet <semantic-ast-patch.json|->
+  ts-harness check [--changed | --full] [--json]
+  ts-harness agent doctor [--json]
+  ts-harness agent guide
 
 SEARCH VIEWS
   search workspace          Workspace package/router index
@@ -61,7 +61,7 @@ QUERY
                               Pure compact parser-owned code output
   query --treesitter-query <s-expression> [--selector <selector>] [--code]
                              Tree-sitter-compatible syntax locate, capture, and pure code extraction
-  query --from-hook direct-source-read --workspace <project-root> --selector <workspace-path:start:end> --code
+  query --from-hook direct-source-read --workspace <workspace-root> --selector <workspace-path:start:end> --code
                              Source-preserved direct read for workspace-relative selectors
   query --catalog declarations
                              Provider-embedded canonical tree-sitter query catalog
@@ -88,29 +88,29 @@ GENERAL
   --help             This help
 
 EXAMPLES
-  ts-harness search workspace .
-  ts-harness search prime --package packages/core .
-  ts-harness search prime .
-  ts-harness search dependency react .
-  ts-harness search deps react/jsx-runtime@19.0.0::jsx .
-  ts-harness search api OrderStatus .
-  ts-harness search public-external-types react .
-  ts-harness search policy TS-AGENT-R001 owner tests .
-  ts-harness search symbol OrderStatus .
-  ts-harness search callsite OrderStatus .
-  ts-harness search import ./order .
-  ts-harness search tests src/domain/order.ts .
-  ts-harness search fzf OrderStatus .
-  ts-harness search fzf --query-set OrderStatus --query-set findOrderStatus owner tests .
+  ts-harness search workspace --workspace .
+  ts-harness search prime --package packages/core --workspace .
+  ts-harness search prime --workspace .
+  ts-harness search dependency react --workspace .
+  ts-harness search deps react/jsx-runtime@19.0.0::jsx --workspace .
+  ts-harness search api OrderStatus --workspace .
+  ts-harness search public-external-types react --workspace .
+  ts-harness search policy TS-AGENT-R001 owner tests --workspace .
+  ts-harness search symbol OrderStatus --workspace .
+  ts-harness search callsite OrderStatus --workspace .
+  ts-harness search import ./order --workspace .
+  ts-harness search tests src/domain/order.ts --workspace .
+  ts-harness search fzf OrderStatus --workspace .
+  ts-harness search fzf --query-set OrderStatus --query-set findOrderStatus owner tests --workspace .
   ts-harness query src/domain/order.ts --term findOrderStatus --workspace . --names-only
   ts-harness query src/domain/order.ts --term findOrderStatus --workspace . --code
   ts-harness query --treesitter-query '(function_declaration name: (identifier) @function.name)' --workspace .
   ts-harness query --catalog declarations --selector src/domain/order.ts --workspace . --code
-  ts-harness query --catalog flow-lite --where 'source.call=payload sink.constructs=Action scope.fn=collect' .
-  ts-harness ast-patch dry-run --packet semantic-ast-patch.json .
-  rg -n "OrderStatus" src tests | ts-harness search ingest .
-  ts-harness check --changed .
-  ts-harness agent guide .
+  ts-harness query --catalog flow-lite --where 'source.call=payload sink.constructs=Action scope.fn=collect' --workspace .
+  ts-harness ast-patch dry-run --packet semantic-ast-patch.json
+  rg -n "OrderStatus" src tests | ts-harness search ingest --workspace .
+  ts-harness check --changed
+  ts-harness agent guide
 
 `;
 

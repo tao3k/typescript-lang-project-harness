@@ -17,12 +17,12 @@ test("search ingest descriptor accepts items and tests pipes", () => {
   assert.equal(descriptor?.acceptsStdin, true);
 });
 
-test("search ingest accepts pipes before project root", () => {
+test("search ingest accepts pipes with explicit workspace", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-search-ingest-cli-"));
   fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ name: "fixture" }));
 
   const result = runCliCapture(
-    ["search", "ingest", "items", "tests", "--view", "seeds", "."],
+    ["search", "ingest", "items", "tests", "--view", "seeds", "--workspace", "."],
     root,
   );
 
@@ -30,7 +30,7 @@ test("search ingest accepts pipes before project root", () => {
   assert.match(result.stdout, /^\[search-ingest\] root=\. alg=seed-frontier/mu);
 });
 
-test("search ingest rejects extra positional root after pipes", () => {
+test("search ingest rejects positional workspace after pipes", () => {
   const parsed = parseProtocolArgs([
     "search",
     "ingest",
@@ -44,7 +44,10 @@ test("search ingest rejects extra positional root after pipes", () => {
 
   assert.equal(parsed?.kind, "error");
   if (parsed?.kind !== "error") return;
-  assert.equal(parsed.message, "expected at most one PROJECT_ROOT argument");
+  assert.equal(
+    parsed.message,
+    "search does not accept positional WORKSPACE; use --workspace <workspace-root>",
+  );
 
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-search-ingest-cli-"));
   fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ name: "fixture" }));
@@ -55,5 +58,5 @@ test("search ingest rejects extra positional root after pipes", () => {
   );
 
   assert.equal(result.exitCode, 2);
-  assert.match(result.stderr, /expected at most one PROJECT_ROOT argument/u);
+  assert.match(result.stderr, /does not accept positional WORKSPACE/u);
 });

@@ -40,7 +40,7 @@ test("search fzf matches path-only TypeScript candidates", () => {
     );
 
     const result = runCliCapture(
-      ["search", "fzf", "hookruntime", "owner", "tests", "--view", "seeds", "."],
+      ["search", "fzf", "hookruntime", "owner", "tests", "--view", "seeds", "--workspace", "."],
       root,
     );
 
@@ -65,6 +65,7 @@ test("search fzf matches path-only TypeScript candidates", () => {
         legacyAliasField,
         "--view",
         "seeds",
+        "--workspace",
         ".",
       ],
       root,

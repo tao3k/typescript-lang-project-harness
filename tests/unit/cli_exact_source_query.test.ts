@@ -22,7 +22,16 @@ test("exact source query emits selector source window without protocol dispatch"
   );
   let stdout = "";
   const status = tryRunExactSourceQueryCli(
-    ["query", "--selector", "src/sample.ts:2-4", "--term", "contentBlocks", "--code", "."],
+    [
+      "query",
+      "--selector",
+      "src/sample.ts:2-4",
+      "--term",
+      "contentBlocks",
+      "--code",
+      "--workspace",
+      ".",
+    ],
     { stdout: { write: (chunk: string) => void (stdout += chunk) } },
     projectRoot,
   );
