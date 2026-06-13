@@ -177,6 +177,12 @@ function finalizeTreeSitterQueryArgs(state: TreeSitterQueryParseState): TreeSitt
   if (json && codeOnly) {
     return { kind: "error", message: "--code cannot be combined with --json" };
   }
+  if (codeOnly && positionals.length > 0) {
+    return {
+      kind: "error",
+      message: "query does not accept positional WORKSPACE; use --workspace <workspace-root>",
+    };
+  }
   const positionalWorkspace = positionalWorkspaceRoot(positionals, workspaceRoot);
   if ("kind" in positionalWorkspace) {
     return positionalWorkspace;

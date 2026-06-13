@@ -226,6 +226,8 @@ test("semantic language registry JSON documents the TypeScript provider identity
     "check/changed",
     "check/full",
     "ast-patch/dry-run",
+    "evidence/graph",
+    "evidence/analyze",
     "agent/doctor",
     "agent/guide",
   ]);
@@ -254,7 +256,9 @@ test("semantic language registry JSON documents the TypeScript provider identity
         : true,
     );
     assert.ok(
-      ["search", "query", "check", "ast-patch", "agent"].includes(String(descriptor.command)),
+      ["search", "query", "check", "ast-patch", "evidence", "agent"].includes(
+        String(descriptor.command),
+      ),
     );
     if (String(descriptor.method).startsWith("search/")) {
       assert.equal(descriptor.command, "search");
@@ -503,6 +507,31 @@ test("semantic language registry JSON documents the TypeScript provider identity
       assert.equal(Object.hasOwn(descriptor, "acceptedPipes"), false);
       assert.equal(Object.hasOwn(descriptor, "capabilities"), false);
       assert.equal(Object.hasOwn(descriptor, "ingestRequiredFor"), false);
+    } else if (String(descriptor.method).startsWith("evidence/")) {
+      const method = String(descriptor.method);
+      assert.equal(descriptor.command, "evidence");
+      assert.equal(Object.hasOwn(descriptor, "view"), false);
+      assert.equal(descriptor.input, "provider project root");
+      assert.deepEqual(
+        descriptor.outputSchemaIds,
+        method === "evidence/analyze"
+          ? ["agent.semantic-protocols.semantic-graph-turbo-request"]
+          : ["agent.semantic-protocols.semantic-evidence-graph"],
+      );
+      assert.deepEqual(
+        descriptor.packetSchemas === undefined ? [] : descriptor.packetSchemas,
+        method === "evidence/analyze" ? ["semantic-graph-turbo-request.v1"] : [],
+      );
+      assert.deepEqual(
+        descriptor.clients === undefined ? [] : descriptor.clients,
+        method === "evidence/analyze" ? ["asp-graph-turbo"] : [],
+      );
+      assert.equal(Object.hasOwn(descriptor, "requiresQuery"), false);
+      assert.equal(Object.hasOwn(descriptor, "acceptsStdin"), false);
+      assert.equal(Object.hasOwn(descriptor, "supportsPackageScope"), false);
+      assert.equal(Object.hasOwn(descriptor, "acceptedPipes"), false);
+      assert.equal(Object.hasOwn(descriptor, "capabilities"), false);
+      assert.equal(Object.hasOwn(descriptor, "ingestRequiredFor"), false);
     } else if (String(descriptor.method).startsWith("agent/")) {
       assert.equal(descriptor.command, "agent");
       assert.equal(Object.hasOwn(descriptor, "view"), false);
@@ -563,6 +592,10 @@ test("semantic language registry JSON documents the TypeScript provider identity
   assertRegisteredSchema(
     "agent.semantic-protocols.semantic-graph",
     "schemas/semantic-graph.v1.schema.json",
+  );
+  assertRegisteredSchema(
+    "agent.semantic-protocols.semantic-graph-turbo-request",
+    "schemas/semantic-graph-turbo-request.v1.schema.json",
   );
   assertRegisteredSchema(
     "agent.semantic-protocols.semantic-fact-graph",
@@ -636,6 +669,7 @@ test("package-local semantic schemas stay synchronized with the protocol reposit
     "semantic-tree-sitter-query.v1.schema.json",
     "semantic-tree-sitter-grammar-profile.v1.schema.json",
     "semantic-graph.v1.schema.json",
+    "semantic-graph-turbo-request.v1.schema.json",
     "semantic-fact-graph.v1.schema.json",
     "semantic-fact-ontology.v1.schema.json",
     "semantic-type-surface.v1.schema.json",

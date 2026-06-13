@@ -22,6 +22,8 @@ export const SEMANTIC_TREE_SITTER_QUERY_SCHEMA_ID =
 export const SEMANTIC_TREE_SITTER_GRAMMAR_PROFILE_SCHEMA_ID =
   "agent.semantic-protocols.semantic-tree-sitter-grammar-profile" as const;
 export const SEMANTIC_GRAPH_SCHEMA_ID = "agent.semantic-protocols.semantic-graph" as const;
+export const SEMANTIC_GRAPH_TURBO_REQUEST_SCHEMA_ID =
+  "agent.semantic-protocols.semantic-graph-turbo-request" as const;
 export const SEMANTIC_FACT_GRAPH_SCHEMA_ID =
   "agent.semantic-protocols.semantic-fact-graph" as const;
 export const SEMANTIC_FACT_ONTOLOGY_SCHEMA_ID =
@@ -265,6 +267,7 @@ export const TYPE_SCRIPT_QUERY_METHODS = [
   "query/direct-source-read",
 ] as const;
 export const TYPE_SCRIPT_AST_PATCH_METHODS = ["ast-patch/dry-run"] as const;
+export const TYPE_SCRIPT_EVIDENCE_METHODS = ["evidence/graph", "evidence/analyze"] as const;
 export const TYPE_SCRIPT_AGENT_METHODS = ["agent/doctor", "agent/guide"] as const;
 
 export type TypeScriptSemanticLanguageMethod =
@@ -272,8 +275,15 @@ export type TypeScriptSemanticLanguageMethod =
   | TypeScriptSemanticQueryMethod
   | (typeof TYPE_SCRIPT_CHECK_METHODS)[number]
   | (typeof TYPE_SCRIPT_AST_PATCH_METHODS)[number]
+  | (typeof TYPE_SCRIPT_EVIDENCE_METHODS)[number]
   | (typeof TYPE_SCRIPT_AGENT_METHODS)[number];
-export type SemanticLanguageCommand = "search" | "query" | "check" | "ast-patch" | "agent";
+export type SemanticLanguageCommand =
+  | "search"
+  | "query"
+  | "check"
+  | "ast-patch"
+  | "evidence"
+  | "agent";
 export type SemanticLanguageOutputMode = "frontier" | "json" | "code" | "names" | "read-packet";
 export type SemanticLanguageCapabilityNamespace = "semantic" | typeof TYPE_SCRIPT_LANGUAGE_ID;
 
@@ -476,6 +486,7 @@ export function typeScriptSemanticLanguageRegistration(): SemanticLanguageRegist
       ...TYPE_SCRIPT_QUERY_METHODS,
       ...TYPE_SCRIPT_CHECK_METHODS,
       ...TYPE_SCRIPT_AST_PATCH_METHODS,
+      ...TYPE_SCRIPT_EVIDENCE_METHODS,
       ...TYPE_SCRIPT_AGENT_METHODS,
     ],
     methodDescriptors: typeScriptSemanticLanguageMethodDescriptors(),
@@ -519,6 +530,11 @@ export function typeScriptSemanticLanguageRegistration(): SemanticLanguageRegist
         schemaId: SEMANTIC_GRAPH_SCHEMA_ID,
         schemaVersion: "1",
         path: "schemas/semantic-graph.v1.schema.json",
+      },
+      {
+        schemaId: SEMANTIC_GRAPH_TURBO_REQUEST_SCHEMA_ID,
+        schemaVersion: "1",
+        path: "schemas/semantic-graph-turbo-request.v1.schema.json",
       },
       {
         schemaId: SEMANTIC_FACT_GRAPH_SCHEMA_ID,
@@ -785,6 +801,24 @@ function typeScriptSemanticLanguageMethodDescriptors(): readonly SemanticLanguag
       supportsCompact: false,
       mutationAvailable: false,
     })),
+    {
+      method: "evidence/graph" as const,
+      command: "evidence" as const,
+      input: "provider project root",
+      outputSchemaIds: [SEMANTIC_EVIDENCE_GRAPH_SCHEMA_ID],
+      supportsJson: true,
+      supportsCompact: true,
+    },
+    {
+      method: "evidence/analyze" as const,
+      command: "evidence" as const,
+      input: "provider project root",
+      outputSchemaIds: [SEMANTIC_GRAPH_TURBO_REQUEST_SCHEMA_ID],
+      packetSchemas: ["semantic-graph-turbo-request.v1"],
+      clients: ["asp-graph-turbo"],
+      supportsJson: true,
+      supportsCompact: true,
+    },
     {
       method: "agent/doctor" as const,
       command: "agent" as const,

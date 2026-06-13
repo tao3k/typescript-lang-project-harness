@@ -28,6 +28,14 @@ import {
   type SemanticSearchRenderMode,
 } from "./semantic-search.js";
 import { renderTypeScriptSemanticGraphFactsJson } from "./semantic-graph-facts.js";
+import {
+  buildTypeScriptEvidenceAnalysisRequest,
+  buildTypeScriptEvidenceGraph,
+  renderTypeScriptEvidenceAnalysisRequest,
+  renderTypeScriptEvidenceAnalysisRequestJson,
+  renderTypeScriptEvidenceGraph,
+  renderTypeScriptEvidenceGraphJson,
+} from "./evidence-graph.js";
 import { buildOwnerItemQueryPacket, renderOwnerItemQuery } from "./semantic-search/item-query.js";
 import { renderOwnerItemQueryCode } from "./semantic-search/item-read.js";
 import { renderTypeScriptTreeSitterQuery } from "../parser/native_syntax/tree-sitter-query.js";
@@ -64,6 +72,7 @@ export type ProtocolArgs =
   | TreeSitterQueryArgs
   | FlowLiteQueryArgs
   | CheckArgs
+  | EvidenceArgs
   | AgentArgs
   | AstPatchArgs
   | ProtocolHelpArgs
@@ -111,6 +120,13 @@ export interface CheckArgs {
   readonly json: boolean;
 }
 
+export interface EvidenceArgs {
+  readonly kind: "evidence";
+  readonly action: "graph" | "analyze";
+  readonly projectRoot: string | undefined;
+  readonly json: boolean;
+}
+
 interface AstPatchArgs {
   readonly kind: "ast-patch";
   readonly mode: "dry-run";
@@ -144,6 +160,7 @@ export function parseProtocolArgs(argv: readonly string[]): ProtocolArgs | undef
   }
   if (command === "ast-patch") return parseAstPatchArgs(argv.slice(1));
   if (command === "check") return parseCheckArgs(argv.slice(1));
+  if (command === "evidence") return parseEvidenceArgs(argv.slice(1));
   if (command === "agent") return parseAgentArgs(argv.slice(1));
   return undefined;
 }
@@ -209,6 +226,25 @@ export function runProtocolCli(
         streams.stdout.write(compact === "" ? "[ok] typescript\n" : `${compact}\n`);
       }
       return isTypeScriptHarnessClean(report) ? 0 : 1;
+    }
+    if (args.kind === "evidence") {
+      const projectRoot = path.resolve(cwd, args.projectRoot ?? ".");
+      if (args.action === "graph") {
+        const graph = buildTypeScriptEvidenceGraph(projectRoot);
+        streams.stdout.write(
+          args.json
+            ? renderTypeScriptEvidenceGraphJson(projectRoot)
+            : renderTypeScriptEvidenceGraph(graph),
+        );
+      } else {
+        const request = buildTypeScriptEvidenceAnalysisRequest(projectRoot);
+        streams.stdout.write(
+          args.json
+            ? renderTypeScriptEvidenceAnalysisRequestJson(projectRoot)
+            : renderTypeScriptEvidenceAnalysisRequest(request),
+        );
+      }
+      return 0;
     }
     if (args.view === "semantic-facts") {
       if (!args.json) {
@@ -890,6 +926,36 @@ function parseCheckArgs(argv: readonly string[]): ProtocolArgs {
     return { kind: "error", message: "expected at most one PROJECT_ROOT argument" };
   }
   return { kind: "check", mode, projectRoot: positionals[0], json };
+}
+
+function parseEvidenceArgs(argv: readonly string[]): ProtocolArgs {
+  const actionValue = argv[0];
+  if (actionValue === "--help" || actionValue === "-h") return { kind: "help" };
+  if (actionValue !== "graph" && actionValue !== "analyze" && actionValue !== "analysis") {
+    return { kind: "error", message: "expected evidence <graph|analyze>" };
+  }
+  let json = false;
+  const positionals: string[] = [];
+  for (const arg of argv.slice(1)) {
+    if (arg === "--json") {
+      json = true;
+    } else if (arg === "--help" || arg === "-h") {
+      return { kind: "help" };
+    } else if (arg.startsWith("-")) {
+      return { kind: "error", message: `unknown evidence option: ${arg}` };
+    } else {
+      positionals.push(arg);
+    }
+  }
+  if (positionals.length > 1) {
+    return { kind: "error", message: "expected at most one PROJECT_ROOT argument" };
+  }
+  return {
+    kind: "evidence",
+    action: actionValue === "analysis" ? "analyze" : actionValue,
+    projectRoot: positionals[0],
+    json,
+  };
 }
 
 function isSemanticSearchRenderMode(value: string | undefined): value is SemanticSearchRenderMode {

@@ -827,6 +827,8 @@ test("CLI exposes semantic-search protocol commands", () => {
     "check/changed",
     "check/full",
     "ast-patch/dry-run",
+    "evidence/graph",
+    "evidence/analyze",
     "agent/doctor",
     "agent/guide",
   ];
@@ -1106,6 +1108,24 @@ test("CLI exposes semantic-search protocol commands", () => {
         supportsCompact: false,
       },
       {
+        method: "evidence/graph",
+        command: "evidence",
+        input: "provider project root",
+        outputSchemaIds: ["agent.semantic-protocols.semantic-evidence-graph"],
+        supportsJson: true,
+        supportsCompact: true,
+      },
+      {
+        method: "evidence/analyze",
+        command: "evidence",
+        input: "provider project root",
+        outputSchemaIds: ["agent.semantic-protocols.semantic-graph-turbo-request"],
+        packetSchemas: ["semantic-graph-turbo-request.v1"],
+        clients: ["asp-graph-turbo"],
+        supportsJson: true,
+        supportsCompact: true,
+      },
+      {
         method: "agent/doctor",
         command: "agent",
         outputSchemaIds: ["agent.semantic-protocols.semantic-language-registry"],
@@ -1159,6 +1179,11 @@ test("CLI exposes semantic-search protocol commands", () => {
         schemaId: "agent.semantic-protocols.semantic-graph",
         schemaVersion: "1",
         path: "schemas/semantic-graph.v1.schema.json",
+      },
+      {
+        schemaId: "agent.semantic-protocols.semantic-graph-turbo-request",
+        schemaVersion: "1",
+        path: "schemas/semantic-graph-turbo-request.v1.schema.json",
       },
       {
         schemaId: "agent.semantic-protocols.semantic-fact-graph",

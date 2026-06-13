@@ -21,6 +21,8 @@ Usage:
   ts-harness query --catalog flow-lite --where 'source.call=NAME sink.constructs=TYPE scope.fn=FUNCTION' [<workspace-root>] [--json] [--workspace <workspace-root>]
   ts-harness ast-patch dry-run --packet <semantic-ast-patch.json|->
   ts-harness check [--changed | --full] [--json]
+  ts-harness evidence graph [--json] [PROJECT_ROOT]
+  ts-harness evidence analyze [--json] [PROJECT_ROOT]
   ts-harness agent doctor [--json]
   ts-harness agent guide
 
@@ -77,6 +79,10 @@ CHECK
   check --full              Full project harness check
   check --json              Structured TypeScriptHarnessReport JSON
 
+EVIDENCE
+  evidence graph --json     Portable semantic-evidence-graph packet
+  evidence analyze --json   Graph-turbo request for evidence-quality ranking
+
 AGENT
   agent doctor              Print semantic-language provider readiness
   agent doctor --json       Semantic language registry document
@@ -108,6 +114,8 @@ EXAMPLES
   ts-harness query --catalog declarations --selector src/domain/order.ts --workspace . --code
   ts-harness query --catalog flow-lite --where 'source.call=payload sink.constructs=Action scope.fn=collect' --workspace .
   ts-harness ast-patch dry-run --packet semantic-ast-patch.json
+  ts-harness evidence graph --json .
+  ts-harness evidence analyze --json .
   rg -n "OrderStatus" src tests | ts-harness search ingest --workspace .
   ts-harness check --changed
   ts-harness agent guide
