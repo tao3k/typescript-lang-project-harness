@@ -6,6 +6,7 @@ import type { TypeScriptHarnessReport } from "../../model.js";
 import { buildApiPacketPayload } from "./api.js";
 import { buildDependencyPacketPayload, buildDepsPacketPayload } from "./dependency.js";
 import { buildDocsPacketPayload } from "./packet-docs.js";
+import { buildKnowledgePacketPayload } from "./packet-knowledge.js";
 import { basePacket } from "./packet-base.js";
 import { buildOwnerPacket, buildPrimePacket, buildWorkspacePacket } from "./packet-overview.js";
 import { buildFzfPacket } from "./packet-fzf.js";
@@ -57,6 +58,15 @@ export function buildSemanticSearchPacket(
       return buildFzfPacket(report, options);
     case "reasoning":
       return buildReasoningPacket(report, options);
+    case "env":
+    case "runtime-source":
+    case "lang":
+    case "std":
+    case "capability":
+    case "extension":
+    case "pattern":
+    case "compare":
+      return basePacket(report, options, buildKnowledgePacketPayload(report, options));
     case "ingest":
       return buildIngestPacket(report, options);
   }

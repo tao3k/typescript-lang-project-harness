@@ -819,6 +819,14 @@ test("CLI exposes semantic-search protocol commands", () => {
     "search/tests",
     "search/fzf",
     "search/reasoning",
+    "search/env",
+    "search/runtime-source",
+    "search/lang",
+    "search/std",
+    "search/capability",
+    "search/extension",
+    "search/pattern",
+    "search/compare",
     "search/semantic-facts",
     "search/ingest",
     "query",
@@ -874,6 +882,9 @@ test("CLI exposes semantic-search protocol commands", () => {
             "search/tests",
             "search/fzf",
             "search/reasoning",
+            "search/extension",
+            "search/pattern",
+            "search/compare",
             "search/semantic-facts",
           ].includes(method),
           acceptsStdin: method === "search/ingest" || method === "search/semantic-facts",
@@ -1349,6 +1360,46 @@ function expectedSearchCapabilities(
         typeScriptCapability("owner-item-query"),
         typeScriptCapability("test-owner-search"),
         typeScriptCapability("dependency-local-usage-search"),
+      ];
+    case "search/env":
+      return [
+        semanticCapability("provider-knowledge-axis"),
+        typeScriptCapability("typescript-project-environment-facts"),
+      ];
+    case "search/runtime-source":
+      return [
+        semanticCapability("provider-knowledge-axis"),
+        typeScriptCapability("typescript-runtime-source-frontier"),
+      ];
+    case "search/lang":
+      return [
+        semanticCapability("provider-knowledge-axis"),
+        typeScriptCapability("typescript-language-semantics-facts"),
+      ];
+    case "search/std":
+      return [
+        semanticCapability("provider-knowledge-axis"),
+        typeScriptCapability("typescript-standard-api-facts"),
+      ];
+    case "search/capability":
+      return [
+        semanticCapability("provider-knowledge-axis"),
+        typeScriptCapability("typescript-provider-capability-facts"),
+      ];
+    case "search/extension":
+      return [
+        semanticCapability("provider-knowledge-axis"),
+        typeScriptCapability("typescript-ecosystem-extension-facts"),
+      ];
+    case "search/pattern":
+      return [
+        semanticCapability("provider-knowledge-axis"),
+        typeScriptCapability("typescript-executable-pattern-facts"),
+      ];
+    case "search/compare":
+      return [
+        semanticCapability("provider-knowledge-axis"),
+        typeScriptCapability("typescript-semantic-comparison-facts"),
       ];
     case "search/semantic-facts":
       return [

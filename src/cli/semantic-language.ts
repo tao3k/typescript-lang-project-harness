@@ -73,6 +73,14 @@ export type TypeScriptSemanticSearchView =
   | "tests"
   | "fzf"
   | "reasoning"
+  | "env"
+  | "runtime-source"
+  | "lang"
+  | "std"
+  | "capability"
+  | "extension"
+  | "pattern"
+  | "compare"
   | "semantic-facts"
   | "ingest";
 export type TypeScriptSemanticSearchPipe =
@@ -231,6 +239,70 @@ export const TYPE_SCRIPT_SEARCH_VIEW_DESCRIPTORS = [
       typeScriptCapability("owner-item-query"),
       typeScriptCapability("test-owner-search"),
       typeScriptCapability("dependency-local-usage-search"),
+    ],
+  }),
+  searchView("env", {
+    requiresQuery: false,
+    acceptsStdin: false,
+    capabilities: [
+      semanticCapability("provider-knowledge-axis"),
+      typeScriptCapability("typescript-project-environment-facts"),
+    ],
+  }),
+  searchView("runtime-source", {
+    requiresQuery: false,
+    acceptsStdin: false,
+    capabilities: [
+      semanticCapability("provider-knowledge-axis"),
+      typeScriptCapability("typescript-runtime-source-frontier"),
+    ],
+  }),
+  searchView("lang", {
+    requiresQuery: false,
+    acceptsStdin: false,
+    capabilities: [
+      semanticCapability("provider-knowledge-axis"),
+      typeScriptCapability("typescript-language-semantics-facts"),
+    ],
+  }),
+  searchView("std", {
+    requiresQuery: false,
+    acceptsStdin: false,
+    capabilities: [
+      semanticCapability("provider-knowledge-axis"),
+      typeScriptCapability("typescript-standard-api-facts"),
+    ],
+  }),
+  searchView("capability", {
+    requiresQuery: false,
+    acceptsStdin: false,
+    capabilities: [
+      semanticCapability("provider-knowledge-axis"),
+      typeScriptCapability("typescript-provider-capability-facts"),
+    ],
+  }),
+  searchView("extension", {
+    requiresQuery: true,
+    acceptsStdin: false,
+    capabilities: [
+      semanticCapability("provider-knowledge-axis"),
+      typeScriptCapability("typescript-ecosystem-extension-facts"),
+    ],
+  }),
+  searchView("pattern", {
+    requiresQuery: true,
+    acceptsStdin: false,
+    capabilities: [
+      semanticCapability("provider-knowledge-axis"),
+      typeScriptCapability("typescript-executable-pattern-facts"),
+    ],
+  }),
+  searchView("compare", {
+    requiresQuery: true,
+    acceptsStdin: false,
+    capabilities: [
+      semanticCapability("provider-knowledge-axis"),
+      typeScriptCapability("typescript-semantic-comparison-facts"),
     ],
   }),
   searchView("semantic-facts", {

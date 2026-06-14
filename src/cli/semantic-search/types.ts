@@ -21,6 +21,14 @@ export type SemanticSearchView =
   | "tests"
   | "fzf"
   | "reasoning"
+  | "env"
+  | "runtime-source"
+  | "lang"
+  | "std"
+  | "capability"
+  | "extension"
+  | "pattern"
+  | "compare"
   | "ingest";
 export type SemanticSearchPipe = SemanticSearchView | "items";
 export type SemanticSearchRenderMode = "graph" | "hits" | "both" | "seeds";

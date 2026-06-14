@@ -520,7 +520,7 @@ function parseSearchArgs(argv: readonly string[]): ProtocolArgs {
     return {
       kind: "error",
       message:
-        "usage: ts-harness search <workspace|prime|owner|dependency|deps|docs|api|public-external-types|policy|symbol|callsite|import|tests|fzf|reasoning|text|ingest|query> ... [--json] [--code] [--package PATH] [--workspace <workspace-root>]",
+        "usage: ts-harness search <workspace|prime|owner|dependency|deps|docs|api|public-external-types|policy|symbol|callsite|import|tests|fzf|reasoning|env|runtime-source|lang|std|capability|extension|pattern|compare|text|ingest|query> ... [--json] [--code] [--package PATH] [--workspace <workspace-root>]",
     };
   }
   if (viewValue === "query") return parseSearchQueryArgs(argv.slice(1));
@@ -630,6 +630,26 @@ function parseSearchArgs(argv: readonly string[]): ProtocolArgs {
   }
   if (namesOnly && !(searchView.view === "owner" && itemQuery !== undefined)) {
     return { kind: "error", message: "--names-only requires search owner <path> --query <symbol>" };
+  }
+  if (searchViewAcceptsOptionalTerms(searchView.view)) {
+    if (searchView.requiresQuery && positionals.length === 0) {
+      return { kind: "error", message: `search ${viewValue} requires a query` };
+    }
+    return {
+      kind: "search",
+      view: searchView.view,
+      query: positionals.length > 0 ? positionals.join(" ") : undefined,
+      projectRoot: workspaceRoot,
+      packagePath,
+      workspace,
+      ownerPath: undefined,
+      pipes: [],
+      querySet: [],
+      json,
+      ...(codeOnly ? { codeOnly } : {}),
+      ...(namesOnly ? { namesOnly } : {}),
+      renderMode,
+    };
   }
   if (searchView.requiresQuery) {
     const query = querySet.length > 0 ? querySet.join(",") : positionals[0];
@@ -838,6 +858,19 @@ function parseSearchQuerySurfaces(value: string): TypeScriptSemanticSearchPipe[]
     }
   }
   return pipes;
+}
+
+function searchViewAcceptsOptionalTerms(view: TypeScriptSemanticSearchView): boolean {
+  return new Set<TypeScriptSemanticSearchView>([
+    "env",
+    "runtime-source",
+    "lang",
+    "std",
+    "capability",
+    "extension",
+    "pattern",
+    "compare",
+  ]).has(view);
 }
 
 function isBroadHookQueryArgs(argv: readonly string[]): boolean {
