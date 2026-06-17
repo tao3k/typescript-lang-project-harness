@@ -34,8 +34,8 @@ The public binary is `ts-harness`.
 
 ```shell
 ts-harness search workspace .
-ts-harness search prime --view seeds .
-ts-harness search owner src/index.ts --view seeds .
+ts-harness search prime --workspace . --view seeds
+ts-harness search owner src/index.ts --workspace . --view seeds
 ts-harness search fzf OrderStatus .
 ts-harness search fzf --query-set OrderStatus --query-set findOrderStatus owner tests .
 rg -n "OrderStatus" src tests | ts-harness search ingest .

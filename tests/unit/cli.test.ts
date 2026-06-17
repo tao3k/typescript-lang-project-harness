@@ -34,7 +34,7 @@ test("CLI exposes only search, check, and agent protocol entrypoints", () => {
   assert.match(changed.stdout, /^\[ok\] typescript/u);
   assert.doesNotMatch(changed.stdout, /\[TS-PROJ-R001\] Info/u);
 
-  for (const legacyArgv of [
+  for (const retiredArgv of [
     ["."],
     ["--json", "."],
     ["--agent-compact", "."],
@@ -43,7 +43,7 @@ test("CLI exposes only search, check, and agent protocol entrypoints", () => {
     ["--stats", "."],
     ["--harness", "."],
   ]) {
-    const invalid = runCliCapture(legacyArgv, root);
+    const invalid = runCliCapture(retiredArgv, root);
     assert.equal(invalid.exitCode, 2);
     assert.match(invalid.stderr, /unknown (command|option)/u);
   }
@@ -395,10 +395,14 @@ test("CLI reports root asp owner for hook install and runtime", () => {
   assert.match(guide.stdout, /\|route query-code selectors=O:owner,Q:symbol/u);
   assert.match(
     guide.stdout,
-    /\|cmd prime=asp typescript search prime --view seeds --workspace <workspace-root>/u,
+    /\|cmd prime=asp typescript search prime --workspace <workspace-root> --view seeds/u,
   );
-  assert.match(guide.stdout, /asp typescript search fzf <query> owner tests --view seeds/u);
+  assert.match(
+    guide.stdout,
+    /asp typescript search fzf <query> owner tests --workspace <workspace-root> --view seeds/u,
+  );
   assert.doesNotMatch(guide.stdout, /\|cmd prime=asp typescript search prime --view seeds \//u);
+  assert.doesNotMatch(guide.stdout, /--view seeds\s+--workspace <workspace-root>/u);
   assert.match(guide.stdout, /agent hook install\/runtime is owned by asp/u);
   assert.doesNotMatch(guide.stdout, /README|SKILL|docs\/|src\/cli\/agent-hooks/u);
 

@@ -133,9 +133,9 @@ export function fzfQuerySetHitsFromHitsByTerm(
   >();
   const orderedTerms = [...hitsByTerm.keys()].sort(compareQueryTermsBySpecificity);
   const depth = Math.max(...[...hitsByTerm.values()].map((hits) => hits.length), 0);
-  for (let offset = 0; offset < depth; offset += 1) {
+  for (let depthIndex = 0; depthIndex < depth; depthIndex += 1) {
     for (const queryTerm of orderedTerms) {
-      const hit = hitsByTerm.get(queryTerm)?.[offset];
+      const hit = hitsByTerm.get(queryTerm)?.[depthIndex];
       if (hit === undefined) {
         continue;
       }

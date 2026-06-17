@@ -54,15 +54,15 @@ test("search fzf matches path-only TypeScript candidates", () => {
     );
     assert.doesNotMatch(result.stdout, /\|seed /u);
 
-    const legacyAliasField = ["compatible", "Handles"].join("");
-    const legacyResult = runCliCapture(
+    const retiredAliasField = ["compatible", "Handles"].join("");
+    const retiredResult = runCliCapture(
       [
         "search",
         "owner",
         "src/hook_runtime.ts",
         "items",
         "--query",
-        legacyAliasField,
+        retiredAliasField,
         "--view",
         "seeds",
         "--workspace",
@@ -71,8 +71,8 @@ test("search fzf matches path-only TypeScript candidates", () => {
       root,
     );
 
-    assert.equal(legacyResult.exitCode, 0, legacyResult.stderr);
-    assert.match(legacyResult.stdout, /status=miss/u);
+    assert.equal(retiredResult.exitCode, 0, retiredResult.stderr);
+    assert.match(retiredResult.stdout, /status=miss/u);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
     if (previousRenderer === undefined) {

@@ -113,36 +113,6 @@ function renderSemanticSearchSeedPacket(packet: SemanticSearchPacket): string {
   return renderCompactGraphSeedPacket(packet, renderFields);
 }
 
-function renderLegacySemanticSearchSeedPacket(packet: SemanticSearchPacket): string {
-  if ((packet.items?.length ?? 0) > 0) {
-    return renderSemanticSearchItemPacket(packet);
-  }
-  const lines = [`[${packet.header.kind}] ${renderFields(packet.header.fields)}`];
-  lines.push("|flow prime->owner|deps|symbol|tests pipe=fzf:owner,tests ingest=stdin");
-  lines.push(...renderQueryCoverageLines(packet.queryCoverage ?? []));
-  const itemContextOwnerPath = singleOwnerContextPath(packet);
-  for (const item of renderedItems(packet)) {
-    lines.push(renderItemLine(item, itemContextOwnerPath));
-  }
-  for (const handle of packet.semanticHandles ?? []) {
-    lines.push(renderSemanticHandleLine(handle));
-  }
-  for (const [kind, targets] of seedGroups(packet)) {
-    lines.push(`|seed ${kind}:${targets.join(",")}`);
-  }
-  for (const note of packet.notes) {
-    lines.push(`|note kind=${note.kind} message=${escapeFieldValue(note.message)}`);
-  }
-  if (packet.searchSynthesis !== undefined) {
-    lines.push(`|synthesis ${renderSearchSynthesis(packet.searchSynthesis)}`.trimEnd());
-  }
-  const runtimeLine = renderRuntimeCostLine(packet);
-  if (runtimeLine !== undefined) lines.push(runtimeLine);
-  lines.push(...renderAvoidNextActionLines(packet.avoidNextActions ?? []));
-  lines.push(...renderNextRunLines(packet.nextActions));
-  return `${lines.join("\n")}\n`;
-}
-
 function renderSemanticSearchItemPacket(packet: SemanticSearchPacket): string {
   const items = renderedItems(packet);
   const headerFields: SemanticSearchFields = {

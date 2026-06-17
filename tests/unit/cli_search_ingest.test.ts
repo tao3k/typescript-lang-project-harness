@@ -37,9 +37,10 @@ test("search ingest rejects positional workspace after pipes", () => {
     "items",
     "tests",
     "extra",
+    "--workspace",
+    ".",
     "--view",
     "seeds",
-    ".",
   ]);
 
   assert.equal(parsed?.kind, "error");

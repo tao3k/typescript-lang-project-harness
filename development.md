@@ -22,7 +22,7 @@ agent hook flows from other repositories:
 ```shell
 direnv exec . npm install -g --prefix /opt/homebrew .
 ts-harness agent doctor .
-ts-harness search prime --view seeds .
+ts-harness search prime --workspace . --view seeds
 ts-harness agent install --client codex .
 ts-harness agent guide --client codex .
 ```

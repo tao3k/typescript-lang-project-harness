@@ -301,9 +301,10 @@ function ownerItemNextActions(
     "--owner",
     ownerPath,
     "owner",
+    "--workspace",
+    ".",
     "--view",
     "seeds",
-    ".",
   ]
     .map(commandArg)
     .join(" ");

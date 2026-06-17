@@ -475,7 +475,7 @@ function parseQueryArgs(argv: readonly string[]): ProtocolArgs {
       return {
         kind: "error",
         message:
-          "query --names-only requires an owner selector; workspace term discovery is `search fzf '<term>' owner --view seeds --workspace <workspace-root>`",
+          "query --names-only requires an owner selector; workspace term discovery is `search fzf '<term>' owner --workspace <workspace-root> --view seeds`",
       };
     }
     return { kind: "error", message: "query requires an owner path" };

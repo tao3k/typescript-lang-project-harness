@@ -98,8 +98,8 @@ test("Effect dependency gives project-wide async migration advice", () => {
       dependencies: { effect: "^3.0.0" },
     },
     source: {
-      "legacy.ts": [
-        "export async function loadLegacyOwner(): Promise<string> {",
+      "retired.ts": [
+        "export async function loadRetiredOwner(): Promise<string> {",
         "  return 'owner';",
         "}",
       ],
@@ -120,7 +120,7 @@ test("Effect dependency gives project-wide async migration advice", () => {
     report.findings
       .filter((finding) => finding.ruleId === "TS-EXT-EFFECT-R002")
       .map((finding) => `${path.basename(finding.location.path ?? "")}:${finding.severity}`),
-    ["effect-owner.ts:info", "legacy.ts:info"],
+    ["effect-owner.ts:info", "retired.ts:info"],
   );
   assert.match(advice, /AgentCompactText: mode=advice findings=2 tasks=1/u);
   assert.match(
@@ -130,7 +130,7 @@ test("Effect dependency gives project-wide async migration advice", () => {
   assert.match(advice, /raw Promise instead of Effect\.Effect; facts: package\.json Effect/u);
   assert.match(advice, /coverage: project activation=dependency dependency=dependencies/u);
   assert.match(advice, /target_groups:\n   - src\/effect-owner\.ts x1 first=loadEffectOwner/u);
-  assert.match(advice, /\n   - src\/legacy\.ts x1 first=loadLegacyOwner/u);
+  assert.match(advice, /\n   - src\/retired\.ts x1 first=loadRetiredOwner/u);
   assert.match(advice, /add `import \{ Effect \} from "effect"`/u);
   assert.match(advice, /Effect\.Effect<Success, DomainError, Requirements>/u);
   assert.match(advice, /Effect\.tryPromise\(\{ try: \(\) => promise, catch:/u);
