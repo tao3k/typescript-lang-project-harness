@@ -11,33 +11,10 @@
   "binary": "ts-harness",
   "execution": "external-process",
   "source": {
-    "defaultExtensions": [
-      ".ts",
-      ".tsx",
-      ".js",
-      ".jsx",
-      ".mts",
-      ".cts",
-      ".mjs",
-      ".cjs"
-    ],
-    "defaultConfigFiles": [
-      "package.json",
-      "tsconfig.json",
-      "pnpm-workspace.yaml"
-    ],
-    "defaultSourceRoots": [
-      "src",
-      "tests",
-      "app",
-      "packages"
-    ],
-    "defaultIgnoredPathPrefixes": [
-      "node_modules",
-      "dist",
-      "build",
-      ".next"
-    ],
+    "defaultExtensions": [".ts", ".tsx", ".js", ".jsx", ".mts", ".cts", ".mjs", ".cjs"],
+    "defaultConfigFiles": ["package.json", "tsconfig.json", "pnpm-workspace.yaml"],
+    "defaultSourceRoots": ["src", "tests", "app", "packages"],
+    "defaultIgnoredPathPrefixes": ["node_modules", "dist", "build", ".next"],
     "defaultProjectMarkers": [
       "package.json",
       "tsconfig.json",
@@ -64,15 +41,7 @@
   },
   "routes": {
     "prime": {
-      "argv": [
-        "ts-harness",
-        "search",
-        "prime",
-        "--workspace",
-        "{projectRoot}",
-        "--view",
-        "seeds"
-      ]
+      "argv": ["ts-harness", "search", "prime", "--workspace", "{projectRoot}", "--view", "seeds"]
     },
     "owner": {
       "argv": [
@@ -132,19 +101,10 @@
       "stdinMode": "pipe-candidates"
     },
     "checkChanged": {
-      "argv": [
-        "ts-harness",
-        "check",
-        "--changed",
-        "{projectRoot}"
-      ]
+      "argv": ["ts-harness", "check", "--changed", "{projectRoot}"]
     },
     "guide": {
-      "argv": [
-        "ts-harness",
-        "guide",
-        "{projectRoot}"
-      ]
+      "argv": ["ts-harness", "guide", "{projectRoot}"]
     }
   }
 }
