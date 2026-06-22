@@ -42,18 +42,12 @@ export function buildDependencyPacketPayload(
 ): SemanticSearchPacketPayload {
   const query = options.query ?? "";
   const manifestMatches = dependencyManifestMatches(report, query);
-  const matches = dependencyImportMatches(report, query);
-  const hits = [
-    ...manifestMatches.map((match) => dependencyManifestHit(report, match)),
-    ...matches.map((match) => dependencyHit(report, match)),
-  ];
+  const matches: ReturnType<typeof dependencyImportMatches> = [];
+  const hits = manifestMatches.map((match) => dependencyManifestHit(report, match));
   const packageRoots = dependencyPackageRoots(matches, manifestMatches);
   const queryPackageRoot = packageRootFromSpecifier(query) ?? query.trim();
-  const edges = matches.map((match) => dependencyEdge(report, match));
-  const owners = ownersForHits(
-    report,
-    matches.map((match) => dependencyHit(report, match)),
-  );
+  const edges: ReturnType<typeof dependencyEdge>[] = [];
+  const owners: ReturnType<typeof ownersForHits> = [];
   const cache = dependencySearchCache(report, hits);
   return {
     header: {
@@ -65,6 +59,7 @@ export function buildDependencyPacketPayload(
         own: owners.length,
         hit: hits.length,
         edge: edges.length,
+        topology: "asp-owned",
         view: "graph",
       },
     },
@@ -78,7 +73,6 @@ export function buildDependencyPacketPayload(
     hits,
     findings: [],
     nextActions: [
-      ...owners.slice(0, 5).map((owner) => ({ kind: "owner" as const, target: owner.path })),
       ...(queryPackageRoot === ""
         ? []
         : [
@@ -96,7 +90,7 @@ export function buildDependencyPacketPayload(
       {
         kind: "fact-scope" as const,
         message:
-          "dependency view combines parser-owned package dependency facts with TypeScript import-resolution usage facts",
+          "dependency view exposes manifest facts only; ASP owns dependency topology and source/import indexes",
       },
     ],
   };
@@ -111,7 +105,9 @@ export function buildDepsPacketPayload(
   const manifestMatches =
     query === undefined ? [] : dependencyManifestMatches(report, query.packageRoot);
   const allDependencyMatches =
-    query === undefined ? [] : dependencyImportMatches(report, query.packageRoot);
+    query === undefined || query.apiQuery === undefined
+      ? []
+      : dependencyImportMatches(report, query.packageRoot);
   const workspaceVersion =
     query === undefined
       ? {}
@@ -122,7 +118,7 @@ export function buildDepsPacketPayload(
       : dependencyVersionStatus(query, manifestMatches, workspaceVersion);
   const versionScope = dependencyVersionScope(versionStatus);
   const matches =
-    query === undefined || versionScope !== "current"
+    query === undefined || query.apiQuery === undefined || versionScope !== "current"
       ? []
       : dependencyApiUsageMatches(report, query, allDependencyMatches);
   const hits =
@@ -172,6 +168,7 @@ export function buildDepsPacketPayload(
         manifest: manifestMatches.length,
         usage: matches.length,
         hit: hits.length,
+        topology: "asp-owned",
         view: "hits",
       },
     },
@@ -234,7 +231,9 @@ export function buildDepsPacketPayload(
       {
         kind: "fact-scope" as const,
         message:
-          "deps view anchors API usage to package manifest, lockfile version, and TypeScript import facts; external API docs require a separate provider",
+          query?.apiQuery === undefined
+            ? "deps view exposes manifest facts only; ASP owns dependency topology and source/import indexes"
+            : "deps API view anchors usage to package manifest, lockfile version, and TypeScript import facts; external API docs require a separate provider",
       },
     ],
   };

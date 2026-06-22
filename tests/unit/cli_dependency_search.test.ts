@@ -6,7 +6,7 @@ import test from "node:test";
 
 import { runCliCapture } from "./cli_helpers.js";
 
-test("CLI searches external dependency usage", () => {
+test("CLI searches external dependency manifest topology", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-semantic-search-dependency-"));
   fs.mkdirSync(path.join(root, "src"));
   fs.writeFileSync(
@@ -46,14 +46,17 @@ test("CLI searches external dependency usage", () => {
   const dependency = runCliCapture(["search", "dependency", "react", "--workspace", "."], root);
   assert.equal(dependency.exitCode, 0);
   assert.match(dependency.stdout, /^\[search-dependency\] /u);
+  assert.match(dependency.stdout, /\btopology=asp-owned\b/u);
+  assert.match(dependency.stdout, /\bown=0\b/u);
+  assert.match(dependency.stdout, /\bedge=0\b/u);
   assert.match(
     dependency.stdout,
     /\|hit path=package\.json lineRange=1:1 .*reason=manifest-package-exact/u,
   );
   assert.match(dependency.stdout, /source=dependencies/u);
-  assert.match(dependency.stdout, /\|hit path=src\/index\.ts lineRange=1:1\b/u);
-  assert.match(dependency.stdout, /moduleSpecifier=react/u);
-  assert.match(dependency.stdout, /\|edge O:src\/index\.ts -dependency-> C:react/u);
+  assert.doesNotMatch(dependency.stdout, /\|hit path=src\/index\.ts/u);
+  assert.doesNotMatch(dependency.stdout, /moduleSpecifier=react/u);
+  assert.doesNotMatch(dependency.stdout, /\|edge O:src\/index\.ts -dependency-> C:react/u);
 
   const dependencyJson = runCliCapture(
     ["search", "dependency", "react", "--json", "--workspace", "."],
@@ -73,7 +76,7 @@ test("CLI searches external dependency usage", () => {
   assert.equal(packet.method, "search/dependency");
   assert.equal(packet.view, "dependency");
   assert.ok(packet.nodes.some((node) => node.id === "C:react" && node.kind === "dependency"));
-  assert.ok(packet.edges.some((edge) => edge.kind === "dependency" && edge.to === "C:react"));
+  assert.equal(packet.edges.length, 0);
   assert.ok(packet.hits.some((hit) => hit.fields?.packageRoot === "react"));
   assert.ok(packet.hits.some((hit) => hit.reason === "manifest-package-exact"));
 
