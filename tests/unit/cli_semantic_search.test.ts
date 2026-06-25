@@ -129,6 +129,17 @@ test("CLI exposes semantic-search protocol commands", () => {
   assert.doesNotMatch(primeSeeds.stdout, /\|flow |\|synthesis |\|seed /u);
   assert.doesNotMatch(primeSeeds.stdout, /\|owner /u);
 
+  const dependencySeeds = runCliCapture(
+    ["search", "deps", "react", "--view", "seeds", "--workspace", "."],
+    root,
+  );
+  assert.equal(dependencySeeds.exitCode, 0);
+  assert.match(dependencySeeds.stdout, /^\[search-dependency\] /u);
+  assert.match(dependencySeeds.stdout, /D=dependency:pkg\(react\)!dependency/u);
+  assert.match(dependencySeeds.stdout, /O=owner:path\(\.\)!owner/u);
+  assert.match(dependencySeeds.stdout, /rank=D,O frontier=D\.dependency,O\.owner/u);
+  assert.doesNotMatch(dependencySeeds.stdout, /\|dependency |\|owner |\|synthesis |\|seed /u);
+
   const workspace = runCliCapture(["search", "workspace", "--workspace", "."], root);
   assert.equal(workspace.exitCode, 0);
   assert.match(workspace.stdout, /^\[search-workspace\] /u);
@@ -161,6 +172,51 @@ test("CLI exposes semantic-search protocol commands", () => {
   assert.match(packagePrime.stdout, /^\[search-prime\] /u);
   assert.match(packagePrime.stdout, /\bpackage=@example\/core\b/u);
   assert.match(packagePrime.stdout, /\|owner src\/index\.ts/u);
+
+  const packagePrimeSeeds = runCliCapture(
+    ["search", "prime", "--package", "packages/core", "--view", "seeds", "--workspace", "."],
+    root,
+  );
+  assert.equal(packagePrimeSeeds.exitCode, 0);
+  assert.match(packagePrimeSeeds.stdout, /^\[search-prime\] /u);
+  assert.match(packagePrimeSeeds.stdout, /O=owner:path\(packages\/core\/src\/index\.ts\)!owner/u);
+  assert.match(packagePrimeSeeds.stdout, /Q=query:term\(\*\)!fzf/u);
+  assert.match(
+    packagePrimeSeeds.stdout,
+    /entries=owner-query\(O,Q=>items\+tests\+dependency-usage\)/u,
+  );
+  assert.doesNotMatch(packagePrimeSeeds.stdout, /\|owner |\|synthesis |\|seed /u);
+
+  const packageQuerySetSeeds = runCliCapture(
+    [
+      "search",
+      "fzf",
+      "--query-set",
+      "Core",
+      "owner",
+      "tests",
+      "--package",
+      "packages/core",
+      "--view",
+      "seeds",
+      "--workspace",
+      ".",
+    ],
+    root,
+  );
+  assert.equal(packageQuerySetSeeds.exitCode, 0);
+  assert.match(packageQuerySetSeeds.stdout, /^\[search-fzf\] /u);
+  assert.match(packageQuerySetSeeds.stdout, /Q=query:term\(Core\)!fzf/u);
+  assert.match(
+    packageQuerySetSeeds.stdout,
+    /O=owner:path\(packages\/core\/src\/index\.ts\)!owner/u,
+  );
+  assert.match(packageQuerySetSeeds.stdout, /S=symbol:symbol\(Core\)!symbol/u);
+  assert.match(
+    packageQuerySetSeeds.stdout,
+    /entries=owner-query\(O,Q=>items\+tests\+dependency-usage\)/u,
+  );
+  assert.doesNotMatch(packageQuerySetSeeds.stdout, /\|hit |\|owner |\|synthesis |\|seed /u);
 
   const packagePrimeJson = runCliCapture(
     ["search", "prime", "--package", "packages/core", "--json", "--workspace", "."],
@@ -561,13 +617,13 @@ test("CLI exposes semantic-search protocol commands", () => {
   );
   assert.equal(ownerSeeds.exitCode, 0);
   assert.match(ownerSeeds.stdout, /^\[search-owner\] /u);
-  assert.match(ownerSeeds.stdout, /O\d*=owner:path\(src\/index\.ts\)!owner/u);
+  assert.match(ownerSeeds.stdout, /O=owner:path\(src\/index\.ts\)!owner/u);
+  assert.match(ownerSeeds.stdout, /rank=O frontier=O\.owner/u);
   assert.match(
     ownerSeeds.stdout,
-    /I=item:symbol\(findOrderStatus\)(?:@src\/index\.ts:1:1)?!(?:code|syntax)/u,
+    /entries=owner-tests\(O=>covering-tests\+test-entrypoints\+fixtures\)/u,
   );
-  assert.match(ownerSeeds.stdout, /frontier=.*I\.(?:code|syntax)/u);
-  assert.doesNotMatch(ownerSeeds.stdout, /\|seed /u);
+  assert.doesNotMatch(ownerSeeds.stdout, /\|owner |\|synthesis |\|seed /u);
   assert.doesNotMatch(ownerSeeds.stdout, /\|edge /u);
 
   fs.writeFileSync(

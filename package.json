@@ -5,7 +5,7 @@
   "description": "Project-level TypeScript language harness with native parser facts and compact diagnostics for agents",
   "license": "Apache-2.0",
   "bin": {
-    "ts-harness": "./dist/src/cli/main.js"
+    "ts-harness": "./dist/src/cli/main.bundle.js"
   },
   "files": [
     "dist",
@@ -22,7 +22,7 @@
   },
   "scripts": {
     "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
-    "build": "npm run clean && tsc -p tsconfig.json && node -e \"require('node:fs').chmodSync('dist/src/cli/main.js', 0o755)\"",
+    "build": "npm run clean && tsc -p tsconfig.json && node scripts/build-bundle.mjs",
     "check": "npm run check:implementation",
     "check:implementation": "tsc -p tsconfig.json --noEmit",
     "check:policy": "npm run build && node --test \"dist/tests/unit/self_policy.test.js\"",
@@ -34,13 +34,14 @@
     "test:implementation": "npm run build && node scripts/run-node-tests.mjs implementation",
     "test:perf": "npm run build && node --test dist/tests/perf/query-search.microbench.js",
     "test:policy": "npm run build && node scripts/run-node-tests.mjs policy",
-    "harness": "npm run build && node dist/src/cli/main.js check --full ."
+    "harness": "npm run build && node dist/src/cli/main.bundle.js check --full ."
   },
   "dependencies": {
     "typescript": "^5.9.3"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
+    "esbuild": "^0.28.1",
     "oxfmt": "^0.52.0",
     "oxlint": "^1.67.0"
   }

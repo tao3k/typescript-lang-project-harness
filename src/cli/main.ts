@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { tryRunFastSearchCli } from "./fast-search-cli.js";
 import { tryRunExactSourceQueryCli } from "../queries/exact-source-query-cli.js";
 
 export interface CliStreams {
@@ -161,6 +162,8 @@ export async function runCli(
 ): Promise<number> {
   const exactSourceStatus = tryRunExactSourceQueryCli(argv, streams, cwd);
   if (exactSourceStatus !== undefined) return exactSourceStatus;
+  const fastSearchStatus = tryRunFastSearchCli(argv, streams, cwd);
+  if (fastSearchStatus !== undefined) return fastSearchStatus;
   if (argv.length === 0 || argv[0] === "--help" || argv[0] === "-h") {
     streams.stdout.write(HELP_TEXT);
     return 0;
