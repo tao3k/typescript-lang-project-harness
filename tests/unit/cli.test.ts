@@ -228,11 +228,11 @@ test("fzf query-set explains fixture paths and synthesizes real owners", () => {
   assert.match(fixtureSeeds.stdout, /selector=fuzzy-set/u);
   assert.match(
     fixtureSeeds.stdout,
-    new RegExp(`S=symbol:symbol\\(${protocolRunner}\\)!symbol`, "u"),
+    new RegExp(`S=symbol:symbol\\(${protocolRunner}\\)(?:@[^!]+)?!symbol`, "u"),
   );
   assert.match(
     fixtureSeeds.stdout,
-    new RegExp(`S2=symbol:symbol\\(${protocolParser}\\)!symbol`, "u"),
+    new RegExp(`S2=symbol:symbol\\(${protocolParser}\\)(?:@[^!]+)?!symbol`, "u"),
   );
   assert.doesNotMatch(fixtureSeeds.stdout, /\|query |\|seed |\|avoid /u);
 });
@@ -386,7 +386,7 @@ test("CLI reports root asp owner for hook install and runtime", () => {
   );
   assert.match(
     guide.stdout,
-    /\|route syntax-locate selectors=S:tree-sitter-query,R:range returns=locator,capture,frontier code=false/u,
+    /\|route syntax-locate selectors=S:tree-sitter-query,Scope:owner-or-structural returns=locator,capture,frontier code=false/u,
   );
   assert.match(
     guide.stdout,

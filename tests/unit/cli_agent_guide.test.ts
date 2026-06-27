@@ -14,7 +14,7 @@ test("agent guide keeps workspace independent from query --code", () => {
   assert.equal(result.exitCode, 0, result.stderr);
   assert.match(
     result.stdout,
-    /--selector <path\[:line\|:start-end\]> --workspace <workspace-root> --code/u,
+    /--selector <exact-structural-selector> --workspace <workspace-root> --code/u,
   );
   assert.match(
     result.stdout,
@@ -25,6 +25,7 @@ test("agent guide keeps workspace independent from query --code", () => {
     /--workspace <workspace-root> is the independent workspace override/u,
   );
   assert.doesNotMatch(result.stdout, /trailing \. is the project root/u);
+  assert.doesNotMatch(result.stdout, /<path\[:line\|:start-end\]>/u);
   assert.doesNotMatch(result.stdout, /--code \./u);
   assert.doesNotMatch(result.stdout, /--code --workspace/u);
 });
