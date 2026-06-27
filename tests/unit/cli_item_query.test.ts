@@ -61,6 +61,42 @@ test("owner items --query emits compact item locators", () => {
   assert.doesNotMatch(result.stdout, /function beta/u);
 });
 
+test("owner items --query emits class member locators", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-owner-class-member-query-"));
+  writeTsProject(
+    root,
+    "owner-class-member-query-fixture",
+    `
+export class Runtime {
+  tell(message: string): void {
+    this.process(message);
+  }
+
+  private process(message: string): void {
+    void message;
+  }
+}
+
+export const unrelated = 1;
+`.trimStart(),
+  );
+
+  const result = runCliCapture(
+    ["search", "owner", "src/demo.ts", "items", "--query", "Runtime.tell", "--workspace", "."],
+    root,
+  );
+
+  assert.equal(result.exitCode, 0, result.stderr);
+  assert.match(result.stdout, /^\[search-owner\].*item=1.*itemQuery=Runtime\.tell/mu);
+  assert.match(result.stdout, /next=query-code/u);
+  assert.match(
+    result.stdout,
+    /\|item method Runtime\.tell owner=src\/demo\.ts column=2 read=src\/demo\.ts:\d+:\d+/u,
+  );
+  assert.doesNotMatch(result.stdout, /\|item class Runtime /u);
+  assert.doesNotMatch(result.stdout, /\|item method Runtime\.process /u);
+});
+
 test("query --names-only exact owner emits locator-only output", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-query-names-only-"));
   writeTsProject(

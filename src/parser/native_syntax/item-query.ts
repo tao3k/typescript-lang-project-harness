@@ -100,6 +100,9 @@ function collectTopLevelItems(
         items.push(
           itemFromNode(sourceFile, sourceText, statement, name, declarationKind(statement)),
         );
+        if (ts.isClassDeclaration(statement)) {
+          items.push(...collectClassMemberItems(sourceFile, sourceText, statement, name));
+        }
       }
       continue;
     }
@@ -114,6 +117,50 @@ function collectTopLevelItems(
     }
   }
   return items;
+}
+
+function collectClassMemberItems(
+  sourceFile: ts.SourceFile,
+  sourceText: string,
+  declaration: ts.ClassDeclaration,
+  className: string,
+): readonly TypeScriptItemQueryMatch[] {
+  const items: TypeScriptItemQueryMatch[] = [];
+  for (const member of declaration.members) {
+    const memberName = classMemberName(member);
+    if (memberName === undefined) continue;
+    items.push(
+      itemFromNode(
+        sourceFile,
+        sourceText,
+        member,
+        `${className}.${memberName}`,
+        classMemberKind(member),
+      ),
+    );
+  }
+  return items;
+}
+
+function classMemberName(member: ts.ClassElement): string | undefined {
+  if (ts.isConstructorDeclaration(member)) return "constructor";
+  const name = member.name;
+  if (name === undefined) return undefined;
+  if (ts.isIdentifier(name) || ts.isStringLiteralLike(name) || ts.isNumericLiteral(name)) {
+    return name.text;
+  }
+  if (ts.isPrivateIdentifier(name)) return name.text;
+  if (ts.isComputedPropertyName(name)) return compactNodeText(name.getSourceFile(), name);
+  return undefined;
+}
+
+function classMemberKind(member: ts.ClassElement): string {
+  if (ts.isConstructorDeclaration(member)) return "constructor";
+  if (ts.isMethodDeclaration(member)) return "method";
+  if (ts.isPropertyDeclaration(member)) return "property";
+  if (ts.isGetAccessorDeclaration(member)) return "get";
+  if (ts.isSetAccessorDeclaration(member)) return "set";
+  return "member";
 }
 
 function itemFromNode(
