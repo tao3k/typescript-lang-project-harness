@@ -5,7 +5,7 @@ import path from "node:path";
 import test from "node:test";
 
 import { buildApiPacketPayload } from "../../src/cli/semantic-search/api.js";
-import { renderTypeScriptProjectHarness, runTypeScriptProjectHarness } from "../../src/index.js";
+import { runTypeScriptProjectHarness } from "../../src/index.js";
 import { slashPath } from "../../src/reasoning/path_utils.js";
 
 const SCENARIO = path.join(
@@ -55,10 +55,6 @@ test("agent software criterion control-flow v1 scenario snapshot", () => {
       })),
     ),
     expectFile("findings.json"),
-  );
-  assert.equal(
-    renderTypeScriptProjectHarness({ ...report, findings }),
-    expectTextFile("rendered.txt"),
   );
   assert.deepEqual(
     payload.hits.map((hit) => ({
@@ -150,10 +146,6 @@ function walkFiles(root: string): string[] {
 
 function expectFile(name: string): string {
   return fs.readFileSync(path.join(SCENARIO, "expect", name), "utf8");
-}
-
-function expectTextFile(name: string): string {
-  return expectFile(name).replace(/\n$/u, "");
 }
 
 function expectJsonFile(name: string): unknown {

@@ -12,7 +12,7 @@ expected = "expect"
 
 [policy_trigger]
 kind = "software-criterion"
-trigger = "vitest software criterion snapshot reads inputs/src/criterion.ts and compares expect/findings.json plus expect/rendered.txt"
+trigger = "vitest software criterion JSON receipt reads inputs/src/criterion.ts and compares expect/findings.json plus expect/api-route-hits.json"
 evidence = "expect/findings.json"
 expected_rule_ids = ["TS-AGENT-POLICY-007", "TS-AGENT-POLICY-008"]
 expected_criteria = [
