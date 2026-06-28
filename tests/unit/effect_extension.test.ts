@@ -162,17 +162,18 @@ test("Effect compact advice is prioritized before generic agent shape advice", (
   assert.deepEqual(
     report.findings
       .filter(
-        (finding) => finding.ruleId === "TS-EXT-EFFECT-R002" || finding.ruleId === "TS-AGENT-R010",
+        (finding) =>
+          finding.ruleId === "TS-EXT-EFFECT-R002" || finding.ruleId === "TS-AGENT-POLICY-010",
       )
       .map((finding) => finding.ruleId)
       .sort(),
-    ["TS-AGENT-R010", "TS-EXT-EFFECT-R002"],
+    ["TS-AGENT-POLICY-010", "TS-EXT-EFFECT-R002"],
   );
   assert.match(
     advice,
     /RepairTasks:\n- \[TS-EXT-EFFECT-R002\] Info x1: Migrate public async domain APIs to Effect/u,
   );
-  assert.match(advice, /\n- \[TS-AGENT-R010\] Info x1:/u);
+  assert.match(advice, /\n- \[TS-AGENT-POLICY-010\] Info x1:/u);
 });
 
 test("explicit Effect enablement without dependency is an error-level blocking finding", () => {

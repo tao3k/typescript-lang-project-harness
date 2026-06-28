@@ -45,22 +45,22 @@ test("rule catalog keeps deterministic pack order and agent advice severity", ()
   assert.deepEqual(
     typeScriptAgentPolicyRules().map((rule) => `${rule.ruleId}:${rule.severity}`),
     [
-      "TS-AGENT-R001:info",
-      "TS-AGENT-R002:info",
-      "TS-AGENT-R003:info",
-      "TS-AGENT-R004:info",
-      "TS-AGENT-R005:info",
-      "TS-AGENT-R006:info",
-      "TS-AGENT-R007:info",
-      "TS-AGENT-R008:info",
-      "TS-AGENT-R009:info",
-      "TS-AGENT-R010:info",
-      "TS-AGENT-R011:info",
-      "TS-AGENT-R012:info",
-      "TS-AGENT-R013:info",
-      "TS-AGENT-R014:info",
-      "TS-AGENT-R015:info",
-      "TS-AGENT-R016:info",
+      "TS-AGENT-POLICY-001:info",
+      "TS-AGENT-POLICY-002:info",
+      "TS-AGENT-POLICY-003:info",
+      "TS-AGENT-POLICY-004:info",
+      "TS-AGENT-POLICY-005:info",
+      "TS-AGENT-POLICY-006:info",
+      "TS-AGENT-POLICY-007:info",
+      "TS-AGENT-POLICY-008:info",
+      "TS-AGENT-POLICY-009:info",
+      "TS-AGENT-POLICY-010:info",
+      "TS-AGENT-POLICY-011:info",
+      "TS-AGENT-POLICY-012:info",
+      "TS-AGENT-POLICY-013:info",
+      "TS-AGENT-POLICY-014:info",
+      "TS-AGENT-POLICY-015:info",
+      "TS-AGENT-POLICY-016:info",
     ],
   );
   assert.deepEqual(
@@ -117,31 +117,31 @@ test("agent policy reports unresolved project imports without blocking", () => {
   assert.deepEqual(
     typeScriptAgentPolicyRules().map((rule) => rule.ruleId),
     [
-      "TS-AGENT-R001",
-      "TS-AGENT-R002",
-      "TS-AGENT-R003",
-      "TS-AGENT-R004",
-      "TS-AGENT-R005",
-      "TS-AGENT-R006",
-      "TS-AGENT-R007",
-      "TS-AGENT-R008",
-      "TS-AGENT-R009",
-      "TS-AGENT-R010",
-      "TS-AGENT-R011",
-      "TS-AGENT-R012",
-      "TS-AGENT-R013",
-      "TS-AGENT-R014",
-      "TS-AGENT-R015",
-      "TS-AGENT-R016",
+      "TS-AGENT-POLICY-001",
+      "TS-AGENT-POLICY-002",
+      "TS-AGENT-POLICY-003",
+      "TS-AGENT-POLICY-004",
+      "TS-AGENT-POLICY-005",
+      "TS-AGENT-POLICY-006",
+      "TS-AGENT-POLICY-007",
+      "TS-AGENT-POLICY-008",
+      "TS-AGENT-POLICY-009",
+      "TS-AGENT-POLICY-010",
+      "TS-AGENT-POLICY-011",
+      "TS-AGENT-POLICY-012",
+      "TS-AGENT-POLICY-013",
+      "TS-AGENT-POLICY-014",
+      "TS-AGENT-POLICY-015",
+      "TS-AGENT-POLICY-016",
     ],
   );
   assert.deepEqual(
     report.findings
-      .filter((finding) => finding.ruleId === "TS-AGENT-R001")
+      .filter((finding) => finding.ruleId === "TS-AGENT-POLICY-001")
       .map((finding) => `${finding.ruleId}:${finding.severity}`),
-    ["TS-AGENT-R001:info", "TS-AGENT-R001:info", "TS-AGENT-R001:info"],
+    ["TS-AGENT-POLICY-001:info", "TS-AGENT-POLICY-001:info", "TS-AGENT-POLICY-001:info"],
   );
-  assert.match(rendered, /\[TS-AGENT-R001\] Info/u);
+  assert.match(rendered, /\[TS-AGENT-POLICY-001\] Info/u);
   assert.match(rendered, /Project import '\.\/missing\.js' does not resolve/u);
   assert.match(rendered, /Project import '#missing' does not resolve/u);
   assert.match(rendered, /Project import '@app\/missing' does not resolve/u);
@@ -178,7 +178,7 @@ test("agent policy reports unresolved package entries without blocking", () => {
   assert.equal(isTypeScriptHarnessClean(report), true);
   assert.deepEqual(
     report.findings.map((finding) => finding.ruleId),
-    ["TS-AGENT-R002", "TS-AGENT-R002"],
+    ["TS-AGENT-POLICY-002", "TS-AGENT-POLICY-002"],
   );
   assert.match(rendered, /Package exports '\.' target '\.\/dist\/missing\.js'/u);
   assert.match(rendered, /Package imports '#missing' target '\.\/src\/missing\.ts'/u);
@@ -205,7 +205,7 @@ test("agent policy reports multi-owner facades without intent docs", () => {
   assert.equal(isTypeScriptHarnessClean(report), true);
   assert.deepEqual(
     report.findings.map((finding) => finding.ruleId),
-    ["TS-AGENT-R003"],
+    ["TS-AGENT-POLICY-003"],
   );
   assert.match(rendered, /Facade re-exports 2 owners without a local intent doc/u);
 });
@@ -243,7 +243,7 @@ test("agent policy reports missing module docs for broad public surfaces only", 
 
   const report = runTypeScriptProjectHarness(root);
   const missingDocPaths = report.findings
-    .filter((finding) => finding.ruleId === "TS-AGENT-R013")
+    .filter((finding) => finding.ruleId === "TS-AGENT-POLICY-013")
     .flatMap((finding) =>
       finding.location.path === undefined ? [] : [relativePath(root, finding.location.path)],
     )
@@ -278,7 +278,7 @@ test("agent policy reports parser-native public API shape advice without blockin
   assert.equal(isTypeScriptHarnessClean(report), true);
   assert.deepEqual(
     report.findings.map((finding) => finding.ruleId),
-    ["TS-AGENT-R004", "TS-AGENT-R005", "TS-AGENT-R006"],
+    ["TS-AGENT-POLICY-004", "TS-AGENT-POLICY-005", "TS-AGENT-POLICY-006"],
   );
   assert.match(rendered, /multiple flag parameters/u);
   assert.match(rendered, /exposes 6 positional parameters/u);
@@ -321,14 +321,16 @@ test("agent policy reports parser-native algorithm shape advice without blocking
   assert.equal(isTypeScriptHarnessClean(report), true);
   assert.deepEqual(
     report.findings.map((finding) => finding.ruleId),
-    ["TS-AGENT-R007", "TS-AGENT-R008"],
+    ["TS-AGENT-POLICY-007", "TS-AGENT-POLICY-008"],
   );
   assert.equal(
-    report.findings.find((finding) => finding.ruleId === "TS-AGENT-R007")?.labels.softwareCriteria,
+    report.findings.find((finding) => finding.ruleId === "TS-AGENT-POLICY-007")?.labels
+      .softwareCriteria,
     "control-flow.decision-stack",
   );
   assert.equal(
-    report.findings.find((finding) => finding.ruleId === "TS-AGENT-R008")?.labels.softwareCriteria,
+    report.findings.find((finding) => finding.ruleId === "TS-AGENT-POLICY-008")?.labels
+      .softwareCriteria,
     "control-flow.broad-linear-phase",
   );
   assert.match(rendered, /hides algorithm shape/u);
@@ -366,7 +368,9 @@ test("agent policy labels parser-native traversal knot advice", () => {
   );
 
   const report = runTypeScriptProjectHarness(root);
-  const traversalFinding = report.findings.find((finding) => finding.ruleId === "TS-AGENT-R007");
+  const traversalFinding = report.findings.find(
+    (finding) => finding.ruleId === "TS-AGENT-POLICY-007",
+  );
 
   assert.equal(isTypeScriptHarnessClean(report), true);
   assert.equal(traversalFinding?.labels.softwareCriteria, "control-flow.traversal-knot");
@@ -395,7 +399,9 @@ test("agent policy labels parser-native literal dispatch advice", () => {
   );
 
   const report = runTypeScriptProjectHarness(root);
-  const dispatchFinding = report.findings.find((finding) => finding.ruleId === "TS-AGENT-R007");
+  const dispatchFinding = report.findings.find(
+    (finding) => finding.ruleId === "TS-AGENT-POLICY-007",
+  );
 
   assert.equal(isTypeScriptHarnessClean(report), true);
   assert.equal(dispatchFinding?.labels.softwareCriteria, "control-flow.literal-dispatch-chain");
@@ -427,7 +433,7 @@ test("agent policy reports parser-native public data shape advice without blocki
   assert.equal(isTypeScriptHarnessClean(report), true);
   assert.deepEqual(
     report.findings.map((finding) => finding.ruleId),
-    ["TS-AGENT-R009"],
+    ["TS-AGENT-POLICY-009"],
   );
   assert.match(rendered, /OwnerEvent/u);
   assert.match(rendered, /ownerId: string/u);
@@ -483,7 +489,7 @@ test("agent policy reports parser-native public type boundary advice without blo
   assert.equal(isTypeScriptHarnessClean(report), true);
   assert.deepEqual(
     report.findings.map((finding) => finding.ruleId),
-    ["TS-AGENT-R010", "TS-AGENT-R011", "TS-AGENT-R012"],
+    ["TS-AGENT-POLICY-010", "TS-AGENT-POLICY-011", "TS-AGENT-POLICY-012"],
   );
   assert.match(rendered, /OwnerId/u);
   assert.doesNotMatch(rendered, /OwnerState/u);

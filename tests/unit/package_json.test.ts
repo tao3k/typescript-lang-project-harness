@@ -29,17 +29,17 @@ test("project harness reports malformed package json without throwing", () => {
   assert.deepEqual(
     typeScriptProjectPolicyRules().map((rule) => `${rule.ruleId}:${rule.severity}`),
     [
-      "TS-PROJ-R001:warning",
-      "TS-PROJ-R002:error",
-      "TS-PROJ-R003:info",
-      "TS-PROJ-R004:info",
-      "TS-PROJ-R005:info",
-      "TS-PROJ-R006:info",
+      "TS-AGENT-PROJECT-001:warning",
+      "TS-AGENT-PROJECT-002:error",
+      "TS-AGENT-PROJECT-003:info",
+      "TS-AGENT-PROJECT-004:info",
+      "TS-AGENT-PROJECT-005:info",
+      "TS-AGENT-PROJECT-006:info",
     ],
   );
   assert.deepEqual(
     report.findings.map((finding) => `${finding.ruleId}:${finding.severity}`),
-    ["TS-PROJ-R003:info"],
+    ["TS-AGENT-PROJECT-003:info"],
   );
   assert.deepEqual(
     report.reasoningTree.diagnostics.map((diagnostic) => ({
@@ -49,10 +49,10 @@ test("project harness reports malformed package json without throwing", () => {
     [{ phase: "package-json", ownerPath: "package.json" }],
   );
   assert.equal(report.projectScope?.packageJson.diagnostics.length, 1);
-  assert.match(rendered, /\[TS-PROJ-R003\] Info/u);
+  assert.match(rendered, /\[TS-AGENT-PROJECT-003\] Info/u);
   assert.match(rendered, /package\.json parser diagnostic/u);
   assert.match(snapshot, /FindingGroups:/u);
-  assert.match(snapshot, /TS-PROJ-R003 x1 first=package\.json/u);
+  assert.match(snapshot, /TS-AGENT-PROJECT-003 x1 first=package\.json/u);
 });
 
 test("project harness reports malformed project reference package json without throwing", () => {
@@ -81,7 +81,7 @@ test("project harness reports malformed project reference package json without t
   assert.equal(isTypeScriptHarnessClean(report), true);
   assert.deepEqual(
     report.findings.map((finding) => `${finding.ruleId}:${finding.severity}`),
-    ["TS-PROJ-R003:info"],
+    ["TS-AGENT-PROJECT-003:info"],
   );
   assert.deepEqual(
     report.projectScope?.config.projectReferencePackages.map((referencePackage) => ({
@@ -186,7 +186,7 @@ test("project policy reports referenced package config shape as advice", () => {
   assert.equal(isTypeScriptHarnessClean(report), true);
   assert.deepEqual(
     report.findings
-      .filter((finding) => finding.ruleId === "TS-PROJ-R004")
+      .filter((finding) => finding.ruleId === "TS-AGENT-PROJECT-004")
       .map((finding) => `${finding.severity}:${finding.label}`),
     ["info:referenced project config"],
   );
@@ -224,12 +224,12 @@ test("project policy reports package entry module resolution as advice", () => {
   assert.equal(isTypeScriptHarnessClean(report), true);
   assert.deepEqual(
     report.findings
-      .filter((finding) => finding.ruleId === "TS-PROJ-R005")
+      .filter((finding) => finding.ruleId === "TS-AGENT-PROJECT-005")
       .map((finding) => `${finding.severity}:${finding.label}`),
     ["info:package entry module resolution"],
   );
   assert.match(
-    report.findings.find((finding) => finding.ruleId === "TS-PROJ-R005")?.summary ?? "",
+    report.findings.find((finding) => finding.ruleId === "TS-AGENT-PROJECT-005")?.summary ?? "",
     /classic/u,
   );
 });
@@ -257,7 +257,7 @@ test("project policy uses TypeScript effective module resolution facts", () => {
 
   assert.equal(report.reasoningTree.compilerOptions.moduleResolution, "NodeNext");
   assert.deepEqual(
-    report.findings.filter((finding) => finding.ruleId === "TS-PROJ-R005"),
+    report.findings.filter((finding) => finding.ruleId === "TS-AGENT-PROJECT-005"),
     [],
   );
 });
@@ -282,7 +282,7 @@ test("project harness reports malformed workspace package json without throwing"
   assert.equal(isTypeScriptHarnessClean(report), true);
   assert.deepEqual(
     report.findings.map((finding) => `${finding.ruleId}:${finding.severity}`),
-    ["TS-PROJ-R003:info"],
+    ["TS-AGENT-PROJECT-003:info"],
   );
   assert.deepEqual(
     report.projectScope?.packageJson.workspacePackages.map((workspacePackage) => ({
@@ -300,7 +300,7 @@ test("project harness reports malformed workspace package json without throwing"
   );
   const rendered = renderTypeScriptReasoningTree(report);
   assert.match(rendered, /FindingGroups:/u);
-  assert.match(rendered, /TS-PROJ-R003 x1 first=packages\/broken\/package\.json/u);
+  assert.match(rendered, /TS-AGENT-PROJECT-003 x1 first=packages\/broken\/package\.json/u);
 });
 
 test("project harness discovers workspace package facts from package json", () => {
@@ -514,7 +514,7 @@ test("project harness keeps package entry source locations from the TypeScript J
   );
   assert.deepEqual(
     report.findings
-      .filter((finding) => finding.ruleId === "TS-AGENT-R002")
+      .filter((finding) => finding.ruleId === "TS-AGENT-POLICY-002")
       .map((finding) => `${finding.location.line}:${finding.label}`),
     ["5:unresolved package entry target", "6:unresolved package entry target"],
   );
@@ -668,13 +668,13 @@ test("project harness records Rspack build tool facts from package json and conf
   );
   assert.deepEqual(
     report.findings
-      .filter((finding) => finding.ruleId === "TS-PROJ-R006")
+      .filter((finding) => finding.ruleId === "TS-AGENT-PROJECT-006")
       .map((finding) => `${finding.severity}:${finding.label}`),
     ["info:expose Rspack through package scripts"],
   );
   assert.match(
     advice,
-    /\[TS-PROJ-R006\] Info x1: Expose Rspack build surface through npm scripts/u,
+    /\[TS-AGENT-PROJECT-006\] Info x1: Expose Rspack build surface through npm scripts/u,
   );
   assert.match(advice, /add or update package scripts so `npm run build`/u);
 });
@@ -724,7 +724,7 @@ test("Rspack script facts satisfy the build tool surface advice", () => {
     ],
   );
   assert.deepEqual(
-    report.findings.filter((finding) => finding.ruleId === "TS-PROJ-R006"),
+    report.findings.filter((finding) => finding.ruleId === "TS-AGENT-PROJECT-006"),
     [],
   );
 });
@@ -769,7 +769,7 @@ test("package json harness config can explicitly expose Rspack build tool intent
     ],
   );
   assert.match(
-    report.findings.find((finding) => finding.ruleId === "TS-PROJ-R006")?.summary ?? "",
+    report.findings.find((finding) => finding.ruleId === "TS-AGENT-PROJECT-006")?.summary ?? "",
     /package\.json harness config/u,
   );
 });

@@ -24,7 +24,8 @@ test("agent software criterion control-flow v1 scenario snapshot", () => {
     slashPath(moduleReport.path).endsWith("src/criterion.ts"),
   );
   const findings = report.findings.filter(
-    (finding) => finding.ruleId === "TS-AGENT-R007" || finding.ruleId === "TS-AGENT-R008",
+    (finding) =>
+      finding.ruleId === "TS-AGENT-POLICY-007" || finding.ruleId === "TS-AGENT-POLICY-008",
   );
   const payload = buildApiPacketPayload(report, { view: "api", query: "route" });
 

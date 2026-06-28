@@ -1,4 +1,4 @@
-// Positive fixture: src/index.ts with own exports — triggers TS-PROJ-R003
+// Positive fixture: src/index.ts with own exports — triggers TS-AGENT-PROJECT-003
 export function doSomething(): string {
   return "done";
 }

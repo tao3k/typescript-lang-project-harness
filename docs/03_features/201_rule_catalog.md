@@ -51,8 +51,8 @@ for advisory rules; it does not mutate catalog severity.
 
 - `TS-SYN-R001`: TypeScript source must parse through the TypeScript Compiler
   API.
-- `TS-PROJ-R001`: TypeScript project runs should have a `tsconfig.json`.
-- `TS-PROJ-R002`: `tsconfig.json` must parse through TypeScript's native config
+- `TS-AGENT-PROJECT-001`: TypeScript project runs should have a `tsconfig.json`.
+- `TS-AGENT-PROJECT-002`: `tsconfig.json` must parse through TypeScript's native config
   parser.
 - `TS-EXT-EFFECT-R001`: when `package.json` explicitly enables the Effect
   extension, the `effect` dependency must be declared so the configured policy
@@ -68,8 +68,8 @@ for advisory rules; it does not mutate catalog severity.
 
 ## Agent Advice Rules
 
-`TS-SEM-*`, `TS-PROJ-R003`, `TS-PROJ-R004`, `TS-PROJ-R005`,
-`TS-PROJ-R006`, `TS-MOD-*`, `TS-TEST-*`, `TS-AGENT-*`, and
+`TS-SEM-*`, `TS-AGENT-PROJECT-003`, `TS-AGENT-PROJECT-004`, `TS-AGENT-PROJECT-005`,
+`TS-AGENT-PROJECT-006`, `TS-MOD-*`, `TS-TEST-*`, `TS-AGENT-*`, and
 `TS-EXT-EFFECT-R002` through `TS-EXT-EFFECT-R010`, `TS-EXT-REACT-R002`, and
 `TS-EXT-REACT-R004` rules are `info` findings. They are rendered by default for
 repair agents but do not fail assertions unless a caller promotes them or uses
@@ -80,20 +80,20 @@ projects keep a bounded first reading surface for agents.
 - `TS-SEM-R001`: TypeScript `Program` semantic diagnostics should be visible
   from parser-native facts, including stable TypeScript diagnostic codes,
   without replacing `tsc`.
-- `TS-PROJ-R003`: root, project-reference, and workspace-package `package.json`
+- `TS-AGENT-PROJECT-003`: root, project-reference, and workspace-package `package.json`
   files should parse so package entry fields, exports/imports/bin, script,
   workspace, referenced package, and workspace package facts are visible.
   Package diagnostics, entry locations, conditional exports/imports target
   details, script locations, and workspace locations come from TypeScript's JSON AST.
-- `TS-PROJ-R004`: TypeScript project references should point to package-local
+- `TS-AGENT-PROJECT-004`: TypeScript project references should point to package-local
   configs whose parser-owned compiler option facts show `composite` and
   `declaration` enabled. This stays non-blocking so agents can still inspect
   partial workspaces.
-- `TS-PROJ-R005`: projects using package `exports` or `imports` should have an
+- `TS-AGENT-PROJECT-005`: projects using package `exports` or `imports` should have an
   effective TypeScript `moduleResolution` of `node16`, `nodenext`, or `bundler`.
   The value comes from TypeScript compiler-option facts, including defaults
   implied by `module`, not raw JSON string matching.
-- `TS-PROJ-R006`: projects with parser-visible Rspack package/config facts
+- `TS-AGENT-PROJECT-006`: projects with parser-visible Rspack package/config facts
   should expose that build surface through package scripts. This helps agents
   run `npm run build` or `npm run check` without adding ad-hoc local gate
   scripts, and it remains non-blocking advice.
@@ -107,41 +107,41 @@ projects keep a bounded first reading surface for agents.
 - `TS-TEST-R001`: when configured test roots exist, parser-visible test modules
   should live under those roots.
 
-- `TS-AGENT-R001`: project imports, including relative imports, unresolved
+- `TS-AGENT-POLICY-001`: project imports, including relative imports, unresolved
   configured path aliases, and unresolved `#` package imports, should resolve
   to a parser-visible TypeScript owner or be documented as a non-TypeScript
   asset.
-- `TS-AGENT-R002`: package exports/imports should resolve to parser-visible
+- `TS-AGENT-POLICY-002`: package exports/imports should resolve to parser-visible
   TypeScript owners or documented external artifacts.
-- `TS-AGENT-R003`: facade `index.*` modules that re-export multiple owners
+- `TS-AGENT-POLICY-003`: facade `index.*` modules that re-export multiple owners
   should include a local intent doc.
-- `TS-AGENT-R004`: public functions should avoid multiple boolean mode
+- `TS-AGENT-POLICY-004`: public functions should avoid multiple boolean mode
   parameters when a named options object or discriminated union would preserve
   agent-visible intent.
-- `TS-AGENT-R005`: public functions should avoid broad positional parameter
+- `TS-AGENT-POLICY-005`: public functions should avoid broad positional parameter
   surfaces when a named request/options object would preserve call semantics.
-- `TS-AGENT-R006`: public tuple parameters and return values that bundle
+- `TS-AGENT-POLICY-006`: public tuple parameters and return values that bundle
   primitive semantic values should use named object, tuple alias, or domain
   types.
-- `TS-AGENT-R007`: public functions with deeply nested or branch-heavy
+- `TS-AGENT-POLICY-007`: public functions with deeply nested or branch-heavy
   algorithm shape should expose guard clauses, discriminated dispatch, or small
   named steps.
-- `TS-AGENT-R008`: broad linear public functions should split algorithm
+- `TS-AGENT-POLICY-008`: broad linear public functions should split algorithm
   responsibilities into small named helpers or pipeline steps.
-- `TS-AGENT-R009`: public source data surfaces should avoid clusters of
+- `TS-AGENT-POLICY-009`: public source data surfaces should avoid clusters of
   semantic primitive fields such as identifiers, URLs, paths, byte/time units,
   or boolean mode fields unless the raw DTO boundary is explicit. Harness
   model-layer modules, including nested `src/**/model.ts` schema modules, stay
   outside this advice surface.
-- `TS-AGENT-R010`: public semantic type aliases such as `OwnerId = string`
+- `TS-AGENT-POLICY-010`: public semantic type aliases such as `OwnerId = string`
   should use a branded type, opaque wrapper, or named domain object so agents
   do not treat the alias as a real type boundary. Literal-union catalog aliases
   such as `Status = "pending" | "done"` are accepted.
-- `TS-AGENT-R011`: public data models should avoid raw string state, status,
+- `TS-AGENT-POLICY-011`: public data models should avoid raw string state, status,
   kind, mode, phase, type, tag, or category fields when a string-literal union,
   public enum, branded type, or typed catalog boundary would preserve the
   finite state space.
-- `TS-AGENT-R012`: public discriminated-union variants should avoid broad
+- `TS-AGENT-POLICY-012`: public discriminated-union variants should avoid broad
   primitive semantic payloads when named domain types or named payload objects
   would preserve event and command invariants.
 - `TS-EXT-EFFECT-R002`: when the Effect extension is active, public source APIs

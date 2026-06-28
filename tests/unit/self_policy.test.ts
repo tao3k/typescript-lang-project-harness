@@ -34,7 +34,7 @@ test("repository self-applies the default advice surface with minimal findings",
 
   const advice = advisoryFindings(report);
   assert.ok(
-    advice.every((finding) => finding.ruleId !== "TS-AGENT-R013"),
+    advice.every((finding) => finding.ruleId !== "TS-AGENT-POLICY-013"),
     "repository broad public surfaces should carry module-level intent docs",
   );
   // Allow a bounded number of info-level findings from public API, renderer,

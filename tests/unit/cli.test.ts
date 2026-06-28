@@ -32,7 +32,7 @@ test("CLI exposes only search, check, and agent protocol entrypoints", () => {
   const changed = runCliCapture(["check", "--changed", "."], noTsconfig);
   assert.equal(changed.exitCode, 0);
   assert.match(changed.stdout, /^\[ok\] typescript/u);
-  assert.doesNotMatch(changed.stdout, /\[TS-PROJ-R001\] Info/u);
+  assert.doesNotMatch(changed.stdout, /\[TS-AGENT-PROJECT-001\] Info/u);
 
   for (const retiredArgv of [
     ["."],

@@ -13,7 +13,7 @@ TypeScript native public data-field facts
 
 ## Scope
 
-- Add advisory `TS-AGENT-R009` for public source interfaces, type literals, or
+- Add advisory `TS-AGENT-POLICY-009` for public source interfaces, type literals, or
   public class fields that expose clusters of semantic primitive fields.
 - Consume only `TypeScriptReasoningModule.publicDataFields`; rule code must not
   import `typescript`, call parser helpers, or scan source text for TypeScript

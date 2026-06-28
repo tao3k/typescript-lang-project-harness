@@ -89,7 +89,7 @@ test("semantic-search JSON packets conform to the shared schema envelope", () =>
     jsonPacket(root, ["search", "deps", "react::jsx", "--json", "."]),
     jsonPacket(root, ["search", "api", "findOrderStatus", "--json", "."]),
     jsonPacket(root, ["search", "public-external-types", "react", "--json", "."]),
-    jsonPacket(root, ["search", "policy", "TS-AGENT-R001", "--json", "."]),
+    jsonPacket(root, ["search", "policy", "TS-AGENT-POLICY-001", "--json", "."]),
     jsonPacket(root, ["search", "symbol", "findOrderStatus", "--json", "."]),
     jsonPacket(root, ["search", "callsite", "findOrderStatus", "--json", "."]),
     jsonPacket(root, ["search", "import", "./index", "--json", "."]),

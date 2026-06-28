@@ -102,7 +102,7 @@ EXAMPLES
   ts-harness search deps react/jsx-runtime@19.0.0::jsx --workspace .
   ts-harness search api OrderStatus --workspace .
   ts-harness search public-external-types react --workspace .
-  ts-harness search policy TS-AGENT-R001 owner tests --workspace .
+  ts-harness search policy TS-AGENT-POLICY-001 owner tests --workspace .
   ts-harness search symbol OrderStatus --workspace .
   ts-harness search callsite OrderStatus --workspace .
   ts-harness search import ./order --workspace .

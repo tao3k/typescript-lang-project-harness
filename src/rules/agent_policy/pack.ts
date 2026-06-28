@@ -26,7 +26,7 @@ import {
 } from "./software_criteria.js";
 
 const TS_AGENT_R001: TypeScriptHarnessRule = {
-  ruleId: "TS-AGENT-R001",
+  ruleId: "TS-AGENT-POLICY-001",
   packId: "typescript.agent_policy",
   severity: "info",
   title: "Project import should resolve to an owner",
@@ -36,7 +36,7 @@ const TS_AGENT_R001: TypeScriptHarnessRule = {
 };
 
 const TS_AGENT_R002: TypeScriptHarnessRule = {
-  ruleId: "TS-AGENT-R002",
+  ruleId: "TS-AGENT-POLICY-002",
   packId: "typescript.agent_policy",
   severity: "info",
   title: "Package entry should resolve to an owner",
@@ -46,7 +46,7 @@ const TS_AGENT_R002: TypeScriptHarnessRule = {
 };
 
 const TS_AGENT_R003: TypeScriptHarnessRule = {
-  ruleId: "TS-AGENT-R003",
+  ruleId: "TS-AGENT-POLICY-003",
   packId: "typescript.agent_policy",
   severity: "info",
   title: "Facade with multiple owners needs intent",
@@ -56,7 +56,7 @@ const TS_AGENT_R003: TypeScriptHarnessRule = {
 };
 
 const TS_AGENT_R004: TypeScriptHarnessRule = {
-  ruleId: "TS-AGENT-R004",
+  ruleId: "TS-AGENT-POLICY-004",
   packId: "typescript.agent_policy",
   severity: "info",
   title: "Public function exposes multiple flag parameters",
@@ -66,7 +66,7 @@ const TS_AGENT_R004: TypeScriptHarnessRule = {
 };
 
 const TS_AGENT_R005: TypeScriptHarnessRule = {
-  ruleId: "TS-AGENT-R005",
+  ruleId: "TS-AGENT-POLICY-005",
   packId: "typescript.agent_policy",
   severity: "info",
   title: "Public function exposes a broad positional parameter surface",
@@ -76,7 +76,7 @@ const TS_AGENT_R005: TypeScriptHarnessRule = {
 };
 
 const TS_AGENT_R006: TypeScriptHarnessRule = {
-  ruleId: "TS-AGENT-R006",
+  ruleId: "TS-AGENT-POLICY-006",
   packId: "typescript.agent_policy",
   severity: "info",
   title: "Public API exposes an anonymous primitive tuple",
@@ -86,7 +86,7 @@ const TS_AGENT_R006: TypeScriptHarnessRule = {
 };
 
 const TS_AGENT_R007: TypeScriptHarnessRule = {
-  ruleId: "TS-AGENT-R007",
+  ruleId: "TS-AGENT-POLICY-007",
   packId: "typescript.agent_policy",
   severity: "info",
   title: "Public function hides algorithm behind nested control flow",
@@ -96,7 +96,7 @@ const TS_AGENT_R007: TypeScriptHarnessRule = {
 };
 
 const TS_AGENT_R008: TypeScriptHarnessRule = {
-  ruleId: "TS-AGENT-R008",
+  ruleId: "TS-AGENT-POLICY-008",
   packId: "typescript.agent_policy",
   severity: "info",
   title: "Public function owns a broad linear algorithm surface",
@@ -106,7 +106,7 @@ const TS_AGENT_R008: TypeScriptHarnessRule = {
 };
 
 const TS_AGENT_R013: TypeScriptHarnessRule = {
-  ruleId: "TS-AGENT-R013",
+  ruleId: "TS-AGENT-POLICY-013",
   packId: "typescript.agent_policy",
   severity: "info",
   title: "Exported module should document its public API intent",
@@ -116,7 +116,7 @@ const TS_AGENT_R013: TypeScriptHarnessRule = {
 };
 
 const TS_AGENT_R014: TypeScriptHarnessRule = {
-  ruleId: "TS-AGENT-R014",
+  ruleId: "TS-AGENT-POLICY-014",
   packId: "typescript.agent_policy",
   severity: "info",
   title: "Module imports many symbols from same source without namespace grouping",
@@ -126,7 +126,7 @@ const TS_AGENT_R014: TypeScriptHarnessRule = {
 };
 
 const TS_AGENT_R015: TypeScriptHarnessRule = {
-  ruleId: "TS-AGENT-R015",
+  ruleId: "TS-AGENT-POLICY-015",
   packId: "typescript.agent_policy",
   severity: "info",
   title: "Facade module exports too many symbols without organization",
@@ -136,7 +136,7 @@ const TS_AGENT_R015: TypeScriptHarnessRule = {
 };
 
 const TS_AGENT_R016: TypeScriptHarnessRule = {
-  ruleId: "TS-AGENT-R016",
+  ruleId: "TS-AGENT-POLICY-016",
   packId: "typescript.agent_policy",
   severity: "info",
   title: "Domain error/exception types should document when they occur",

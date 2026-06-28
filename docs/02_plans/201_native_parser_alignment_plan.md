@@ -78,7 +78,7 @@ target details:
 - `PackageJsonEntryFact.targetDetails` preserves each target string, its
   conditional path, and its TypeScript JSON AST location.
 - `TypeScriptPackageEntryResolutionFact` carries those condition paths into
-  package owner resolution and `TS-AGENT-R002` advice.
+  package owner resolution and `TS-AGENT-POLICY-002` advice.
 - `ts-harness search prime` renders package entry ownership as owner dependencies,
   such as `package exports:. [import] --owner--> src/index.ts`, and groups
   unresolved package targets through `FindingGroups:` instead of repeating full

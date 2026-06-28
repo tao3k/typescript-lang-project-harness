@@ -9,7 +9,7 @@ import type {
 } from "../../model.js";
 
 export const TS_AGENT_R009: TypeScriptHarnessRule = {
-  ruleId: "TS-AGENT-R009",
+  ruleId: "TS-AGENT-POLICY-009",
   packId: "typescript.agent_policy",
   severity: "info",
   title: "Public data surface exposes primitive semantic fields",
@@ -19,7 +19,7 @@ export const TS_AGENT_R009: TypeScriptHarnessRule = {
 };
 
 export const TS_AGENT_R010: TypeScriptHarnessRule = {
-  ruleId: "TS-AGENT-R010",
+  ruleId: "TS-AGENT-POLICY-010",
   packId: "typescript.agent_policy",
   severity: "info",
   title: "Public semantic type alias hides a primitive carrier",
@@ -29,7 +29,7 @@ export const TS_AGENT_R010: TypeScriptHarnessRule = {
 };
 
 export const TS_AGENT_R011: TypeScriptHarnessRule = {
-  ruleId: "TS-AGENT-R011",
+  ruleId: "TS-AGENT-POLICY-011",
   packId: "typescript.agent_policy",
   severity: "info",
   title: "Public data model exposes a stringly state field",
@@ -39,7 +39,7 @@ export const TS_AGENT_R011: TypeScriptHarnessRule = {
 };
 
 export const TS_AGENT_R012: TypeScriptHarnessRule = {
-  ruleId: "TS-AGENT-R012",
+  ruleId: "TS-AGENT-POLICY-012",
   packId: "typescript.agent_policy",
   severity: "info",
   title: "Public discriminated union variant exposes primitive semantic payload fields",

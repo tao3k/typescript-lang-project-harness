@@ -70,10 +70,10 @@ describe("rule packs", () => {
     assert.ok(facade[0]!.help.includes("13"), "names the count");
   });
 
-  it("TS-PROJ-R003: detects non-facade index.ts", () => {
+  it("TS-AGENT-PROJECT-003: detects non-facade index.ts", () => {
     const mod = parseSingle(path.join(POS, "index.ts"));
     const findings = evaluateRules([mod]);
-    const index = findings.filter((f) => f.ruleId === "TS-PROJ-R003");
+    const index = findings.filter((f) => f.ruleId === "TS-AGENT-PROJECT-003");
     assert.equal(index.length, 1, "own exports in index should trigger PROJ-R003");
   });
 
@@ -128,10 +128,10 @@ describe("rule packs", () => {
     assert.equal(facade.length, 0);
   });
 
-  it("TS-PROJ-R003 negative: facade-only index.ts is clean", () => {
+  it("TS-AGENT-PROJECT-003 negative: facade-only index.ts is clean", () => {
     const mod = parseSingle(path.join(NEG, "index.ts"));
     const findings = evaluateRules([mod]);
-    const index = findings.filter((f) => f.ruleId === "TS-PROJ-R003");
+    const index = findings.filter((f) => f.ruleId === "TS-AGENT-PROJECT-003");
     assert.equal(index.length, 0);
   });
 

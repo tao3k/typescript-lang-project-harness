@@ -9,11 +9,24 @@ import { runCliCapture } from "./cli_helpers.js";
 test("search policy returns provider-owned owner and test handles", () => {
   const root = policySearchFixture();
   const result = runCliCapture(
-    ["search", "policy", "TS-AGENT-R001", "owner", "tests", "--view", "seeds", "--workspace", "."],
+    [
+      "search",
+      "policy",
+      "TS-AGENT-POLICY-001",
+      "owner",
+      "tests",
+      "--view",
+      "seeds",
+      "--workspace",
+      ".",
+    ],
     root,
   );
   assert.equal(result.exitCode, 0, result.stderr);
-  assert.match(result.stdout, /^\[search-policy\] q=TS-AGENT-R001 alg=policy-handle-catalog/mu);
+  assert.match(
+    result.stdout,
+    /^\[search-policy\] q=TS-AGENT-POLICY-001 alg=policy-handle-catalog/mu,
+  );
   assert.match(result.stdout, /^O=owner:path\(src\/rules\/agent_policy\/pack\.ts\)!owner;/mu);
   assert.match(result.stdout, /^rank=O,T,T2,T3 frontier=O\.owner,T\.tests,T2\.tests,T3\.tests/mu);
   assert.match(result.stdout, /O=owner:path\(src\/rules\/agent_policy\/pack\.ts\)!owner/u);
@@ -24,7 +37,7 @@ test("search policy returns provider-owned owner and test handles", () => {
 test("search policy JSON exposes semanticHandles", () => {
   const root = policySearchFixture();
   const result = runCliCapture(
-    ["search", "policy", "TS-PROJ-R001", "owner", "tests", "--json", "--workspace", "."],
+    ["search", "policy", "TS-AGENT-PROJECT-001", "owner", "tests", "--json", "--workspace", "."],
     root,
   );
   assert.equal(result.exitCode, 0, result.stderr);
@@ -38,7 +51,7 @@ test("search policy JSON exposes semanticHandles", () => {
     }[];
   };
   assert.equal(packet.view, "policy");
-  assert.equal(packet.semanticHandles?.[0]?.id, "TS-PROJ-R001");
+  assert.equal(packet.semanticHandles?.[0]?.id, "TS-AGENT-PROJECT-001");
   assert.equal(packet.semanticHandles?.[0]?.kind, "policy-rule");
   assert.equal(packet.semanticHandles?.[0]?.ownerPath, "src/rules/project_policy/pack.ts");
   assert.ok(packet.semanticHandles?.[0]?.testPaths?.includes("tests/unit/runner.test.ts"));

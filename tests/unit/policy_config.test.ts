@@ -23,11 +23,14 @@ import {
 test("policy config can disable a single rule finding", () => {
   const root = unresolvedImportProject("single-rule");
   const defaultReport = runTypeScriptProjectHarness(root);
-  const config = withDisabledTypeScriptRule(defaultTypeScriptHarnessConfig(), "TS-AGENT-R001");
+  const config = withDisabledTypeScriptRule(
+    defaultTypeScriptHarnessConfig(),
+    "TS-AGENT-POLICY-001",
+  );
   const configuredReport = runTypeScriptProjectHarness(root, config);
 
-  assert.ok(defaultReport.findings.some((finding) => finding.ruleId === "TS-AGENT-R001"));
-  assert.ok(configuredReport.findings.every((finding) => finding.ruleId !== "TS-AGENT-R001"));
+  assert.ok(defaultReport.findings.some((finding) => finding.ruleId === "TS-AGENT-POLICY-001"));
+  assert.ok(configuredReport.findings.every((finding) => finding.ruleId !== "TS-AGENT-POLICY-001"));
 });
 
 test("policy config can disable several rules and a built-in rule pack", () => {
@@ -39,22 +42,22 @@ test("policy config can disable several rules and a built-in rule pack", () => {
   const report = runTypeScriptProjectHarness(root, config);
 
   assert.deepEqual(typeScriptRulePackRuleIds("agent_policy"), [
-    "TS-AGENT-R001",
-    "TS-AGENT-R002",
-    "TS-AGENT-R003",
-    "TS-AGENT-R004",
-    "TS-AGENT-R005",
-    "TS-AGENT-R006",
-    "TS-AGENT-R007",
-    "TS-AGENT-R008",
-    "TS-AGENT-R009",
-    "TS-AGENT-R010",
-    "TS-AGENT-R011",
-    "TS-AGENT-R012",
-    "TS-AGENT-R013",
-    "TS-AGENT-R014",
-    "TS-AGENT-R015",
-    "TS-AGENT-R016",
+    "TS-AGENT-POLICY-001",
+    "TS-AGENT-POLICY-002",
+    "TS-AGENT-POLICY-003",
+    "TS-AGENT-POLICY-004",
+    "TS-AGENT-POLICY-005",
+    "TS-AGENT-POLICY-006",
+    "TS-AGENT-POLICY-007",
+    "TS-AGENT-POLICY-008",
+    "TS-AGENT-POLICY-009",
+    "TS-AGENT-POLICY-010",
+    "TS-AGENT-POLICY-011",
+    "TS-AGENT-POLICY-012",
+    "TS-AGENT-POLICY-013",
+    "TS-AGENT-POLICY-014",
+    "TS-AGENT-POLICY-015",
+    "TS-AGENT-POLICY-016",
   ]);
   assert.deepEqual(typeScriptRulePackRuleIds("extension_policy"), [
     "TS-EXT-EFFECT-R001",
@@ -86,7 +89,7 @@ test("policy config can override single-rule and rule-pack severities", () => {
   const root = unresolvedImportProject("severity");
   const ruleConfig = withTypeScriptRuleSeverity(
     defaultTypeScriptHarnessConfig(),
-    "TS-AGENT-R001",
+    "TS-AGENT-POLICY-001",
     "warning",
   );
   const packConfig = withTypeScriptRulePackSeverity(
@@ -111,7 +114,7 @@ test("single-rule severity override wins after rule-pack severity", () => {
   const root = unresolvedImportProject("rule-wins");
   const config = withTypeScriptRuleSeverity(
     withTypeScriptRulePackSeverity(defaultTypeScriptHarnessConfig(), "agent_policy", "info"),
-    "TS-AGENT-R001",
+    "TS-AGENT-POLICY-001",
     "warning",
   );
   const report = runTypeScriptProjectHarness(root, config);
@@ -124,11 +127,11 @@ test("blocking rule ids and blocking severity helper are applied at report time"
   const root = unresolvedImportProject("blocking-rule");
   const config = {
     ...defaultTypeScriptHarnessConfig(),
-    blockingRuleIds: ["TS-AGENT-R001"],
+    blockingRuleIds: ["TS-AGENT-POLICY-001"],
   };
   const warningConfig = withTypeScriptRuleSeverity(
     defaultTypeScriptHarnessConfig(),
-    "TS-AGENT-R001",
+    "TS-AGENT-POLICY-001",
     "warning",
   );
   const nonBlockingWarningConfig = withTypeScriptBlockingSeverities(warningConfig, ["error"]);
@@ -148,14 +151,14 @@ test("agent snapshot uses policy-configured findings", () => {
   const configuredSnapshot = renderTypeScriptProjectHarnessAgentSnapshot(
     runTypeScriptProjectHarnessAgentSnapshot(
       root,
-      withDisabledTypeScriptRule(defaultTypeScriptHarnessConfig(), "TS-AGENT-R001"),
+      withDisabledTypeScriptRule(defaultTypeScriptHarnessConfig(), "TS-AGENT-POLICY-001"),
     ),
   );
 
   assert.match(defaultSnapshot, /FindingGroups:/u);
-  assert.match(defaultSnapshot, /TS-AGENT-R001/u);
+  assert.match(defaultSnapshot, /TS-AGENT-POLICY-001/u);
   assert.doesNotMatch(configuredSnapshot, /FindingGroups:/u);
-  assert.doesNotMatch(configuredSnapshot, /TS-AGENT-R001/u);
+  assert.doesNotMatch(configuredSnapshot, /TS-AGENT-POLICY-001/u);
 });
 
 function unresolvedImportProject(label: string): string {
@@ -176,7 +179,7 @@ function unresolvedImportProject(label: string): string {
 }
 
 function agentFinding(report: ReturnType<typeof runTypeScriptProjectHarness>) {
-  const finding = report.findings.find((candidate) => candidate.ruleId === "TS-AGENT-R001");
+  const finding = report.findings.find((candidate) => candidate.ruleId === "TS-AGENT-POLICY-001");
   assert.ok(finding, renderTypeScriptProjectHarness(report));
   return finding;
 }

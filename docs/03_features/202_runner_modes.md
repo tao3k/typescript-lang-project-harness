@@ -18,7 +18,7 @@ diagnostics as parser-owned facts and expose them through reasoning-tree
 diagnostics as non-blocking advice.
 
 When no config file exists, the runner falls back to recursive TypeScript file
-discovery and emits `TS-PROJ-R001` from the reasoning tree's missing
+discovery and emits `TS-AGENT-PROJECT-001` from the reasoning tree's missing
 `configPath` fact. That fallback is for early bootstrap and editor-oriented
 use; long-lived projects should declare `tsconfig.json` so the harness sees the
 same source set TypeScript sees.

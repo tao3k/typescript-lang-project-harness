@@ -6,7 +6,7 @@ import type {
 import { diagnosticFinding, relativeToProject } from "../common.js";
 
 const TS_PROJ_R001: TypeScriptHarnessRule = {
-  ruleId: "TS-PROJ-R001",
+  ruleId: "TS-AGENT-PROJECT-001",
   packId: "typescript.project_policy",
   severity: "warning",
   title: "Project should declare tsconfig",
@@ -16,7 +16,7 @@ const TS_PROJ_R001: TypeScriptHarnessRule = {
 };
 
 const TS_PROJ_R002: TypeScriptHarnessRule = {
-  ruleId: "TS-PROJ-R002",
+  ruleId: "TS-AGENT-PROJECT-002",
   packId: "typescript.project_policy",
   severity: "error",
   title: "tsconfig must parse",
@@ -25,7 +25,7 @@ const TS_PROJ_R002: TypeScriptHarnessRule = {
 };
 
 const TS_PROJ_R003: TypeScriptHarnessRule = {
-  ruleId: "TS-PROJ-R003",
+  ruleId: "TS-AGENT-PROJECT-003",
   packId: "typescript.project_policy",
   severity: "info",
   title: "package.json should parse",
@@ -35,7 +35,7 @@ const TS_PROJ_R003: TypeScriptHarnessRule = {
 };
 
 const TS_PROJ_R004: TypeScriptHarnessRule = {
-  ruleId: "TS-PROJ-R004",
+  ruleId: "TS-AGENT-PROJECT-004",
   packId: "typescript.project_policy",
   severity: "info",
   title: "Project references should be composite",
@@ -45,7 +45,7 @@ const TS_PROJ_R004: TypeScriptHarnessRule = {
 };
 
 const TS_PROJ_R005: TypeScriptHarnessRule = {
-  ruleId: "TS-PROJ-R005",
+  ruleId: "TS-AGENT-PROJECT-005",
   packId: "typescript.project_policy",
   severity: "info",
   title: "Package entries need modern module resolution",
@@ -55,7 +55,7 @@ const TS_PROJ_R005: TypeScriptHarnessRule = {
 };
 
 const TS_PROJ_R006: TypeScriptHarnessRule = {
-  ruleId: "TS-PROJ-R006",
+  ruleId: "TS-AGENT-PROJECT-006",
   packId: "typescript.project_policy",
   severity: "info",
   title: "Rspack projects should expose npm build scripts",

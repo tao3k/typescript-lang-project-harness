@@ -309,15 +309,15 @@ function agentTaskTitle(finding: TypeScriptHarnessFinding): string {
     return reactTitle;
   }
   switch (finding.ruleId) {
-    case "TS-AGENT-R009":
+    case "TS-AGENT-POLICY-009":
       return "Make public DTO/domain fields carry typed meaning";
-    case "TS-AGENT-R010":
+    case "TS-AGENT-POLICY-010":
       return "Replace primitive semantic aliases with real domain types";
-    case "TS-AGENT-R011":
+    case "TS-AGENT-POLICY-011":
       return "Replace stringly state fields with finite typed states";
-    case "TS-AGENT-R012":
+    case "TS-AGENT-POLICY-012":
       return "Give discriminated-union payloads named domain shapes";
-    case "TS-PROJ-R006":
+    case "TS-AGENT-PROJECT-006":
       return "Expose Rspack build surface through npm scripts";
     default:
       return finding.title;
@@ -334,56 +334,56 @@ function adviceFixSteps(finding: TypeScriptHarnessFinding): readonly string[] {
     return reactSteps;
   }
   switch (finding.ruleId) {
-    case "TS-AGENT-R009":
+    case "TS-AGENT-POLICY-009":
       return [
         "edit the exported interface/type/class fields named in targets",
         "replace repeated primitive ids, paths, flags, and urls with branded aliases or named domain objects",
         "if raw JSON is intentional, name the boundary as DTO/Payload and keep the raw shape at the adapter edge",
       ];
-    case "TS-AGENT-R010":
+    case "TS-AGENT-POLICY-010":
       return [
         "replace aliases such as `export type OwnerId = string` with branded/opaque aliases or named value objects",
         "keep finite literal-union catalog aliases as the typed boundary",
       ];
-    case "TS-AGENT-R011":
+    case "TS-AGENT-POLICY-011":
       return [
         "replace raw `status: string`, `kind: string`, `mode: string`, or similar state fields",
         "use string-literal unions, public enums, branded state types, or typed catalog boundaries",
       ];
-    case "TS-AGENT-R012":
+    case "TS-AGENT-POLICY-012":
       return [
         "move primitive discriminated-union payload fields into named payload/domain types",
         "prefer a named payload object such as `UserLoadedPayload` with branded ids",
       ];
-    case "TS-PROJ-R006":
+    case "TS-AGENT-PROJECT-006":
       return [
         "add or update package scripts so `npm run build` or an equivalent script runs `rspack build`",
         "keep `tsc --noEmit` in `npm run check` when the project still needs TypeScript type checking",
         "if declaration output is required, keep a separate `tsc --emitDeclarationOnly` or `tsc` build step",
       ];
-    case "TS-AGENT-R013":
+    case "TS-AGENT-POLICY-013":
       return [
         "add a module-level JSDoc comment (/** ... */) describing the module's public API and responsibility",
         "example from Effect-TS: Brand.ts opens with 20 lines explaining refined vs nominal branding",
       ];
-    case "TS-AGENT-R014":
+    case "TS-AGENT-POLICY-014":
       return [
         "replace dense named imports with a namespace import: `import * as X from './module.js'`",
         "example from Effect-TS: `import * as Arr from './Array.js'` instead of importing 10 symbols individually",
       ];
-    case "TS-AGENT-R015":
+    case "TS-AGENT-POLICY-015":
       return [
         "split the facade into sub-domain barrels (e.g., Schema.ts, Cause.ts, Fiber.ts)",
         "each sub-domain barrel should export only symbols for that domain",
         "example from Effect-TS: each file in src/ is a self-contained sub-domain barrel",
       ];
-    case "TS-AGENT-R016":
+    case "TS-AGENT-POLICY-016":
       return [
         "add a JSDoc comment for each error/exception type explaining when it occurs",
         "document the failure condition, not just the type name",
         "example from Effect-TS: ConfigError.ts documents when each variant (MissingData, InvalidData, etc.) fires",
       ];
-    case "TS-AGENT-R007":
+    case "TS-AGENT-POLICY-007":
       return [
         "extract deeply nested logic into small, flat helper functions",
         "each function should handle one level of control flow (condition, loop, or branch)",
@@ -420,15 +420,15 @@ function problemText(finding: TypeScriptHarnessFinding): string {
     return reactProblem;
   }
   switch (finding.ruleId) {
-    case "TS-AGENT-R009":
+    case "TS-AGENT-POLICY-009":
       return "public exported data shape uses primitive fields for domain meaning";
-    case "TS-AGENT-R010":
+    case "TS-AGENT-POLICY-010":
       return "public semantic type alias is only a primitive carrier";
-    case "TS-AGENT-R011":
+    case "TS-AGENT-POLICY-011":
       return "public data shape uses raw string for finite state/kind/mode";
-    case "TS-AGENT-R012":
+    case "TS-AGENT-POLICY-012":
       return "public discriminated-union variant carries primitive semantic payload fields";
-    case "TS-PROJ-R006":
+    case "TS-AGENT-PROJECT-006":
       return "Rspack is configured or installed but not exposed through package scripts";
     default:
       return finding.label;
@@ -445,12 +445,12 @@ function adviceParserEvidenceText(finding: TypeScriptHarnessFinding): string {
     return reactEvidence;
   }
   switch (finding.ruleId) {
-    case "TS-AGENT-R009":
-    case "TS-AGENT-R010":
-    case "TS-AGENT-R011":
-    case "TS-AGENT-R012":
+    case "TS-AGENT-POLICY-009":
+    case "TS-AGENT-POLICY-010":
+    case "TS-AGENT-POLICY-011":
+    case "TS-AGENT-POLICY-012":
       return "native exported TypeScript type/API facts";
-    case "TS-PROJ-R006":
+    case "TS-AGENT-PROJECT-006":
       return "package.json dependency/script facts + Rspack config files";
     default:
       return "";
@@ -499,7 +499,7 @@ function targetDetailText(finding: TypeScriptHarnessFinding): string {
       return labelValue("hooks", finding.labels.react_hook_calls) ?? finding.label;
     case "TS-EXT-REACT-R004":
       return labelValue("definitions", finding.labels.react_static_definitions) ?? finding.label;
-    case "TS-AGENT-R010":
+    case "TS-AGENT-POLICY-010":
       return labelValue("alias", finding.labels.alias) ?? finding.label;
     default:
       return finding.label;

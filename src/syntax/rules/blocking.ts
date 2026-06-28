@@ -36,11 +36,11 @@ const tsSynR001: TsRule = {
   },
 };
 
-// ── TS-PROJ-R001: package.json must expose stable library entry ──
+// ── TS-AGENT-PROJECT-001: package.json must expose stable library entry ──
 
 const tsProjR001: TsRule = {
   descriptor: {
-    id: "TS-PROJ-R001",
+    id: "TS-AGENT-PROJECT-001",
     severity: "Error",
     title: "package.json must expose a stable library entry",
     contract:
@@ -53,11 +53,11 @@ const tsProjR001: TsRule = {
   },
 };
 
-// ── TS-PROJ-R002: tsconfig must enable strict mode ──────────
+// ── TS-AGENT-PROJECT-002: tsconfig must enable strict mode ──────────
 
 const tsProjR002: TsRule = {
   descriptor: {
-    id: "TS-PROJ-R002",
+    id: "TS-AGENT-PROJECT-002",
     severity: "Error",
     title: "tsconfig must enable strict mode",
     contract: "tsconfig.json must set `strict: true` to enable full type-safety.",
@@ -68,11 +68,11 @@ const tsProjR002: TsRule = {
   },
 };
 
-// ── TS-PROJ-R003: src/index.ts must stay facade-only ───────
+// ── TS-AGENT-PROJECT-003: src/index.ts must stay facade-only ───────
 
 const tsProjR003: TsRule = {
   descriptor: {
-    id: "TS-PROJ-R003",
+    id: "TS-AGENT-PROJECT-003",
     severity: "Error",
     title: "src/index.ts must stay facade-only",
     contract:
@@ -91,7 +91,7 @@ const tsProjR003: TsRule = {
     if (ownExports.length > 0) {
       return [
         {
-          ruleId: "TS-PROJ-R003",
+          ruleId: "TS-AGENT-PROJECT-003",
           severity: "Error",
           title: "src/index.ts must stay facade-only",
           path: indexModule.path,

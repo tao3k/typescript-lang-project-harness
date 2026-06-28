@@ -36,7 +36,7 @@ export function checkConfig(projectRoot: string, mode: CheckArgs["mode"]) {
       ...config,
       ruleSeverityOverrides: {
         ...config.ruleSeverityOverrides,
-        "TS-PROJ-R001": "info" as const,
+        "TS-AGENT-PROJECT-001": "info" as const,
       },
     };
   }

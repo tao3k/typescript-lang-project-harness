@@ -102,13 +102,13 @@ test("project runner routes missing tsconfig policy through reasoning facts", ()
       ruleId: finding.ruleId,
       locationPath: finding.location.path,
     })),
-    [{ ruleId: "TS-PROJ-R001", locationPath: root }],
+    [{ ruleId: "TS-AGENT-PROJECT-001", locationPath: root }],
   );
   assert.equal(isTypeScriptHarnessClean(report), false);
-  assert.match(rendered, /\[TS-PROJ-R001\] Warning/u);
+  assert.match(rendered, /\[TS-AGENT-PROJECT-001\] Warning/u);
   assert.match(snapshot, /^Modules: source=1 branches=1 findings=1/u);
   assert.match(snapshot, /FindingGroups:/u);
-  assert.match(snapshot, /TS-PROJ-R001/u);
+  assert.match(snapshot, /TS-AGENT-PROJECT-001/u);
   assert.doesNotMatch(snapshot, /^config /mu);
 });
 
@@ -161,12 +161,12 @@ test("project runner routes tsconfig diagnostics through reasoning facts", () =>
   );
   assert.deepEqual(
     report.findings.map((finding) => finding.ruleId),
-    ["TS-PROJ-R002"],
+    ["TS-AGENT-PROJECT-002"],
   );
-  assert.match(rendered, /\[TS-PROJ-R002\] Error/u);
+  assert.match(rendered, /\[TS-AGENT-PROJECT-002\] Error/u);
   assert.match(rendered, /TypeScript config parser diagnostic/u);
   assert.match(snapshot, /FindingGroups:/u);
-  assert.match(snapshot, /TS-PROJ-R002/u);
+  assert.match(snapshot, /TS-AGENT-PROJECT-002/u);
 });
 
 test("explicit-path runner routes syntax diagnostics through reasoning facts", () => {

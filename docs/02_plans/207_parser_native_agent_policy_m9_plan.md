@@ -21,7 +21,7 @@ TypeScript native syntax facts
   metrics.
 - Project those facts into `TypeScriptReasoningModule` so rule packs consume
   reasoning tree facts instead of TypeScript ASTs or parser helper APIs.
-- Add advisory `TS-AGENT-R004` through `TS-AGENT-R008` for public flag
+- Add advisory `TS-AGENT-POLICY-004` through `TS-AGENT-POLICY-008` for public flag
   parameters, broad positional public APIs, anonymous primitive tuple APIs,
   nested public algorithms, and broad linear public algorithms.
 - Keep all new agent policy findings at `info` severity and visible by
@@ -40,15 +40,15 @@ lane unless a later milestone extends them.
 
 ## Rule Surface
 
-- `TS-AGENT-R004`: public functions with multiple flag parameters should move
+- `TS-AGENT-POLICY-004`: public functions with multiple flag parameters should move
   mode semantics to a named options object or discriminated union.
-- `TS-AGENT-R005`: broad public positional parameter lists should move to a
+- `TS-AGENT-POLICY-005`: broad public positional parameter lists should move to a
   named request/options surface.
-- `TS-AGENT-R006`: anonymous primitive tuple parameters or return values should
+- `TS-AGENT-POLICY-006`: anonymous primitive tuple parameters or return values should
   become named object, tuple alias, or domain types.
-- `TS-AGENT-R007`: deeply nested or branch-heavy public algorithms should
+- `TS-AGENT-POLICY-007`: deeply nested or branch-heavy public algorithms should
   expose guard clauses, discriminated dispatch, or small named steps.
-- `TS-AGENT-R008`: broad linear public algorithms should split algorithm
+- `TS-AGENT-POLICY-008`: broad linear public algorithms should split algorithm
   responsibilities into smaller named helpers or pipeline steps.
 
 These rules consume only `TypeScriptReasoningTree` and

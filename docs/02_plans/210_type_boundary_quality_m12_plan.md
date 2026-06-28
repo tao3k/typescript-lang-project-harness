@@ -16,10 +16,10 @@ TypeScript native type-boundary facts
 - Extend the parser-native fact layer with public primitive type aliases and
   discriminated-union variant payload fields.
 - Keep public data fields as the source for stringly state/status/kind advice.
-- Add advisory `TS-AGENT-R010` through `TS-AGENT-R012`:
-  - `TS-AGENT-R010`: semantic public type aliases over raw primitive carriers.
-  - `TS-AGENT-R011`: raw string public state/status/kind/mode/type/tag fields.
-  - `TS-AGENT-R012`: public discriminated-union variants with multiple
+- Add advisory `TS-AGENT-POLICY-010` through `TS-AGENT-POLICY-012`:
+  - `TS-AGENT-POLICY-010`: semantic public type aliases over raw primitive carriers.
+  - `TS-AGENT-POLICY-011`: raw string public state/status/kind/mode/type/tag fields.
+  - `TS-AGENT-POLICY-012`: public discriminated-union variants with multiple
     primitive semantic payload fields.
 - Keep all M12 rules at `info` severity. Projects can disable individual
   rules, disable `agent_policy`, override severities, or promote them through
@@ -38,7 +38,7 @@ accepted typed boundary, not a warning.
 
 - Parser tests cover public primitive aliases and discriminated-union payload
   facts.
-- Agent-policy tests cover `TS-AGENT-R010` through `TS-AGENT-R012`, catalog
+- Agent-policy tests cover `TS-AGENT-POLICY-010` through `TS-AGENT-POLICY-012`, catalog
   order, policy-pack membership, and model-layer suppression.
 - Public API tests cover the exported M12 fact types.
 - Parser-boundary and self-apply tests continue to prove rule layers consume

@@ -411,7 +411,9 @@ test("public agent-clean assertion surfaces advisory findings as test-gate feedb
 
   const blockingOnlyReport = api.assertTypeScriptProjectHarnessClean(root);
   assert.equal(api.isTypeScriptHarnessClean(blockingOnlyReport), true);
-  assert.ok(blockingOnlyReport.findings.some((finding) => finding.ruleId === "TS-AGENT-R004"));
+  assert.ok(
+    blockingOnlyReport.findings.some((finding) => finding.ruleId === "TS-AGENT-POLICY-004"),
+  );
 
   assert.throws(
     () => api.assertTypeScriptProjectHarnessAgentClean(root),
@@ -420,9 +422,9 @@ test("public agent-clean assertion surfaces advisory findings as test-gate feedb
       assert.match(error.message, /AgentCompactText: mode=advice findings=3 tasks=3/u);
       assert.match(error.message, /Directive: edit listed targets/u);
       assert.match(error.message, /RepairTasks:/u);
-      assert.match(error.message, /\[TS-AGENT-R004\] Info x1: .+ task=1/u);
-      assert.match(error.message, /\[TS-AGENT-R005\] Info x1: .+ task=2/u);
-      assert.match(error.message, /\[TS-AGENT-R006\] Info x1: .+ task=3/u);
+      assert.match(error.message, /\[TS-AGENT-POLICY-004\] Info x1: .+ task=1/u);
+      assert.match(error.message, /\[TS-AGENT-POLICY-005\] Info x1: .+ task=2/u);
+      assert.match(error.message, /\[TS-AGENT-POLICY-006\] Info x1: .+ task=3/u);
       assert.match(error.message, /Public function exposes multiple flag parameters/u);
       assert.match(error.message, /targets:\n   - @ src\/api\.ts/u);
       assert.match(error.message, /fix:/u);
