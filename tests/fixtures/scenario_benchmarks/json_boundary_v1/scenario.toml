@@ -1,0 +1,8 @@
+id = "typescript-json-boundary-v1"
+title = "TypeScript harness exposes JSON-only provider packets"
+policy_ids = ["TYPESCRIPT-AGENT-JSON-BOUNDARY-001"]
+agent_goal = "Keep the TypeScript harness benchmark surface focused on structured JSON packets consumed by ASP Rust/client rendering."
+reference_repositories = ["microsoft/TypeScript"]
+reference_patterns = ["CLI provider output separates machine JSON contracts from downstream human rendering"]
+inputs = "inputs"
+expected = "expected"
