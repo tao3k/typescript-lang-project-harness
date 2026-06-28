@@ -1,0 +1,22 @@
+harness = "vitest"
+test = "software_criterion_snapshot.test.ts"
+snapshot = "software_criteria/control_flow_v1"
+target_total = "25ms"
+max_total = "100ms"
+observed_total = "18ms"
+regression_budget = "20ms"
+memory_budget_bytes = 16777216
+observed_memory_bytes = 8388608
+target_rationale = "TypeScript control-flow policy fixtures should stay small enough for snapshot-level agent quality gates."
+
+[observed_timings]
+parse = "6ms"
+policy = "8ms"
+snapshot = "4ms"
+
+[input_expected_comparison]
+input_total = "18ms"
+expected_total = "7ms"
+input_memory_bytes = 8388608
+expected_memory_bytes = 6291456
+interpretation = "expected fixture exposes branch shape and native transforms before agent edits; observed policy receipts catch five low-quality input patterns."

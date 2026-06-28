@@ -1,0 +1,26 @@
+id = "typescript-control-flow-v1"
+title = "TypeScript control-flow and native-idiom findings are reproducible"
+policy_ids = ["TS-AGENT-CONTROL-FLOW-001", "TS-AGENT-NATIVE-IDIOM-001"]
+agent_goal = "Force agents to split nested public algorithms and native-idiom boilerplate before editing TypeScript behavior."
+reference_repositories = ["microsoft/TypeScript"]
+reference_patterns = [
+  "Public algorithm shape is exposed through guard clauses or dispatch maps",
+  "Native collection transformations use map/filter/reduce or named pipeline helpers",
+]
+inputs = "inputs"
+expected = "expect"
+
+[policy_trigger]
+kind = "software-criterion"
+trigger = "vitest software criterion snapshot reads inputs/src/criterion.ts and compares expect/findings.json plus expect/rendered.txt"
+evidence = "expect/findings.json"
+expected_rule_ids = ["TS-AGENT-POLICY-007", "TS-AGENT-POLICY-008"]
+expected_criteria = [
+  "control-flow.literal-dispatch-chain",
+  "control-flow.decision-stack",
+  "control-flow.traversal-knot",
+  "control-flow.broad-linear-phase",
+  "native-idiom.manual-transform-loop",
+]
+agent_failure_mode = "AI agent leaves broad nested public functions and manual transform loops in place, making later edits redundant and hard to localize."
+expected_resolution = "Flatten branch shape into explicit dispatch or guard clauses and split broad/manual transform logic into named pipeline helpers."

@@ -17,6 +17,9 @@ import {
   writeTypeScriptHarnessRulesToUnitTests,
 } from "../../src/index.js";
 
+const agentPolicyRuleIdPattern = /^TS-AGENT(?:-[A-Z][A-Z0-9]*)+-[0-9]{3}$/;
+const nonAgentRuleIdPattern = /^TS-(?:(?:SEM|PROJ|MOD|TEST)-R|EXT-[A-Z]+-R)\d{3}$/;
+
 function packageRoot(): string {
   return path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 }
@@ -55,7 +58,11 @@ test("harness rules markdown is a plain rule-id list", () => {
     const ruleId = item.slice(0, separator);
     const sentence = item.slice(separator + 2);
 
-    assert.match(ruleId, /^TS-(?:(?:SEM|PROJ|MOD|TEST|AGENT)-R|EXT-[A-Z]+-R)\d{3}$/);
+    if (ruleId.includes("-AGENT-")) {
+      assert.match(ruleId, agentPolicyRuleIdPattern);
+    } else {
+      assert.match(ruleId, nonAgentRuleIdPattern);
+    }
     assert.ok(sentence.endsWith("."));
     assert.equal([...sentence.matchAll(/[.!?]/g)].length, 1);
   }
