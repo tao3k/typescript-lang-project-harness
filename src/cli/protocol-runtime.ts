@@ -98,10 +98,6 @@ function prefilteredSearchRunPlan(
 }
 
 function prefilterQueryTerms(args: SearchArgs): readonly string[] {
-  if (args.view === "fzf") {
-    if (args.querySet.length > 0) return args.querySet;
-    return args.query === undefined ? [] : [args.query];
-  }
   if (args.view === "api" && args.query !== undefined && !args.query.includes("::")) {
     return [args.query];
   }

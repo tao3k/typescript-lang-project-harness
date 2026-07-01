@@ -71,7 +71,6 @@ export type TypeScriptSemanticSearchView =
   | "callsite"
   | "import"
   | "tests"
-  | "fzf"
   | "reasoning"
   | "env"
   | "runtime-source"
@@ -209,26 +208,6 @@ export const TYPE_SCRIPT_SEARCH_VIEW_DESCRIPTORS = [
     requiresQuery: true,
     acceptsStdin: false,
     capabilities: [typeScriptCapability("test-owner-search")],
-  }),
-  searchView("fzf", {
-    requiresQuery: true,
-    acceptsStdin: false,
-    acceptedPipes: ["owner", "tests"],
-    supportsQuerySet: true,
-    acceptedQuerySetSelectors: ["fuzzy-set"],
-    querySetScopes: ["project", "owner"],
-    clients: ["semantic-agent-hook"],
-    input: "search fzf <query> [owner|tests...] or --query-set TERM [--query-set TERM...]",
-    capabilities: [
-      semanticCapability("finder-fuzzy-candidate-search"),
-      typeScriptCapability("parser-visible-source-fuzzy-search"),
-    ],
-    ingestRequiredFor: [
-      typeScriptIngestSurface("non-parser-text"),
-      typeScriptIngestSurface("docs-text"),
-      typeScriptIngestSurface("schema-json"),
-      typeScriptIngestSurface("generated-artifact"),
-    ],
   }),
   searchView("reasoning", {
     requiresQuery: true,

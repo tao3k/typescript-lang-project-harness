@@ -35,7 +35,6 @@ const TYPE_SCRIPT_SEARCH_VIEWS = [
   "callsite",
   "import",
   "tests",
-  "fzf",
   "reasoning",
   "env",
   "runtime-source",
@@ -94,7 +93,6 @@ test("semantic-search JSON packets conform to the shared schema envelope", () =>
     jsonPacket(root, ["search", "callsite", "findOrderStatus", "--json", "."]),
     jsonPacket(root, ["search", "import", "./index", "--json", "."]),
     jsonPacket(root, ["search", "tests", "src/index.ts", "--json", "."]),
-    jsonPacket(root, ["search", "fzf", "OrderStatus", "--json", "."]),
     jsonPacket(root, [
       "search",
       "reasoning",
@@ -132,36 +130,6 @@ test("semantic-search JSON packets conform to the shared schema envelope", () =>
       `registry includes ${String(packet.method)}`,
     );
   }
-
-  const querySetPacket = jsonPacket(root, [
-    "search",
-    "fzf",
-    "--query-set",
-    "OrderStatus",
-    "--query-set",
-    "findOrderStatus",
-    "--json",
-    ".",
-  ]);
-  assertSemanticSearchPacket(schema, querySetPacket, typeSurfaceSchema, semanticHandleSchema);
-  assert.deepEqual(
-    array(querySetPacket.querySet, "querySetPacket.querySet").map(
-      (term, index) => record(term, `querySetPacket.querySet[${index}]`).value,
-    ),
-    ["OrderStatus", "findOrderStatus"],
-  );
-  assert.equal(
-    record(querySetPacket.queryComposition, "querySetPacket.queryComposition").mode,
-    "query-set",
-  );
-  assert.deepEqual(
-    array(querySetPacket.queryCoverage, "querySetPacket.queryCoverage").map(
-      (coverage, index) => record(coverage, `querySetPacket.queryCoverage[${index}]`).value,
-    ),
-    ["OrderStatus", "findOrderStatus"],
-  );
-  assert.ok(Object.hasOwn(querySetPacket, "ownerResolution"));
-  assert.ok(Object.hasOwn(querySetPacket, "searchSynthesis"));
 });
 
 test("semantic language registry JSON documents the TypeScript provider identity", () => {
@@ -232,7 +200,6 @@ test("semantic language registry JSON documents the TypeScript provider identity
     "search/callsite",
     "search/import",
     "search/tests",
-    "search/fzf",
     "search/reasoning",
     "search/env",
     "search/runtime-source",
@@ -317,7 +284,6 @@ test("semantic language registry JSON documents the TypeScript provider identity
           "search/callsite",
           "search/import",
           "search/tests",
-          "search/fzf",
           "search/reasoning",
           "search/extension",
           "search/pattern",
@@ -334,7 +300,7 @@ test("semantic language registry JSON documents the TypeScript provider identity
         descriptor.acceptedPipes === undefined
           ? []
           : stringArray(descriptor.acceptedPipes, `${String(descriptor.method)} acceptedPipes`),
-        String(descriptor.method) === "search/fzf" || String(descriptor.method) === "search/policy"
+        String(descriptor.method) === "search/policy"
           ? ["owner", "tests"]
           : String(descriptor.method) === "search/owner"
             ? ["items"]
@@ -358,10 +324,7 @@ test("semantic language registry JSON documents the TypeScript provider identity
       );
       assert.equal(
         descriptor.supportsQuerySet,
-        String(descriptor.method) === "search/fzf" ||
-          String(descriptor.method) === "query/owner-items"
-          ? true
-          : undefined,
+        String(descriptor.method) === "query/owner-items" ? true : undefined,
       );
       assert.deepEqual(
         descriptor.acceptedQuerySetSelectors === undefined
@@ -370,21 +333,13 @@ test("semantic language registry JSON documents the TypeScript provider identity
               descriptor.acceptedQuerySetSelectors,
               `${String(descriptor.method)} acceptedQuerySetSelectors`,
             ),
-        String(descriptor.method) === "search/fzf"
-          ? ["fuzzy-set"]
-          : String(descriptor.method) === "query/owner-items"
-            ? ["exact-set"]
-            : [],
+        String(descriptor.method) === "query/owner-items" ? ["exact-set"] : [],
       );
       assert.deepEqual(
         descriptor.querySetScopes === undefined
           ? []
           : stringArray(descriptor.querySetScopes, `${String(descriptor.method)} querySetScopes`),
-        String(descriptor.method) === "search/fzf"
-          ? ["project", "owner"]
-          : String(descriptor.method) === "query/owner-items"
-            ? ["owner"]
-            : [],
+        String(descriptor.method) === "query/owner-items" ? ["owner"] : [],
       );
       const capabilities = array(
         descriptor.capabilities,
