@@ -55,11 +55,11 @@
         "seeds"
       ]
     },
-    "fzf": {
+    "lexical": {
       "argv": [
         "ts-harness",
         "search",
-        "fzf",
+        "lexical",
         "{query}",
         "owner",
         "tests",

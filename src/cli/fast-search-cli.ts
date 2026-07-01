@@ -186,7 +186,7 @@ function tryRenderPackagePrimeSeedFastPath(cwd: string, args: FastSearchArgs): s
     `rank=${rank.join(",")} frontier=${rank.map((id) => `${id}.${id.startsWith("O") ? "owner" : "fzf"}`).join(",")}`,
     "entries=owner-query(O,Q=>items+tests+dependency-usage),owner-tests(O=>covering-tests+test-entrypoints+fixtures)",
     "omit=items,blocks,code,full-test-list",
-    "avoid=raw-read,full-json,broad-fzf",
+    "avoid=raw-read,full-json,broad-lexical",
     "",
   ].join("\n");
 }
