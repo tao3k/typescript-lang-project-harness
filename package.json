@@ -5,7 +5,7 @@
   "description": "Project-level TypeScript language harness with native parser facts and compact diagnostics for agents",
   "license": "Apache-2.0",
   "bin": {
-    "ts-harness": "./dist/src/cli/main.bundle.js"
+    "ts-harness": "./dist/src/cli/main.js"
   },
   "files": [
     "dist",
@@ -34,7 +34,7 @@
     "test:implementation": "npm run build && node scripts/run-node-tests.mjs implementation",
     "test:perf": "npm run build && node --test dist/tests/perf/query-search.microbench.js",
     "test:policy": "npm run build && node scripts/run-node-tests.mjs policy",
-    "harness": "npm run build && node dist/src/cli/main.bundle.js check --full ."
+    "harness": "npm run build && node dist/src/cli/main.js check --full ."
   },
   "dependencies": {
     "typescript": "^5.9.3"

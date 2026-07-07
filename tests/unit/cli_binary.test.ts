@@ -34,7 +34,7 @@ test("CLI package bin and semantic registry use the same canonical binary", () =
     "agent.semantic-protocols.languages.typescript.ts-harness",
   );
   assert.deepEqual(Object.keys(pkg.bin ?? {}), [TYPE_SCRIPT_BINARY]);
-  assert.equal(pkg.bin?.[TYPE_SCRIPT_BINARY], "./dist/src/cli/main.bundle.js");
+  assert.equal(pkg.bin?.[TYPE_SCRIPT_BINARY], "./dist/src/cli/main.js");
   assert.equal(registration.providerId, TYPE_SCRIPT_PROVIDER_ID);
   assert.equal(registration.binary, TYPE_SCRIPT_BINARY);
   assert.equal(registration.namespace, TYPE_SCRIPT_PROVIDER_NAMESPACE);

@@ -27,12 +27,9 @@ test("package lock keeps ts-harness bin on compiled CLI entrypoint", () => {
     readonly packages?: Record<string, { readonly bin?: Record<string, string> }>;
   };
 
-  assert.equal(
-    packageJson.bin?.["ts-harness"]?.replace(/^\.\//u, ""),
-    "dist/src/cli/main.bundle.js",
-  );
+  assert.equal(packageJson.bin?.["ts-harness"]?.replace(/^\.\//u, ""), "dist/src/cli/main.js");
   assert.equal(
     packageLock.packages?.[""]?.bin?.["ts-harness"]?.replace(/^\.\//u, ""),
-    "dist/src/cli/main.bundle.js",
+    "dist/src/cli/main.js",
   );
 });
