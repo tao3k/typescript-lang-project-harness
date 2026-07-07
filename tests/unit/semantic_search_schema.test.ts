@@ -35,6 +35,7 @@ const TYPE_SCRIPT_SEARCH_VIEWS = [
   "callsite",
   "import",
   "tests",
+  "lexical",
   "reasoning",
   "env",
   "runtime-source",
@@ -93,6 +94,7 @@ test("semantic-search JSON packets conform to the shared schema envelope", () =>
     jsonPacket(root, ["search", "callsite", "findOrderStatus", "--json", "."]),
     jsonPacket(root, ["search", "import", "./index", "--json", "."]),
     jsonPacket(root, ["search", "tests", "src/index.ts", "--json", "."]),
+    jsonPacket(root, ["search", "lexical", "findOrderStatus", "--json", "."]),
     jsonPacket(root, [
       "search",
       "reasoning",
@@ -200,6 +202,7 @@ test("semantic language registry JSON documents the TypeScript provider identity
     "search/callsite",
     "search/import",
     "search/tests",
+    "search/lexical",
     "search/reasoning",
     "search/env",
     "search/runtime-source",
@@ -284,6 +287,7 @@ test("semantic language registry JSON documents the TypeScript provider identity
           "search/callsite",
           "search/import",
           "search/tests",
+          "search/lexical",
           "search/reasoning",
           "search/extension",
           "search/pattern",
@@ -300,7 +304,8 @@ test("semantic language registry JSON documents the TypeScript provider identity
         descriptor.acceptedPipes === undefined
           ? []
           : stringArray(descriptor.acceptedPipes, `${String(descriptor.method)} acceptedPipes`),
-        String(descriptor.method) === "search/policy"
+        String(descriptor.method) === "search/policy" ||
+          String(descriptor.method) === "search/lexical"
           ? ["owner", "tests"]
           : String(descriptor.method) === "search/owner"
             ? ["items"]
@@ -324,7 +329,10 @@ test("semantic language registry JSON documents the TypeScript provider identity
       );
       assert.equal(
         descriptor.supportsQuerySet,
-        String(descriptor.method) === "query/owner-items" ? true : undefined,
+        String(descriptor.method) === "query/owner-items" ||
+          String(descriptor.method) === "search/lexical"
+          ? true
+          : undefined,
       );
       assert.deepEqual(
         descriptor.acceptedQuerySetSelectors === undefined
@@ -333,13 +341,21 @@ test("semantic language registry JSON documents the TypeScript provider identity
               descriptor.acceptedQuerySetSelectors,
               `${String(descriptor.method)} acceptedQuerySetSelectors`,
             ),
-        String(descriptor.method) === "query/owner-items" ? ["exact-set"] : [],
+        String(descriptor.method) === "query/owner-items"
+          ? ["exact-set"]
+          : String(descriptor.method) === "search/lexical"
+            ? ["fuzzy-set"]
+            : [],
       );
       assert.deepEqual(
         descriptor.querySetScopes === undefined
           ? []
           : stringArray(descriptor.querySetScopes, `${String(descriptor.method)} querySetScopes`),
-        String(descriptor.method) === "query/owner-items" ? ["owner"] : [],
+        String(descriptor.method) === "query/owner-items"
+          ? ["owner"]
+          : String(descriptor.method) === "search/lexical"
+            ? ["project", "owner"]
+            : [],
       );
       const capabilities = array(
         descriptor.capabilities,

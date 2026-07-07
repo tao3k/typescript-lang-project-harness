@@ -58,7 +58,7 @@ export function buildDocsPacketPayload(
       ...(query.trim() === ""
         ? []
         : [
-            { kind: "fzf" as const, target: query },
+            { kind: "lexical" as const, target: query },
             { kind: "ingest" as const, target: query, scope: "external-docs" },
           ]),
     ],

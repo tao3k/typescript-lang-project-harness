@@ -71,6 +71,7 @@ export type TypeScriptSemanticSearchView =
   | "callsite"
   | "import"
   | "tests"
+  | "lexical"
   | "reasoning"
   | "env"
   | "runtime-source"
@@ -208,6 +209,22 @@ export const TYPE_SCRIPT_SEARCH_VIEW_DESCRIPTORS = [
     requiresQuery: true,
     acceptsStdin: false,
     capabilities: [typeScriptCapability("test-owner-search")],
+  }),
+  searchView("lexical", {
+    requiresQuery: true,
+    acceptsStdin: false,
+    acceptedPipes: ["owner", "tests"],
+    supportsQuerySet: true,
+    acceptedQuerySetSelectors: ["fuzzy-set"],
+    querySetScopes: ["project", "owner"],
+    clients: ["semantic-agent-hook"],
+    capabilities: [
+      semanticCapability("dynamic-lexical-overlay-search"),
+      typeScriptCapability("parser-visible-module-owner-search"),
+      typeScriptCapability("test-owner-search"),
+    ],
+    input: "search lexical <query> [owner|tests...] or --query-set TERM [--query-set TERM...]",
+    ingestRequiredFor: [typeScriptIngestSurface("non-parser-path")],
   }),
   searchView("reasoning", {
     requiresQuery: true,

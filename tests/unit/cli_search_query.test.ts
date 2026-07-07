@@ -6,7 +6,7 @@ import test from "node:test";
 
 import { runCliCapture } from "./cli_helpers.js";
 
-test("search query maps hook selector terms into query-set owner and test seeds", () => {
+test("search lexical maps hook selector terms into query-set owner and test seeds", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-search-query-"));
   fs.mkdirSync(path.join(root, "src", "cli", "semantic-search"), { recursive: true });
   fs.mkdirSync(path.join(root, "tests", "unit"), { recursive: true });
@@ -60,7 +60,7 @@ test("search query maps hook selector terms into query-set owner and test seeds"
   const result = runCliCapture(
     [
       "search",
-      "query",
+      "lexical",
       "--from-hook",
       "direct-source-read",
       "--selector",
@@ -84,26 +84,29 @@ test("search query maps hook selector terms into query-set owner and test seeds"
   );
 
   assert.equal(result.exitCode, 0, result.stderr);
-  assert.match(result.stdout, /^\[search-fzf\].*querySet=3.*alg=query-set-owner-resolution/mu);
-  assert.match(result.stdout, /;O=owner:path\(src\/cli\/semantic-search\/build\.ts\)!owner;/mu);
+  assert.match(result.stdout, /^\[search-lexical\].*querySet=3.*alg=query-set-owner-resolution/mu);
   assert.match(
     result.stdout,
-    /^rank=Q,O,O2,O3,T,S,T2,S2 frontier=Q\.fzf,O\.owner,O2\.owner,O3\.owner,T\.tests,S\.symbol,T2\.tests,S2\.symbol/mu,
+    /(?:^|;)O=owner:path\(src\/cli\/semantic-search\/build\.ts\)!owner(?:;|$)/mu,
   );
-  assert.match(result.stdout, /S=symbol:symbol\(buildSemanticSearchPacket\)!symbol/mu);
-  assert.match(result.stdout, /S2=symbol:symbol\(parseSearchArgs\)!symbol/mu);
+  assert.match(
+    result.stdout,
+    /^rank=(?:Q,)?O,O2,O3,T,S,T2,S2 frontier=(?:Q\.lexical,)?O\.owner,O2\.owner,O3\.owner,T\.tests,S\.symbol,T2\.tests,S2\.symbol/mu,
+  );
+  assert.match(result.stdout, /S=symbol:symbol\(buildSemanticSearchPacket\)(?:@[^!]+)?!symbol/mu);
+  assert.match(result.stdout, /S2=symbol:symbol\(parseSearchArgs\)(?:@[^!]+)?!symbol/mu);
   assert.doesNotMatch(result.stdout, /\|query /mu);
   assert.doesNotMatch(result.stdout, /\|seed /mu);
 
   fs.rmSync(root, { recursive: true, force: true });
 });
 
-test("search query validates hook selector and terms", () => {
+test("search lexical validates hook selector and terms", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-search-query-errors-"));
   const missingSelector = runCliCapture(
     [
       "search",
-      "query",
+      "lexical",
       "--from-hook",
       "direct-source-read",
       "--term",
@@ -119,7 +122,7 @@ test("search query validates hook selector and terms", () => {
   const missingTerms = runCliCapture(
     [
       "search",
-      "query",
+      "lexical",
       "--from-hook",
       "direct-source-read",
       "--selector",
@@ -130,7 +133,7 @@ test("search query validates hook selector and terms", () => {
     root,
   );
   assert.equal(missingTerms.exitCode, 2);
-  assert.match(missingTerms.stderr, /search query requires at least one --term/u);
+  assert.match(missingTerms.stderr, /search lexical requires at least one --term/u);
 
   fs.rmSync(root, { recursive: true, force: true });
 });

@@ -45,10 +45,10 @@ SEARCH VIEWS
   search callsite <name>    Owner-level import/reexport sites
   search import <query>     Import/reexport owner edges
   search tests <owner>      Tests that import an owner
-  search fzf <query>        Fuzzy lexical owner/source-text candidates
-  search fzf <query> owner tests
+  search lexical <query>        Fuzzy lexical owner/source-text candidates
+  search lexical <query> owner tests
                              Minimal final-only fuzzy -> owner -> tests pipe
-  search fzf --query-set <q1> --query-set <q2> [owner tests] [--owner <path>]
+  search lexical --query-set <q1> --query-set <q2> [owner tests] [--owner <path>]
                              Homogeneous fuzzy query-set with optional owner scope
   search semantic-facts <query>
                              Provider-owned field/type/collection facts for graph-turbo
@@ -107,8 +107,8 @@ EXAMPLES
   ts-harness search callsite OrderStatus --workspace .
   ts-harness search import ./order --workspace .
   ts-harness search tests src/domain/order.ts --workspace .
-  ts-harness search fzf OrderStatus --workspace .
-  ts-harness search fzf --query-set OrderStatus --query-set findOrderStatus owner tests --workspace .
+  ts-harness search lexical OrderStatus --workspace .
+  ts-harness search lexical --query-set OrderStatus --query-set findOrderStatus owner tests --workspace .
   ts-harness query src/domain/order.ts --term findOrderStatus --workspace . --names-only
   ts-harness query src/domain/order.ts --term findOrderStatus --workspace . --code
   ts-harness query --treesitter-query '(function_declaration name: (identifier) @function.name)' --workspace .

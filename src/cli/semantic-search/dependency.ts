@@ -200,7 +200,7 @@ export function buildDepsPacketPayload(
             ...(query.apiQuery === undefined || versionScope !== "current"
               ? []
               : [
-                  { kind: "fzf" as const, target: query.apiQuery },
+                  { kind: "lexical" as const, target: query.apiQuery },
                   { kind: "tests" as const, target: query.apiQuery },
                 ]),
           ],

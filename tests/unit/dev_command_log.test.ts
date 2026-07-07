@@ -38,7 +38,7 @@ test("dev command log records ordered active-context events", () => {
     delete process.env.SEMANTIC_PROTOCOL_SESSION_ID;
     delete process.env.SEMANTIC_PROTOCOL_HOOK_RUN_ID;
 
-    const log = startDevCommandLog(["search", "fzf", "metadata", project], project);
+    const log = startDevCommandLog(["search", "lexical", "metadata", project], project);
     finishDevCommandLog(log, 0);
 
     const commandDir = path.join(trace, "typescript", "ts-harness", "commands");

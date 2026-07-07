@@ -28,7 +28,7 @@ test("owner item query falls back to bounded top-level items on miss", () => {
   assert.equal(result.exitCode, 0);
   assert.match(
     result.stdout,
-    /^\[search-owner\].*item=3.*itemQuery=types\|Types.*fallback=owner-top-items/mu,
+    /^\[query-item\].*item=3.*itemQuery=types\|Types.*fallback=owner-top-items/mu,
   );
   assert.match(result.stdout, /\|item function makePayload owner=src\/types\.ts/mu);
   assert.match(result.stdout, /output=names/u);

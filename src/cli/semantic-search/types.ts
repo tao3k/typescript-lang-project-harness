@@ -19,7 +19,7 @@ export type SemanticSearchView =
   | "callsite"
   | "import"
   | "tests"
-  | "fzf"
+  | "lexical"
   | "reasoning"
   | "env"
   | "runtime-source"
@@ -535,7 +535,7 @@ export type SemanticSearchNextActionKind =
   | "callsite"
   | "import"
   | "tests"
-  | "fzf"
+  | "lexical"
   | "ingest";
 
 export interface SemanticSearchNextAction {

@@ -1,5 +1,5 @@
 /**
- * Semantic-search packet builders for fzf views and query-set composition.
+ * Semantic-search packet builders for lexical views and query-set composition.
  */
 
 import type { TypeScriptHarnessReport } from "../../model.js";
@@ -9,17 +9,17 @@ import {
   ownersForPaths,
   testEdges,
   testHits,
-  fzfQuerySetHitsFromHitsByTerm,
+  lexicalQuerySetHitsFromHitsByTerm,
   uniqueOwners,
 } from "./hits.js";
 import { basePacket, normalizedQuerySet } from "./packet-base.js";
 import { isTestOwnerPath } from "./test-path.js";
 import {
-  fzfAvoidNextActions,
-  fzfOwnerResolution,
-  fzfQueryCoverage,
-  fzfSearchSynthesis,
-} from "./fzf-query-synthesis.js";
+  lexicalAvoidNextActions,
+  lexicalOwnerResolution,
+  lexicalQueryCoverage,
+  lexicalSearchSynthesis,
+} from "./lexical-query-synthesis.js";
 import { MAX_FZF_HITS } from "./types.js";
 import type {
   SemanticSearchBuildOptions,
@@ -30,9 +30,9 @@ import type {
 } from "./types.js";
 import { findOwner, resolveOwnerPath, stripNodePrefix } from "./utils.js";
 
-import { fuzzyFzfHits, fuzzyFzfQueryHitsByTerm } from "./hit-search.js";
+import { fuzzyLexicalHits, fuzzyLexicalQueryHitsByTerm } from "./hit-search.js";
 
-export function buildFzfPacket(
+export function buildLexicalPacket(
   report: TypeScriptHarnessReport,
   options: SemanticSearchBuildOptions,
 ): SemanticSearchPacket {
@@ -41,43 +41,46 @@ export function buildFzfPacket(
     return buildTextQuerySetPacket(report, options, queryTerms);
   }
   const query = options.query ?? "";
-  const hits = fuzzyFzfHits(report, query);
+  const hits = fuzzyLexicalHits(report, query);
   const pipes = options.pipes ?? [];
-  const fzfOwners = ownersForHits(report, hits);
-  const testEdgesForFzf = pipes.includes("tests") ? testEdgesForOwners(report, fzfOwners) : [];
-  const testHitsForFzf = testEdgesForFzf.length > 0 ? testHits(report, testEdgesForFzf, query) : [];
+  const lexicalOwners = ownersForHits(report, hits);
+  const testEdgesForLexical = pipes.includes("tests")
+    ? testEdgesForOwners(report, lexicalOwners)
+    : [];
+  const testHitsForLexical =
+    testEdgesForLexical.length > 0 ? testHits(report, testEdgesForLexical, query) : [];
   const owners = uniqueOwners([
-    ...fzfOwners,
+    ...lexicalOwners,
     ...ownersForPaths(
       report,
-      testEdgesForFzf.flatMap((edge) => [stripNodePrefix(edge.from), stripNodePrefix(edge.to)]),
+      testEdgesForLexical.flatMap((edge) => [stripNodePrefix(edge.from), stripNodePrefix(edge.to)]),
     ),
-    ...ownersForHits(report, testHitsForFzf),
+    ...ownersForHits(report, testHitsForLexical),
   ]);
   const notes =
     query.trim() === ""
-      ? [{ kind: "empty-query" as const, message: "fzf search requires a non-empty query" }]
+      ? [{ kind: "empty-query" as const, message: "lexical search requires a non-empty query" }]
       : hits.length === 0
         ? [
             {
               kind: "not-found" as const,
               message:
-                "fzf search covers parser-visible source text, owner paths, and exports; pipe rg output to search ingest for docs, schema files, and other non-parser text",
+                "lexical search covers parser-visible source text, owner paths, and exports; pipe rg output to search ingest for docs, schema files, and other non-parser text",
             },
           ]
         : [];
   return basePacket(report, options, {
     header: {
-      kind: "search-fzf",
+      kind: "search-lexical",
       fields: {
         q: query,
         mode: "fuzzy",
         backend: "provider",
         own: owners.length,
-        hit: hits.length + testHitsForFzf.length,
-        view: testEdgesForFzf.length > 0 ? "both" : "hits",
+        hit: hits.length + testHitsForLexical.length,
+        view: testEdgesForLexical.length > 0 ? "both" : "hits",
         pipes,
-        ...(testEdgesForFzf.length > 0 ? { test: testHitsForFzf.length } : {}),
+        ...(testEdgesForLexical.length > 0 ? { test: testHitsForLexical.length } : {}),
       },
     },
     nodes: owners.map((owner) =>
@@ -85,9 +88,9 @@ export function buildFzfPacket(
         ? testNode(owner)
         : ownerNode(owner),
     ),
-    edges: testEdgesForFzf,
+    edges: testEdgesForLexical,
     owners,
-    hits: [...hits, ...testHitsForFzf],
+    hits: [...hits, ...testHitsForLexical],
     findings: [],
     nextActions:
       owners.length > 0
@@ -116,39 +119,48 @@ function buildTextQuerySetPacket(
     ...(ownerScope === undefined ? {} : { queryScope: { ownerPath: ownerScope } }),
   };
   const pipes = options.pipes ?? [];
-  const hitsByTerm = fuzzyFzfQueryHitsByTerm(report, queryTerms, ownerScope);
-  const hits = fzfQuerySetHitsFromHitsByTerm(report, hitsByTerm);
+  const hitsByTerm = fuzzyLexicalQueryHitsByTerm(report, queryTerms, ownerScope);
+  const hits = lexicalQuerySetHitsFromHitsByTerm(report, hitsByTerm);
   const querySetOwnerHits = querySetOwnerFrontierHits(hitsByTerm, queryTerms);
-  const fzfOwners = uniqueOwners([
+  const lexicalOwners = uniqueOwners([
     ...ownersForHits(report, querySetOwnerHits),
     ...ownersForHits(report, hits),
   ]);
-  const testEdgesForFzf = pipes.includes("tests") ? testEdgesForOwners(report, fzfOwners) : [];
-  const testHitsForFzf = testEdgesForFzf.length > 0 ? testHits(report, testEdgesForFzf, query) : [];
+  const testEdgesForLexical = pipes.includes("tests")
+    ? testEdgesForOwners(report, lexicalOwners)
+    : [];
+  const testHitsForLexical =
+    testEdgesForLexical.length > 0 ? testHits(report, testEdgesForLexical, query) : [];
   const owners = uniqueOwners([
-    ...fzfOwners,
+    ...lexicalOwners,
     ...ownersForPaths(
       report,
-      testEdgesForFzf.flatMap((edge) => [stripNodePrefix(edge.from), stripNodePrefix(edge.to)]),
+      testEdgesForLexical.flatMap((edge) => [stripNodePrefix(edge.from), stripNodePrefix(edge.to)]),
     ),
-    ...ownersForHits(report, testHitsForFzf),
+    ...ownersForHits(report, testHitsForLexical),
   ]);
   const ownerPaths = owners.map((owner) => owner.path);
-  const ownerResolution = fzfOwnerResolution(report, owners, hits);
-  const searchSynthesis = fzfSearchSynthesis(report, queryTerms, hits, ownerPaths, ownerResolution);
+  const ownerResolution = lexicalOwnerResolution(report, owners, hits);
+  const searchSynthesis = lexicalSearchSynthesis(
+    report,
+    queryTerms,
+    hits,
+    ownerPaths,
+    ownerResolution,
+  );
   const notes =
     hits.length === 0
       ? [
           {
             kind: "not-found" as const,
             message:
-              "fzf query-set covers parser-visible source text, owner paths, and exports; pipe external candidates to search ingest",
+              "lexical query-set covers parser-visible source text, owner paths, and exports; pipe external candidates to search ingest",
           },
         ]
       : [];
   return basePacket(report, scopedOptions, {
     header: {
-      kind: "search-fzf",
+      kind: "search-lexical",
       fields: {
         q: query,
         querySet: queryTerms.length,
@@ -157,10 +169,10 @@ function buildTextQuerySetPacket(
         backend: "provider",
         ...(ownerScope === undefined ? {} : { scopeOwner: ownerScope }),
         own: owners.length,
-        hit: hits.length + testHitsForFzf.length,
-        view: testEdgesForFzf.length > 0 ? "both" : "hits",
+        hit: hits.length + testHitsForLexical.length,
+        view: testEdgesForLexical.length > 0 ? "both" : "hits",
         pipes,
-        ...(testEdgesForFzf.length > 0 ? { test: testHitsForFzf.length } : {}),
+        ...(testEdgesForLexical.length > 0 ? { test: testHitsForLexical.length } : {}),
       },
     },
     nodes: owners.map((owner) =>
@@ -168,13 +180,13 @@ function buildTextQuerySetPacket(
         ? testNode(owner)
         : ownerNode(owner),
     ),
-    edges: testEdgesForFzf,
+    edges: testEdgesForLexical,
     owners,
-    hits: [...hits, ...testHitsForFzf],
-    queryCoverage: fzfQueryCoverage(queryTerms, hitsByTerm, hits),
+    hits: [...hits, ...testHitsForLexical],
+    queryCoverage: lexicalQueryCoverage(queryTerms, hitsByTerm, hits),
     ownerResolution,
     ...(searchSynthesis === undefined ? {} : { searchSynthesis }),
-    avoidNextActions: fzfAvoidNextActions(queryTerms, ownerResolution),
+    avoidNextActions: lexicalAvoidNextActions(queryTerms, ownerResolution),
     findings: [],
     nextActions:
       owners.length > 0

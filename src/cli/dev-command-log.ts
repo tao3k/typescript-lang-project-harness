@@ -34,7 +34,7 @@ const SEARCH_PIPES = new Set([
   "deps",
   "docs",
   "features",
-  "fzf",
+  "lexical",
   "items",
   "owner",
   "owners",

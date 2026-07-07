@@ -5,7 +5,8 @@ import { parseProtocolArgs, runProtocolCli } from "../../src/cli/protocol.js";
 
 test("query --from-hook broad selector accepts shared surfaces", () => {
   const args = parseProtocolArgs([
-    "query",
+    "search",
+    "lexical",
     "--from-hook",
     "direct-source-read",
     "--selector",
@@ -42,7 +43,8 @@ test("query --from-hook broad selector accepts shared surfaces", () => {
     stdout,
     /legend: (?:aliases ID:kind; node )?ID=kind:role\(value\)!next; edge SRC>{DST:rel}; frontier ID\.next/,
   );
-  assert.match(stdout, /(?:aliases=G:search,Q:query|aliases: graph:\{G=search,Q=query)/);
-  assert.match(stdout, /rank=Q,O,T frontier=Q\.fzf,O\.owner,T\.tests/);
+  assert.match(stdout, /O=owner:path\(tests\/unit\/cli_query_hook_surface\.test\.ts\)!owner/);
+  assert.match(stdout, /T=test:path\(tests\/unit\/cli_query_hook_surface\.test\.ts\)!tests/);
+  assert.match(stdout, /frontier=.*O\.owner.*T\.tests/);
   assert.doesNotMatch(stdout, /\|seed /);
 });

@@ -26,7 +26,7 @@ export function basePacket(
   packet: SemanticSearchPacketPayload,
 ): SemanticSearchPacket {
   const querySet = semanticSearchQueryTerms(options);
-  const querySetSelector = options.view === "fzf" ? "fuzzy-set" : "exact-set";
+  const querySetSelector = options.view === "lexical" ? "fuzzy-set" : "exact-set";
   return {
     schemaId: "agent.semantic-protocols.semantic-search-packet",
     schemaVersion: "1",
@@ -40,7 +40,7 @@ export function basePacket(
     projectRoot: report.reasoningTree.projectRoot,
     ...(report.reasoningTree.packageName ? { packageName: report.reasoningTree.packageName } : {}),
     view: options.view,
-    renderMode: options.renderMode ?? (options.view === "fzf" ? "hits" : "graph"),
+    renderMode: options.renderMode ?? (options.view === "lexical" ? "hits" : "graph"),
     ...(options.renderMode === "graph" ||
     options.renderMode === "seeds" ||
     options.renderMode === "both"
@@ -110,6 +110,6 @@ function semanticSearchQueryTerms(
   return normalizedQuerySet(options.querySet).map((value) => ({
     value,
     kind: options.view === "tests" ? "path" : "text",
-    selector: options.view === "fzf" ? "fuzzy" : "exact",
+    selector: options.view === "lexical" ? "fuzzy" : "exact",
   }));
 }

@@ -66,10 +66,11 @@ export function expectedSearchCapabilities(method: string): readonly CapabilityE
       return [typeScriptCapability("import-edge-search")];
     case "search/tests":
       return [typeScriptCapability("test-owner-search")];
-    case "search/fzf":
+    case "search/lexical":
       return [
-        semanticCapability("finder-fuzzy-candidate-search"),
-        typeScriptCapability("parser-visible-source-fuzzy-search"),
+        semanticCapability("dynamic-lexical-overlay-search"),
+        typeScriptCapability("parser-visible-module-owner-search"),
+        typeScriptCapability("test-owner-search"),
       ];
     case "search/reasoning":
       return [
@@ -139,13 +140,8 @@ export function expectedSearchIngestRequiredFor(method: string): readonly Capabi
   switch (method) {
     case "search/owner":
       return [typeScriptCapability("non-parser-path")];
-    case "search/fzf":
-      return [
-        typeScriptCapability("non-parser-text"),
-        typeScriptCapability("docs-text"),
-        typeScriptCapability("schema-json"),
-        typeScriptCapability("generated-artifact"),
-      ];
+    case "search/lexical":
+      return [typeScriptCapability("non-parser-path")];
     case "search/docs":
       return [typeScriptCapability("external-docs")];
     case "search/api":

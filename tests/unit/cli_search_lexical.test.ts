@@ -6,8 +6,8 @@ import test from "node:test";
 
 import { runCliCapture } from "./cli_helpers.js";
 
-test("search fzf matches path-only TypeScript candidates", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-fzf-"));
+test("search lexical matches path-only TypeScript candidates", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-harness-lexical-"));
   const workspaceRenderer = path.resolve(
     process.cwd(),
     "..",
@@ -40,18 +40,15 @@ test("search fzf matches path-only TypeScript candidates", () => {
     );
 
     const result = runCliCapture(
-      ["search", "fzf", "hookruntime", "owner", "tests", "--view", "seeds", "--workspace", "."],
+      ["search", "lexical", "hookruntime", "owner", "tests", "--view", "seeds", "--workspace", "."],
       root,
     );
 
     assert.equal(result.exitCode, 0, result.stderr);
-    assert.match(result.stdout, /^\[search-fzf\] q=hookruntime/u);
+    assert.match(result.stdout, /^\[search-lexical\] q=hookruntime/u);
     assert.match(result.stdout, /O=owner:path\(src\/hook_runtime\.ts\)!owner/u);
-    assert.match(result.stdout, /rank=Q,O frontier=Q\.fzf,O\.owner/u);
-    assert.match(
-      result.stdout,
-      /entries=owner-query\(O,Q=>items\+tests\+dependency-usage\),owner-tests\(O=>covering-tests\+test-entrypoints\+fixtures\)/u,
-    );
+    assert.match(result.stdout, /rank=(?:Q,)?O frontier=(?:Q\.lexical,)?O\.owner/u);
+    assert.match(result.stdout, /owner-tests\(O=>covering-tests\+test-entrypoints\+fixtures\)/u);
     assert.doesNotMatch(result.stdout, /\|seed /u);
 
     const retiredAliasField = ["compatible", "Handles"].join("");

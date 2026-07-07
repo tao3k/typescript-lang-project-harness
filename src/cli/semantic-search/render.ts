@@ -160,7 +160,7 @@ function seedGroups(packet: SemanticSearchPacket): Map<string, string[]> {
       addSeed(groups, "symbol", exportName);
     }
     for (const action of owner.nextActions ?? []) {
-      if (hasItemPipe && action.kind === "fzf") continue;
+      if (hasItemPipe && action.kind === "lexical") continue;
       addSeed(groups, action.kind, action.target);
     }
   }
@@ -201,7 +201,7 @@ function hitEvidenceFields(
   ownerRole: string | undefined,
   hit: SemanticSearchPacket["hits"][number],
 ): SemanticSearchFields {
-  if (packet.view !== "fzf" && packet.view !== "ingest") {
+  if (packet.view !== "lexical" && packet.view !== "ingest") {
     return {};
   }
   const surface =

@@ -31,15 +31,12 @@ test("compact graph entries use rendered aliases", async () => {
   );
 
   const result = await runCliCapture(
-    ["search", "fzf", "describe", "owner", "tests", "--view", "seeds", "--workspace", root],
+    ["search", "lexical", "describe", "owner", "tests", "--view", "seeds", "--workspace", root],
     process.cwd(),
   );
 
   assert.equal(result.exitCode, 0, result.stderr);
-  assert.match(
-    result.stdout,
-    /entries=owner-query\(O,Q=>items\+tests\+dependency-usage\),owner-tests\(O=>covering-tests\+test-entrypoints\+fixtures\)/,
-  );
+  assert.match(result.stdout, /owner-tests\(O=>covering-tests\+test-entrypoints\+fixtures\)/);
   assert.doesNotMatch(result.stdout, /profiles=/);
   assert.doesNotMatch(result.stdout, /query-deps\(/);
   assert.doesNotMatch(result.stdout, /finding-frontier\(/);

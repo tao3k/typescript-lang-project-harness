@@ -94,7 +94,7 @@ export function buildKnowledgePacketPayload(
     hits,
     findings: [],
     nextActions: [
-      { kind: "fzf" as const, target: query || axis },
+      { kind: "lexical" as const, target: query || axis },
       { kind: "owner" as const, target: "." },
     ],
     notes: [

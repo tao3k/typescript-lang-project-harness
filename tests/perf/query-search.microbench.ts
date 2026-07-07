@@ -55,8 +55,8 @@ test("microbench: query/search provider internals", async (t) => {
     }
   });
 
-  await t.test("search fzf packet build/render follows git-owned p95 budget", () => {
-    const budget = requiredMicrobenchBudget(budgets, "typescript.search.fzf-packet-render");
+  await t.test("search lexical packet build/render follows git-owned p95 budget", () => {
+    const budget = requiredMicrobenchBudget(budgets, "typescript.search.lexical-packet-render");
     const dir = tmpDir();
     try {
       writeFile(
@@ -84,17 +84,17 @@ test("microbench: query/search provider internals", async (t) => {
 
       const stats = measureMicrobench(budget, () => {
         const packet = buildSemanticSearchPacket(report, {
-          view: "fzf",
+          view: "lexical",
           query: "contentBlocks",
           pipes: ["owner", "tests"],
           renderMode: "seeds",
         });
         const output = renderSemanticSearchPacket(packet);
-        assert.match(output, /\[search-fzf\]/u);
+        assert.match(output, /\[search-lexical\]/u);
         assert.match(output, /contentBlocks/u);
       });
 
-      assertMicrobenchWithinBudget("typescript.search.fzf-packet-render", stats, budget);
+      assertMicrobenchWithinBudget("typescript.search.lexical-packet-render", stats, budget);
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
     }

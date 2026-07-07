@@ -84,8 +84,8 @@ function collectSeeds(packet) {
   const otherSeeds = [];
 
   const query = packet.query ?? firstQuerySetValue(packet);
-  if (packet.header?.kind === "search-fzf" && query !== undefined) {
-    querySeeds.push({ kind: "fzf", target: query });
+  if (packet.header?.kind === "search-lexical" && query !== undefined) {
+    querySeeds.push({ kind: "lexical", target: query });
   }
   if (packet.header?.kind === "search-reasoning" && fields.query !== undefined) {
     querySeeds.push({ kind: "query", target: fields.query });
@@ -132,7 +132,7 @@ function collectSeeds(packet) {
       synthesisTests.push(seed);
     } else if (seed.kind === "symbol") {
       synthesisSymbols.push(seed);
-    } else if (seed.kind === "fzf" || seed.kind === "query") {
+    } else if (seed.kind === "lexical" || seed.kind === "query") {
       querySeeds.push(seed);
     } else {
       synthesisOthers.push(seed);
@@ -287,9 +287,9 @@ function renderDescriptorValue(descriptor, seed) {
 
 function describeSeed(seed) {
   switch (seed.kind) {
-    case "fzf":
+    case "lexical":
     case "query":
-      return { prefix: "Q", kind: "query", role: "term", next: "fzf", edge: "matches" };
+      return { prefix: "Q", kind: "query", role: "term", next: "lexical", edge: "matches" };
     case "owner":
     case "ingest":
       return { prefix: "O", kind: "owner", role: "path", next: "owner", edge: "selects" };

@@ -47,7 +47,7 @@ export function textHits(
   return hits.sort((left, right) => compareHits(report, left, right)).slice(0, MAX_FZF_HITS);
 }
 
-export function fuzzyFzfHits(
+export function fuzzyLexicalHits(
   report: TypeScriptHarnessReport,
   query: string,
 ): readonly SemanticSearchHit[] {
@@ -90,7 +90,10 @@ export function textQuerySetHits(
   queryTerms: readonly string[],
   ownerScope: string | undefined,
 ): readonly SemanticSearchHit[] {
-  return fzfQuerySetHitsFromHitsByTerm(report, textQueryHitsByTerm(report, queryTerms, ownerScope));
+  return lexicalQuerySetHitsFromHitsByTerm(
+    report,
+    textQueryHitsByTerm(report, queryTerms, ownerScope),
+  );
 }
 
 export function textQueryHitsByTerm(
@@ -108,7 +111,7 @@ export function textQueryHitsByTerm(
   );
 }
 
-export function fuzzyFzfQueryHitsByTerm(
+export function fuzzyLexicalQueryHitsByTerm(
   report: TypeScriptHarnessReport,
   queryTerms: readonly string[],
   ownerScope: string | undefined,
@@ -116,14 +119,14 @@ export function fuzzyFzfQueryHitsByTerm(
   return new Map(
     queryTerms.map((queryTerm) => [
       queryTerm,
-      fuzzyFzfHits(report, queryTerm).filter(
+      fuzzyLexicalHits(report, queryTerm).filter(
         (hit) => ownerScope === undefined || hit.ownerPath === ownerScope,
       ),
     ]),
   );
 }
 
-export function fzfQuerySetHitsFromHitsByTerm(
+export function lexicalQuerySetHitsFromHitsByTerm(
   report: TypeScriptHarnessReport,
   hitsByTerm: ReadonlyMap<string, readonly SemanticSearchHit[]>,
 ): readonly SemanticSearchHit[] {

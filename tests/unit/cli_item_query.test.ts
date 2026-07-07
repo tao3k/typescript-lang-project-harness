@@ -50,7 +50,7 @@ test("owner items --query emits compact item locators", () => {
   );
 
   assert.equal(result.exitCode, 0);
-  assert.match(result.stdout, /^\[search-owner\].*item=1.*itemQuery=alpha/mu);
+  assert.match(result.stdout, /^\[query-item\].*item=1.*itemQuery=alpha/mu);
   assert.match(result.stdout, /next=query-code/u);
   assert.match(
     result.stdout,
@@ -87,7 +87,7 @@ export const unrelated = 1;
   );
 
   assert.equal(result.exitCode, 0, result.stderr);
-  assert.match(result.stdout, /^\[search-owner\].*item=1.*itemQuery=Runtime\.tell/mu);
+  assert.match(result.stdout, /^\[query-item\].*item=1.*itemQuery=Runtime\.tell/mu);
   assert.match(result.stdout, /next=query-code/u);
   assert.match(
     result.stdout,
@@ -111,7 +111,7 @@ test("query --names-only exact owner emits locator-only output", () => {
   );
 
   assert.equal(result.exitCode, 0, result.stderr);
-  assert.match(result.stdout, /^\[search-owner\].*item=1.*itemQuery=alpha.*output=names/mu);
+  assert.match(result.stdout, /^\[query-item\].*item=1.*itemQuery=alpha.*output=names/mu);
   assert.match(
     result.stdout,
     /\|query itemQuery=alpha status=hit match=exact item=1 reason=parser-item-query output=names next=query-code/u,

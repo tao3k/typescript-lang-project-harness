@@ -9,7 +9,7 @@ import { buildDocsPacketPayload } from "./packet-docs.js";
 import { buildKnowledgePacketPayload } from "./packet-knowledge.js";
 import { basePacket } from "./packet-base.js";
 import { buildOwnerPacket, buildPrimePacket, buildWorkspacePacket } from "./packet-overview.js";
-import { buildFzfPacket } from "./packet-fzf.js";
+import { buildLexicalPacket } from "./packet-lexical.js";
 import {
   buildCallsitePacket,
   buildImportPacket,
@@ -54,8 +54,8 @@ export function buildSemanticSearchPacket(
       return buildImportPacket(report, options);
     case "tests":
       return buildTestsPacket(report, options);
-    case "fzf":
-      return buildFzfPacket(report, options);
+    case "lexical":
+      return buildLexicalPacket(report, options);
     case "reasoning":
       return buildReasoningPacket(report, options);
     case "env":

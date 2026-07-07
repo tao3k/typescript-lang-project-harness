@@ -549,7 +549,12 @@ function parseSearchArgs(argv: readonly string[]): ProtocolArgs {
   let workspaceRoot: string | undefined;
   let ownerPath: string | undefined;
   let dependency: string | undefined;
+  let fromHook: string | undefined;
+  let selector: string | undefined;
+  let intent: string | undefined;
+  let surfacePipes: readonly TypeScriptSemanticSearchPipe[] | undefined;
   const querySet: string[] = [];
+  const terms: string[] = [];
   const positionals: string[] = [];
   let itemQuery: string | undefined;
   let codeOnly = false;
@@ -594,6 +599,45 @@ function parseSearchArgs(argv: readonly string[]): ProtocolArgs {
       }
       dependency = value;
       index += 1;
+    } else if (arg === "--from-hook") {
+      const value = argv[index + 1];
+      if (value === undefined || value.startsWith("-")) {
+        return { kind: "error", message: "--from-hook requires a route" };
+      }
+      fromHook = value;
+      index += 1;
+    } else if (arg === "--selector") {
+      const value = argv[index + 1];
+      if (value === undefined || value.startsWith("-")) {
+        return { kind: "error", message: "--selector requires a selector" };
+      }
+      selector = value;
+      index += 1;
+    } else if (arg === "--intent") {
+      const value = argv[index + 1];
+      if (value === undefined || value.startsWith("-")) {
+        return { kind: "error", message: "--intent requires a value" };
+      }
+      intent = value;
+      index += 1;
+    } else if (arg === "--term") {
+      const value = argv[index + 1];
+      if (value === undefined || value.startsWith("-")) {
+        return { kind: "error", message: "--term requires a query term" };
+      }
+      terms.push(value);
+      index += 1;
+    } else if (arg === "--surface") {
+      const value = argv[index + 1];
+      if (value === undefined || value.startsWith("-")) {
+        return { kind: "error", message: "--surface requires a value" };
+      }
+      const parsedSurfaces = parseSearchQuerySurfaces(value);
+      if (typeof parsedSurfaces === "string") {
+        return { kind: "error", message: parsedSurfaces };
+      }
+      surfacePipes = parsedSurfaces;
+      index += 1;
     } else if (arg === "--query") {
       const value = argv[index + 1];
       if (value === undefined) return { kind: "error", message: "--query requires a value" };
@@ -620,8 +664,40 @@ function parseSearchArgs(argv: readonly string[]): ProtocolArgs {
   if (querySet.length > 0 && !searchViewSupportsQuerySet(searchView.view)) {
     return { kind: "error", message: `search ${viewValue} does not support --query-set` };
   }
-  if (ownerPath !== undefined && searchView.view !== "reasoning") {
-    return { kind: "error", message: "--owner is only supported by search reasoning" };
+  if (fromHook !== undefined) {
+    if (fromHook !== "direct-source-read") {
+      return { kind: "error", message: `unsupported search hook route: ${fromHook}` };
+    }
+    if (selector === undefined) {
+      return { kind: "error", message: "--from-hook requires --selector" };
+    }
+    if (terms.length === 0) {
+      return { kind: "error", message: `search ${viewValue} requires at least one --term` };
+    }
+    return {
+      kind: "search",
+      view: searchView.view,
+      query: terms.join(","),
+      fromHook,
+      selector,
+      ...(intent === undefined ? {} : { intent }),
+      projectRoot: workspaceRoot,
+      packagePath,
+      workspace,
+      ownerPath: undefined,
+      pipes: surfacePipes ?? [],
+      querySet: terms,
+      json,
+      ...(codeOnly ? { codeOnly } : {}),
+      ...(namesOnly ? { namesOnly } : {}),
+      renderMode,
+    };
+  }
+  if (ownerPath !== undefined && searchView.view !== "reasoning" && searchView.view !== "lexical") {
+    return {
+      kind: "error",
+      message: "--owner is only supported by search reasoning or search lexical",
+    };
   }
   if (dependency !== undefined && searchView.view !== "reasoning") {
     return { kind: "error", message: "--dependency is only supported by search reasoning" };
@@ -872,18 +948,18 @@ function tryRenderPackagePrimeSeedFastPath(cwd: string, args: SearchArgs): strin
     const ownerPath = owners[index]!;
     const queryTerm = index === 0 ? "*" : queryTermFromOwnerPath(ownerPath);
     declarations.push(`${ownerId}=owner:path(${ownerPath})!owner`);
-    declarations.push(`${queryId}=query:term(${queryTerm})!fzf`);
+    declarations.push(`${queryId}=query:term(${queryTerm})!lexical`);
     edges.push(`${ownerId}:selects`, `${queryId}:matches`);
     rank.push(ownerId, queryId);
   }
   return [
     `[search-prime] root=${packageName} analysis=structure nativeSyntaxFacts=skipped policyFindings=skipped alg=budgeted-prime-frontier-v1 budget=handles:${owners.length * 2}`,
-    "|decision purpose=decision-primer answer=false code=false capabilities=pipe,fzf,fd-query,rg-query,owner-items,selector-code,treesitter-query ladder=pipe>fzf>fd-query|rg-query>owner-items>selector-code history=asp-artifacts:directReadRisk,repeatedPrime,repeatedPipe,bestPath risk=broad-direct-read,manual-window-scan,repeat-prime next=\"asp typescript search pipe '<question-or-feature-term>' --workspace . --view seeds\"",
+    "|decision purpose=decision-primer answer=false code=false capabilities=pipe,lexical,fd-query,rg-query,owner-items,selector-code,treesitter-query ladder=pipe>lexical>fd-query|rg-query>owner-items>selector-code history=asp-artifacts:directReadRisk,repeatedPrime,repeatedPipe,bestPath risk=broad-direct-read,manual-window-scan,repeat-prime next=\"asp typescript search pipe '<question-or-feature-term>' --workspace . --view seeds\"",
     "legend: ID=kind:role(value)!next; entries profile(selectors=>returns); frontier ID.next",
     "aliases: graph:{G=search,O=owner,Q=query}",
     declarations.join(";"),
     `G>{${edges.join(",")}}`,
-    `rank=${rank.join(",")} frontier=${rank.map((id) => `${id}.${id.startsWith("O") ? "owner" : "fzf"}`).join(",")}`,
+    `rank=${rank.join(",")} frontier=${rank.map((id) => `${id}.${id.startsWith("O") ? "owner" : "lexical"}`).join(",")}`,
     "entries=owner-query(O,Q=>items+tests+dependency-usage),owner-tests(O=>covering-tests+test-entrypoints+fixtures)",
     "omit=items,blocks,code,full-test-list",
     "avoid=raw-read,full-json,broad-lexical",
@@ -1204,6 +1280,6 @@ function isSemanticSearchRenderMode(value: string | undefined): value is Semanti
   return value === "graph" || value === "hits" || value === "both" || value === "seeds";
 }
 
-function searchViewSupportsQuerySet(_view: TypeScriptSemanticSearchView): boolean {
-  return false;
+function searchViewSupportsQuerySet(view: TypeScriptSemanticSearchView): boolean {
+  return view === "lexical";
 }

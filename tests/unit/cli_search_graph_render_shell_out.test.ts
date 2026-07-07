@@ -31,10 +31,10 @@ test("compact graph renderer shells out to canonical asp by default", (t) => {
   process.env.ASP_ARGV_PATH = argvPath;
   process.env.ASP_STDIN_PATH = stdinPath;
 
-  const packet = { header: { kind: "search-fzf" } } as unknown as SemanticSearchPacket;
+  const packet = { header: { kind: "search-lexical" } } as unknown as SemanticSearchPacket;
   const output = renderCompactGraphPacket(packet, 3);
 
-  assert.equal(output, "[search-fzf] q=test\n");
+  assert.equal(output, "[search-lexical] q=test\n");
   assert.deepEqual(readFileSync(argvPath, "utf8").trimEnd().split("\n"), [
     "graph",
     "render",
@@ -58,7 +58,7 @@ test("compact graph renderer does not fallback when protocol bin is missing", (t
   assert.throws(
     () =>
       renderCompactGraphPacket({
-        header: { kind: "search-fzf" },
+        header: { kind: "search-lexical" },
       } as unknown as SemanticSearchPacket),
     CompactGraphRenderError,
   );
@@ -83,7 +83,7 @@ function writeAspFixture(dir: string): void {
       "for await (const chunk of process.stdin) input += chunk;",
       "writeFileSync(process.env.ASP_ARGV_PATH, process.argv.slice(2).join('\\n'));",
       "writeFileSync(process.env.ASP_STDIN_PATH, input);",
-      "process.stdout.write('[search-fzf] q=test\\n');",
+      "process.stdout.write('[search-lexical] q=test\\n');",
       "",
     ].join("\n"),
   );

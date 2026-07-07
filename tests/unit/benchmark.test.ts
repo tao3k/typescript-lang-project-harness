@@ -162,7 +162,7 @@ describe("benchmark: CLI query/search stable paths", () => {
     fs.rmSync(dir, { recursive: true, force: true });
   });
 
-  it("fzf owner/tests search avoids multi-second regressions on a tiny project", () => {
+  it("lexical owner/tests search avoids multi-second regressions on a tiny project", () => {
     const dir = tmpDir();
     writeFile(dir, "tsconfig.json", JSON.stringify({ include: ["src/**/*.ts", "tests/**/*.ts"] }));
     writeFile(
@@ -180,17 +180,27 @@ describe("benchmark: CLI query/search stable paths", () => {
 
     const elapsed = bestOf(3, () => {
       const result = runCliCapture(
-        ["search", "fzf", "contentBlocks", "owner", "tests", "--view", "seeds", "--workspace", "."],
+        [
+          "search",
+          "lexical",
+          "contentBlocks",
+          "owner",
+          "tests",
+          "--view",
+          "seeds",
+          "--workspace",
+          ".",
+        ],
         dir,
       );
       assert.equal(result.exitCode, 0, result.stderr);
-      assert.match(result.stdout, /\[search-fzf\]/u);
+      assert.match(result.stdout, /\[search-lexical\]/u);
       assert.match(result.stdout, /contentBlocks/u);
     });
 
     assert.ok(
       elapsed < 2_000,
-      `fzf owner/tests search best-of-3 took ${elapsed.toFixed(1)}ms (target < 2000ms)`,
+      `lexical owner/tests search best-of-3 took ${elapsed.toFixed(1)}ms (target < 2000ms)`,
     );
     fs.rmSync(dir, { recursive: true, force: true });
   });

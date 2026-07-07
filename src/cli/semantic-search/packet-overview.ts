@@ -296,7 +296,7 @@ function ownerItemNextActions(
   const command = [
     "ts-harness",
     "search",
-    "fzf",
+    "lexical",
     ...terms.flatMap((term) => ["--query-set", term]),
     "--owner",
     ownerPath,
@@ -310,7 +310,7 @@ function ownerItemNextActions(
     .join(" ");
   return [
     {
-      kind: "fzf",
+      kind: "lexical",
       target: terms[0]!,
       ownerPath,
       fields: {

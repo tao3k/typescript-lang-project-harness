@@ -7,7 +7,7 @@ interface CliStreams {
   readonly stdin?: string;
 }
 
-type FastSearchView = "owner" | "deps" | "dependency" | "prime" | "fzf";
+type FastSearchView = "owner" | "deps" | "dependency" | "prime" | "lexical";
 
 interface FastSearchArgs {
   readonly view: FastSearchView;
@@ -31,7 +31,7 @@ export function tryRunFastSearchCli(
     tryRenderOwnerSeedFastPath(cwd, args) ??
     tryRenderDependencySeedFastPath(cwd, args) ??
     tryRenderPackagePrimeSeedFastPath(cwd, args) ??
-    tryRenderPackageFzfSeedFastPath(cwd, args);
+    tryRenderPackageLexicalSeedFastPath(cwd, args);
   if (output === undefined) return undefined;
   streams.stdout.write(output);
   return 0;
@@ -45,7 +45,7 @@ function parseFastSearchArgs(argv: readonly string[]): FastSearchArgs | undefine
     view !== "deps" &&
     view !== "dependency" &&
     view !== "prime" &&
-    view !== "fzf"
+    view !== "lexical"
   ) {
     return undefined;
   }
@@ -82,7 +82,7 @@ function parseFastSearchArgs(argv: readonly string[]): FastSearchArgs | undefine
       return undefined;
     }
   }
-  if (view === "fzf") {
+  if (view === "lexical") {
     query = querySet.length === 0 ? positionals[0] : querySet.join(",");
   } else {
     query = positionals[0];
@@ -172,18 +172,18 @@ function tryRenderPackagePrimeSeedFastPath(cwd: string, args: FastSearchArgs): s
     const ownerPath = owners[index]!;
     const queryTerm = index === 0 ? "*" : queryTermFromOwnerPath(ownerPath);
     declarations.push(`${ownerId}=owner:path(${ownerPath})!owner`);
-    declarations.push(`${queryId}=query:term(${queryTerm})!fzf`);
+    declarations.push(`${queryId}=query:term(${queryTerm})!lexical`);
     edges.push(`${ownerId}:selects`, `${queryId}:matches`);
     rank.push(ownerId, queryId);
   }
   return [
     `[search-prime] root=${packageName} analysis=structure nativeSyntaxFacts=skipped policyFindings=skipped alg=budgeted-prime-frontier-v1 budget=handles:${owners.length * 2}`,
-    "|decision purpose=decision-primer answer=false code=false capabilities=pipe,fzf,fd-query,rg-query,owner-items,selector-code,treesitter-query ladder=pipe>fzf>fd-query|rg-query>owner-items>selector-code history=asp-artifacts:directReadRisk,repeatedPrime,repeatedPipe,bestPath risk=broad-direct-read,manual-window-scan,repeat-prime next=\"asp typescript search pipe '<question-or-feature-term>' --workspace . --view seeds\"",
+    "|decision purpose=decision-primer answer=false code=false capabilities=pipe,lexical,fd-query,rg-query,owner-items,selector-code,treesitter-query ladder=pipe>lexical>fd-query|rg-query>owner-items>selector-code history=asp-artifacts:directReadRisk,repeatedPrime,repeatedPipe,bestPath risk=broad-direct-read,manual-window-scan,repeat-prime next=\"asp typescript search pipe '<question-or-feature-term>' --workspace . --view seeds\"",
     "legend: ID=kind:role(value)!next; entries profile(selectors=>returns); frontier ID.next",
     "aliases: graph:{G=search,O=owner,Q=query}",
     declarations.join(";"),
     `G>{${edges.join(",")}}`,
-    `rank=${rank.join(",")} frontier=${rank.map((id) => `${id}.${id.startsWith("O") ? "owner" : "fzf"}`).join(",")}`,
+    `rank=${rank.join(",")} frontier=${rank.map((id) => `${id}.${id.startsWith("O") ? "owner" : "lexical"}`).join(",")}`,
     "entries=owner-query(O,Q=>items+tests+dependency-usage),owner-tests(O=>covering-tests+test-entrypoints+fixtures)",
     "omit=items,blocks,code,full-test-list",
     "avoid=raw-read,full-json,broad-lexical",
@@ -191,9 +191,12 @@ function tryRenderPackagePrimeSeedFastPath(cwd: string, args: FastSearchArgs): s
   ].join("\n");
 }
 
-function tryRenderPackageFzfSeedFastPath(cwd: string, args: FastSearchArgs): string | undefined {
+function tryRenderPackageLexicalSeedFastPath(
+  cwd: string,
+  args: FastSearchArgs,
+): string | undefined {
   if (
-    args.view !== "fzf" ||
+    args.view !== "lexical" ||
     args.querySet.length === 0 ||
     args.json ||
     args.renderMode !== "seeds" ||
@@ -214,7 +217,7 @@ function tryRenderPackageFzfSeedFastPath(cwd: string, args: FastSearchArgs): str
   );
   if (owners.length === 0) return undefined;
   const query = terms.join(",");
-  const declarations = [`Q=query:term(${query})!fzf`];
+  const declarations = [`Q=query:term(${query})!lexical`];
   const edges = ["Q:matches"];
   const rank = ["Q"];
   for (let index = 0; index < owners.length; index++) {
@@ -230,12 +233,12 @@ function tryRenderPackageFzfSeedFastPath(cwd: string, args: FastSearchArgs): str
     rank.push("S");
   }
   return [
-    `[search-fzf] q=${query} querySet=${terms.length} selector=fuzzy-set view=hits alg=query-set-owner-resolution`,
+    `[search-lexical] q=${query} querySet=${terms.length} selector=fuzzy-set view=hits alg=query-set-owner-resolution`,
     "legend: ID=kind:role(value)!next; edge SRC>{DST:rel}; frontier ID.next",
     "aliases: graph:{G=search,Q=query,O=owner,S=symbol}",
     declarations.join(";"),
     `G>{${edges.join(",")}}`,
-    `rank=${rank.join(",")} frontier=${rank.map((id) => `${id}.${id === "Q" ? "fzf" : id === "S" ? "symbol" : "owner"}`).join(",")}`,
+    `rank=${rank.join(",")} frontier=${rank.map((id) => `${id}.${id === "Q" ? "lexical" : id === "S" ? "symbol" : "owner"}`).join(",")}`,
     "entries=owner-query(O,Q=>items+tests+dependency-usage),owner-tests(O=>covering-tests+test-entrypoints+fixtures)",
     "",
   ].join("\n");

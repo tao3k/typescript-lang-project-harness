@@ -106,7 +106,7 @@ export function buildApiPacketPayload(
       ...(apiQuery.trim() === ""
         ? []
         : [
-            { kind: "fzf" as const, target: apiQuery },
+            { kind: "lexical" as const, target: apiQuery },
             { kind: "tests" as const, target: apiQuery },
           ]),
     ],

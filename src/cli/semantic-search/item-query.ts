@@ -206,7 +206,7 @@ export function renderOwnerItemQuery(
   const revisionField = ownerItemQueryRevisionField(result);
   const nextAction = ownerItemQueryNextAction(result, namesOnly);
   const lines = [
-    `[search-owner] q=${result.ownerPath} pkg=. own=1 item=${result.matches.length} itemQuery=${fieldValue(
+    `[query-item] q=${result.ownerPath} pkg=. own=1 item=${result.matches.length} itemQuery=${fieldValue(
       result.queryTerms.join("|"),
     )}${namesOnly ? " output=names" : ""}${
       result.fallback === undefined ? "" : " fallback=owner-top-items"

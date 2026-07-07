@@ -5,8 +5,8 @@ import { join } from "node:path";
 import { spawn } from "node:child_process";
 import test from "node:test";
 
-test("fzf query-set ranks owner-local exported item matches before broad declaration hits", async () => {
-  const root = mkdtempSync(join(tmpdir(), "ts-harness-fzf-ranking-"));
+test("lexical query-set ranks owner-local exported item matches before broad declaration hits", async () => {
+  const root = mkdtempSync(join(tmpdir(), "ts-harness-lexical-ranking-"));
   mkdirSync(join(root, "src", "server"), { recursive: true });
   mkdirSync(join(root, "types"), { recursive: true });
   mkdirSync(join(root, "tests"), { recursive: true });
@@ -64,7 +64,7 @@ test("fzf query-set ranks owner-local exported item matches before broad declara
 
   const result = await runCli([
     "search",
-    "fzf",
+    "lexical",
     "--query-set",
     "APIRequestContext",
     "--query-set",
@@ -80,7 +80,7 @@ test("fzf query-set ranks owner-local exported item matches before broad declara
   ]);
 
   assert.equal(result.exitCode, 0, result.stderr);
-  assert.match(result.stdout, /\[search-fzf\]/);
+  assert.match(result.stdout, /\[search-lexical\]/);
   assert.match(result.stdout, /querySet=3/);
   assert.match(result.stdout, /owner:path\(src\/server\/fetch\.ts\)/);
   assert.match(result.stdout, /symbol\(APIRequestContext\)/);

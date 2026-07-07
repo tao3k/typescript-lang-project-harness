@@ -15,7 +15,7 @@ import type {
 } from "./types.js";
 import { relPath } from "./utils.js";
 
-export function fzfQueryCoverage(
+export function lexicalQueryCoverage(
   queryTerms: readonly string[],
   hitsByTerm: ReadonlyMap<string, readonly SemanticSearchHit[]>,
   selectedHits: readonly SemanticSearchHit[],
@@ -43,7 +43,7 @@ export function fzfQueryCoverage(
   });
 }
 
-export function fzfOwnerResolution(
+export function lexicalOwnerResolution(
   report: TypeScriptHarnessReport,
   owners: readonly SemanticSearchOwner[],
   hits: readonly SemanticSearchHit[],
@@ -56,7 +56,7 @@ export function fzfOwnerResolution(
       status: "workspace-owner",
       realOwner: true,
       ownerPath: owner.path,
-      reason: "parser-visible owner selected by fzf search",
+      reason: "parser-visible owner selected by lexical search",
     });
   }
   for (const hit of hits) {
@@ -86,7 +86,7 @@ export function fzfOwnerResolution(
   return [...resolutions.values()].slice(0, 12);
 }
 
-export function fzfSearchSynthesis(
+export function lexicalSearchSynthesis(
   report: TypeScriptHarnessReport,
   queryTerms: readonly string[],
   hits: readonly SemanticSearchHit[],
@@ -137,7 +137,7 @@ export function fzfSearchSynthesis(
   };
 }
 
-export function fzfAvoidNextActions(
+export function lexicalAvoidNextActions(
   queryTerms: readonly string[],
   ownerResolution: readonly SemanticSearchOwnerResolution[],
 ): readonly SemanticSearchAvoidNextAction[] {

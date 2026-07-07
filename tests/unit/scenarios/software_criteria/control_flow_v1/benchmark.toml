@@ -1,6 +1,7 @@
 harness = "vitest"
 test = "software_criterion_snapshot.test.ts"
 snapshot = "software_criteria/control_flow_v1"
+phase = "cold"
 target_total = "25ms"
 max_total = "100ms"
 observed_total = "18ms"
