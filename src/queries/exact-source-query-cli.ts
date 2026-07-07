@@ -1,7 +1,12 @@
 import path from "node:path";
 
+import { renderOwnerItemQueryCode } from "../cli/semantic-search/item-read.js";
 import { renderExactSourceWindowCode } from "./exact-source-window.js";
-import { ownerPathFromQuerySelector, selectorHasLineRange } from "./source-selector.js";
+import {
+  ownerPathFromQuerySelector,
+  selectorHasLineRange,
+  structuralItemSelectorFromQuerySelector,
+} from "./source-selector.js";
 
 export interface ExactSourceQueryCliStreams {
   readonly stdout: { write(chunk: string): unknown };
@@ -10,6 +15,7 @@ export interface ExactSourceQueryCliStreams {
 interface ExactSourceQueryArgs {
   readonly selector: string;
   readonly ownerPath: string;
+  readonly itemQuery?: string;
   readonly projectRoot: string | undefined;
 }
 
@@ -21,7 +27,10 @@ export function tryRunExactSourceQueryCli(
   const args = parseExactSourceQueryArgs(argv);
   if (args === undefined) return undefined;
   const projectRoot = path.resolve(cwd, args.projectRoot ?? ".");
-  const output = renderExactSourceWindowCode(projectRoot, args.ownerPath, args.selector);
+  const output =
+    args.itemQuery === undefined
+      ? renderExactSourceWindowCode(projectRoot, args.ownerPath, args.selector)
+      : renderOwnerItemQueryCode(projectRoot, args.ownerPath, args.itemQuery, args.selector);
   if (output === undefined) return undefined;
   streams.stdout.write(`${output}\n`);
   return 0;
@@ -92,8 +101,17 @@ function parseExactSourceQueryArgs(argv: readonly string[]): ExactSourceQueryArg
   }
   if (!codeOnly || json || namesOnly || selector === undefined) return undefined;
   if (fromHook !== undefined && fromHook !== "direct-source-read") return undefined;
-  if (!hasTerm && fromHook !== "direct-source-read") return undefined;
   if (positionals.length > 0) return undefined;
+  const structuralItem = structuralItemSelectorFromQuerySelector(selector);
+  if (structuralItem !== undefined) {
+    return {
+      selector,
+      ownerPath: structuralItem.ownerPath,
+      itemQuery: structuralItem.itemName,
+      projectRoot: workspaceRoot,
+    };
+  }
+  if (!hasTerm && fromHook !== "direct-source-read") return undefined;
   const ownerPath = ownerPathFromQuerySelector(selector);
   if (ownerPath === undefined || !selectorHasLineRange(selector, ownerPath)) return undefined;
   return {
