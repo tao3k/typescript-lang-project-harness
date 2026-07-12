@@ -46,6 +46,7 @@ export function runTypeScriptQueryCommand(
               args.ownerPath,
               itemQuery,
               args.namesOnly ? "names" : "code",
+              args.selector,
             ),
           ),
     );

@@ -16,7 +16,7 @@ import { compareHitsByRecency } from "./recency.js";
 import { fuzzySourceTextHits, fuzzyTextMatch, sourceTextHits } from "./source-text.js";
 import { isTestOwnerPath } from "./test-path.js";
 import type { SemanticSearchEdge, SemanticSearchHit, SemanticSearchSurfaceKind } from "./types.js";
-import { MAX_IMPORT_HITS, MAX_SYMBOL_HITS, MAX_FZF_HITS } from "./types.js";
+import { MAX_IMPORT_HITS, MAX_SYMBOL_HITS, MAX_LEXICAL_HITS } from "./types.js";
 import { locationFromSource, relPath } from "./utils.js";
 
 export function textHits(
@@ -44,7 +44,7 @@ export function textHits(
     });
   }
   hits.push(...sourceTextHits(report, query.trim(), needle));
-  return hits.sort((left, right) => compareHits(report, left, right)).slice(0, MAX_FZF_HITS);
+  return hits.sort((left, right) => compareHits(report, left, right)).slice(0, MAX_LEXICAL_HITS);
 }
 
 export function fuzzyLexicalHits(
@@ -82,7 +82,7 @@ export function fuzzyLexicalHits(
     });
   }
   hits.push(...fuzzySourceTextHits(report, query));
-  return hits.sort((left, right) => compareHits(report, left, right)).slice(0, MAX_FZF_HITS);
+  return hits.sort((left, right) => compareHits(report, left, right)).slice(0, MAX_LEXICAL_HITS);
 }
 
 export function textQuerySetHits(
@@ -171,7 +171,7 @@ export function lexicalQuerySetHitsFromHitsByTerm(
       }
       return compareHits(report, left, right);
     })
-    .slice(0, MAX_FZF_HITS);
+    .slice(0, MAX_LEXICAL_HITS);
 }
 
 function mergeQuerySetOwnerCoverageHits(
@@ -357,7 +357,7 @@ function mergeTextQuerySetHit(
   const key = semanticHitKey(hit);
   const current = byKey.get(key);
   if (current === undefined) {
-    if (byKey.size >= MAX_FZF_HITS) return;
+    if (byKey.size >= MAX_LEXICAL_HITS) return;
     byKey.set(key, { hit, queryTerms: new Set([queryTerm]) });
     return;
   }
@@ -465,7 +465,7 @@ export function callsiteHits(
         right.score - left.score ||
         compareHitsByRecency(report.reasoningTree.projectRoot, left, right),
     )
-    .slice(0, MAX_FZF_HITS);
+    .slice(0, MAX_LEXICAL_HITS);
 }
 
 export function callsiteHit(

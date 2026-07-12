@@ -6,6 +6,7 @@ import path from "node:path";
 
 import ts from "typescript";
 
+import { parseDiagnosticsForSourceFile } from "./diagnostics.js";
 import { discoverTypeScriptFiles, isTypeScriptSourcePath } from "./files.js";
 import {
   collectSemanticGraphFieldFacts,
@@ -21,9 +22,18 @@ export function collectLocatedSemanticGraphFieldFacts(
   stdin: string,
 ): LocatedTypeScriptSemanticGraphFieldFact[] {
   const projectRoot = path.resolve(projectRootInput);
-  return candidateFiles(projectRoot, stdin).flatMap((filePath) =>
-    factsForFile(projectRoot, filePath),
-  );
+  const facts: LocatedTypeScriptSemanticGraphFieldFact[] = [];
+  for (const filePath of candidateFiles(projectRoot, stdin)) {
+    try {
+      facts.push(...factsForFile(projectRoot, filePath));
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      throw new Error(
+        `semantic graph facts failed for ${displayRelativePath(projectRoot, filePath)}: ${reason}`,
+      );
+    }
+  }
+  return facts;
 }
 
 function factsForFile(
@@ -31,13 +41,20 @@ function factsForFile(
   filePath: string,
 ): LocatedTypeScriptSemanticGraphFieldFact[] {
   const sourceText = fs.readFileSync(filePath, "utf8");
-  const sourceFile = ts.createSourceFile(
-    filePath,
-    sourceText,
-    ts.ScriptTarget.Latest,
-    true,
-    scriptKindForPath(filePath),
-  );
+  let sourceFile: ts.SourceFile;
+  try {
+    sourceFile = ts.createSourceFile(
+      filePath,
+      sourceText,
+      ts.ScriptTarget.Latest,
+      true,
+      scriptKindForPath(filePath),
+    );
+  } catch {
+    // Conformance fixtures may intentionally be unparsable and cannot yield exact facts.
+    return [];
+  }
+  if (parseDiagnosticsForSourceFile(sourceFile).length > 0) return [];
   const relativePath = displayRelativePath(projectRoot, filePath);
   return collectSemanticGraphFieldFacts(sourceFile).map((fact) => ({
     ...fact,

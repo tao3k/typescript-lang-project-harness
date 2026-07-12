@@ -225,7 +225,7 @@ test("lexical query-set explains fixture paths and synthesizes real owners", () 
   );
   assert.equal(fixtureSeeds.exitCode, 0, fixtureSeeds.stderr);
   assert.match(fixtureSeeds.stdout, /querySet=2/u);
-  assert.match(fixtureSeeds.stdout, /selector=fuzzy-set/u);
+  assert.match(fixtureSeeds.stdout, /selector=lexical-set/u);
   assert.match(
     fixtureSeeds.stdout,
     new RegExp(`S=symbol:symbol\\(${protocolRunner}\\)(?:@[^!]+)?!symbol`, "u"),

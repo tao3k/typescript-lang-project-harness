@@ -123,6 +123,44 @@ test("query --names-only exact owner emits locator-only output", () => {
   assert.doesNotMatch(result.stdout, /\|code | text=|function beta/u);
 });
 
+test("structural selector query returns a bounded no-hit instead of owner fallback", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-structural-selector-no-hit-"));
+  writeTsProject(root, "structural-selector-no-hit", "export function alpha(): void {}\n");
+
+  const result = runCliCapture(
+    [
+      "query",
+      "--selector",
+      "typescript://src/demo.ts#item/function/does_not_exist",
+      "--term",
+      "does_not_exist",
+      "--json",
+      "--workspace",
+      ".",
+    ],
+    root,
+  );
+
+  const packet = JSON.parse(result.stdout) as {
+    readonly matchMode: string;
+    readonly queryCoverage: readonly { readonly status: string; readonly matchCount: number }[];
+    readonly matches: readonly unknown[];
+    readonly notes?: readonly unknown[];
+  };
+  assert.equal(result.exitCode, 0, result.stderr);
+  assert.equal(packet.matchMode, "unknown");
+  assert.deepEqual(packet.queryCoverage, [
+    {
+      status: "miss",
+      match: "none",
+      matchCount: 0,
+      value: "does_not_exist",
+    },
+  ]);
+  assert.deepEqual(packet.matches, []);
+  assert.equal(packet.notes, undefined);
+});
+
 test("query --names-only --json exact owner emits query packet without code", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-query-names-only-json-"));
   writeTsProject(

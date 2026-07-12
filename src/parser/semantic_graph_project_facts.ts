@@ -110,8 +110,8 @@ function testFacts(projectRoot: string): readonly TypeScriptSemanticGraphTestFac
   const testsDir = path.join(projectRoot, "tests");
   if (!fs.existsSync(testsDir)) return [];
   return discoverTypeScriptFiles([testsDir])
-    .map((filePath) => testFact(projectRoot, filePath))
-    .slice(0, TEST_LIMIT);
+    .slice(0, TEST_LIMIT)
+    .map((filePath) => testFact(projectRoot, filePath));
 }
 
 function testFact(projectRoot: string, filePath: string): TypeScriptSemanticGraphTestFact {
@@ -127,16 +127,20 @@ function testFact(projectRoot: string, filePath: string): TypeScriptSemanticGrap
 
 function testFunctionCount(sourceFile: ts.SourceFile): number {
   let count = 0;
-  const visit = (node: ts.Node): void => {
+  const pending: ts.Node[] = [sourceFile];
+  while (pending.length > 0) {
+    const node = pending.pop();
+    if (node === undefined) continue;
     if (ts.isFunctionDeclaration(node) && node.name?.text.startsWith("test")) {
       count += 1;
     }
     if (ts.isCallExpression(node) && testCallName(node.expression) !== undefined) {
       count += 1;
     }
-    ts.forEachChild(node, visit);
-  };
-  visit(sourceFile);
+    ts.forEachChild(node, (child) => {
+      pending.push(child);
+    });
+  }
   return count;
 }
 

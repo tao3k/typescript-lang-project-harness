@@ -405,7 +405,7 @@ test("CLI exposes semantic-search protocol commands", () => {
   assert.equal(textQuerySetSeeds.exitCode, 0);
   assert.match(textQuerySetSeeds.stdout, /^\[search-lexical\] /u);
   assert.match(textQuerySetSeeds.stdout, /\bquerySet=2\b/u);
-  assert.match(textQuerySetSeeds.stdout, /\bselector=fuzzy-set\b/u);
+  assert.match(textQuerySetSeeds.stdout, /\bselector=lexical-set\b/u);
   assert.match(textQuerySetSeeds.stdout, /O\d*=owner:path\(src\/index\.ts\)!owner/u);
   assert.match(textQuerySetSeeds.stdout, /O\d*=owner:path\(src\/consumer\.ts\)!owner/u);
   assert.match(textQuerySetSeeds.stdout, /T=test:path\(tests\/index\.test\.ts\)!tests/u);
@@ -458,7 +458,7 @@ test("CLI exposes semantic-search protocol commands", () => {
     ],
   );
   assert.equal(scopedQuerySetPacket.queryComposition.mode, "query-set");
-  assert.equal(scopedQuerySetPacket.queryComposition.selector, "fuzzy-set");
+  assert.equal(scopedQuerySetPacket.queryComposition.selector, "lexical-set");
   assert.equal(scopedQuerySetPacket.queryComposition.scope?.ownerPath, "src/consumer.ts");
   assert.equal(scopedQuerySetPacket.header.fields.querySet, 2);
   assert.equal(scopedQuerySetPacket.header.fields.scopeOwner, "src/consumer.ts");
@@ -982,7 +982,7 @@ test("CLI exposes semantic-search protocol commands", () => {
             ? {
                 supportsQuerySet: true,
                 acceptedQuerySetSelectors: [
-                  method === "search/lexical" ? "fuzzy-set" : "exact-set",
+                  method === "search/lexical" ? "lexical-set" : "exact-set",
                 ],
                 querySetScopes: ["project", "owner"],
                 clients: ["semantic-agent-hook"],

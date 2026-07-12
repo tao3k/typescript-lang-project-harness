@@ -21,10 +21,9 @@ interface SearchRunPlan {
 }
 
 export const SEARCH_VIEWS_REQUIRING_FULL_NATIVE_SYNTAX_FACTS =
-  new Set<TypeScriptSemanticSearchView>(["workspace", "owner", "api", "public-external-types"]);
+  new Set<TypeScriptSemanticSearchView>(["owner", "api", "public-external-types"]);
 
 export const SEARCH_VIEWS_REQUIRING_RULE_EVALUATION = new Set<TypeScriptSemanticSearchView>([
-  "workspace",
   "owner",
   "policy",
 ]);
@@ -98,8 +97,14 @@ function prefilteredSearchRunPlan(
 }
 
 function prefilterQueryTerms(args: SearchArgs): readonly string[] {
-  if (args.view === "api" && args.query !== undefined && !args.query.includes("::")) {
-    return [args.query];
+  if (args.query === undefined || args.query.includes("::")) return [];
+  switch (args.view) {
+    case "api":
+    case "public-external-types":
+    case "import":
+    case "reasoning":
+      return [args.query, ...(args.dependency === undefined ? [] : [args.dependency])];
+    default:
+      return [];
   }
-  return [];
 }

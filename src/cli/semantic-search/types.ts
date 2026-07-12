@@ -147,7 +147,7 @@ export interface SemanticSearchQueryTerm {
 export interface SemanticSearchQueryComposition {
   readonly mode: "single" | "query-set";
   readonly view: string;
-  readonly selector: "single" | "exact-set" | "prefix-set" | "fuzzy-set" | "stdin-path-set";
+  readonly selector: "single" | "exact-set" | "prefix-set" | "lexical-set" | "stdin-path-set";
   readonly scope?: SemanticSearchQueryScope;
   readonly merge: readonly (
     | "packages"
@@ -571,6 +571,6 @@ export const MAX_PRIME_EDGES = 24;
 export const MAX_FINDINGS = 8;
 export const MAX_WORKSPACE_PACKAGES = 24;
 export const MAX_WORKSPACE_EDGES = 8;
-export const MAX_FZF_HITS = 12;
+export const MAX_LEXICAL_HITS = 12;
 export const MAX_SYMBOL_HITS = 20;
 export const MAX_IMPORT_HITS = 30;

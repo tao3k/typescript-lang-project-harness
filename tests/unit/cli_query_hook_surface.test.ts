@@ -38,7 +38,7 @@ test("query --from-hook broad selector accepts shared surfaces", () => {
 
   assert.equal(status, 0);
   assert.match(stdout, /querySet=1/);
-  assert.match(stdout, /selector=fuzzy-set/);
+  assert.match(stdout, /selector=lexical-set/);
   assert.match(
     stdout,
     /legend: (?:aliases ID:kind; node )?ID=kind:role\(value\)!next; edge SRC>{DST:rel}; frontier ID\.next/,

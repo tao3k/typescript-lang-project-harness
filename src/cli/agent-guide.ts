@@ -39,7 +39,7 @@ function commandGuide(input: {
     `|cmd owner-items-code=asp typescript search owner ${input.ownerTarget} items --query <symbol-or-a|b|c> ${workspace} --code`,
     `|cmd policy=asp typescript search policy <rule-id-or-alias> owner tests ${seeds}`,
     `|cmd read-plan=asp typescript query --from-hook direct-source-read --selector <selector> --term <term> --surface owners,tests ${seeds}`,
-    `|cmd lexical=asp typescript search lexical <query> owner tests ${seeds}`,
+    `|cmd lexical=asp typescript search lexical --query <seed> --query <seed> owner tests ${seeds}`,
     `|cmd dependency=asp typescript search dependency <package-or-import> ${seeds}`,
     `|cmd deps=asp typescript search deps <dep[/subpath][@version][::api]> ${workspace}`,
     `|cmd env=asp typescript search env [term ...] ${seeds}`,

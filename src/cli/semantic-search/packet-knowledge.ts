@@ -62,18 +62,31 @@ export function buildKnowledgePacketPayload(
   report: TypeScriptHarnessReport,
   options: SemanticSearchBuildOptions,
 ): SemanticSearchPacketPayload {
-  const axis = options.view as TypeScriptKnowledgeAxis;
+  return buildKnowledgePacketPayloadForProject(
+    report.reasoningTree.projectRoot,
+    report.reasoningTree.packageName,
+    options.view as TypeScriptKnowledgeAxis,
+    options.query,
+  );
+}
+
+export function buildKnowledgePacketPayloadForProject(
+  projectRoot: string,
+  packageName: string | undefined,
+  axis: TypeScriptKnowledgeAxis,
+  query: string | undefined,
+): SemanticSearchPacketPayload {
   const detail = KNOWLEDGE_AXIS_DETAILS[axis];
-  const query = options.query ?? "";
-  const terms = queryTerms(query);
-  const facts = knowledgeFacts(report, axis, terms);
+  const normalizedQuery = query ?? "";
+  const terms = queryTerms(normalizedQuery);
+  const facts = knowledgeFacts(projectRoot, packageName, axis, terms);
   const hits = knowledgeHits(axis, detail.authority, facts, terms);
   const missing = facts.length === 0;
   return {
     header: {
       kind: `search-${axis}`,
       fields: {
-        q: query,
+        q: normalizedQuery,
         evidenceGrade: missing ? "unknown" : "fact",
         authority: detail.authority,
         fact: facts.length,
@@ -110,13 +123,14 @@ export function buildKnowledgePacketPayload(
 }
 
 function knowledgeFacts(
-  report: TypeScriptHarnessReport,
+  projectRoot: string,
+  packageName: string | undefined,
   axis: TypeScriptKnowledgeAxis,
   terms: readonly string[],
 ): readonly SemanticSearchFact[] {
   switch (axis) {
     case "env":
-      return envFacts(report, terms);
+      return envFacts(projectRoot, packageName, terms);
     case "runtime-source":
       return [];
     case "lang":
@@ -126,7 +140,7 @@ function knowledgeFacts(
     case "capability":
       return capabilityFacts(terms);
     case "extension":
-      return extensionFacts(report, terms);
+      return extensionFacts(projectRoot, terms);
     case "pattern":
       return patternFacts(terms);
     case "compare":
@@ -135,18 +149,18 @@ function knowledgeFacts(
 }
 
 function envFacts(
-  report: TypeScriptHarnessReport,
+  projectRoot: string,
+  packageName: string | undefined,
   terms: readonly string[],
 ): readonly SemanticSearchFact[] {
   const facts: SemanticSearchFact[] = [];
-  const packageName = report.reasoningTree.packageName;
   if (packageName !== undefined && matchesTerms(packageName, terms)) {
     facts.push({
       id: "package-name",
       fields: { axis: "env", source: "package-json", packageName },
     });
   }
-  for (const configPath of projectConfigPaths(report.reasoningTree.projectRoot)) {
+  for (const configPath of projectConfigPaths(projectRoot)) {
     if (terms.length === 0 || matchesTerms(configPath, terms)) {
       facts.push({
         id: configPath,
@@ -221,10 +235,10 @@ function capabilityFacts(terms: readonly string[]): readonly SemanticSearchFact[
 }
 
 function extensionFacts(
-  report: TypeScriptHarnessReport,
+  projectRoot: string,
   terms: readonly string[],
 ): readonly SemanticSearchFact[] {
-  const dependencies = packageDependencies(report.reasoningTree.projectRoot);
+  const dependencies = packageDependencies(projectRoot);
   return dependencies
     .filter((dependency) => terms.length === 0 || matchesTerms(dependency, terms))
     .map((dependency) => ({

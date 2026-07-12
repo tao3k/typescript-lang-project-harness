@@ -300,6 +300,18 @@ test("semantic language registry JSON documents the TypeScript provider identity
         descriptor.method === "search/ingest" || descriptor.method === "search/semantic-facts",
       );
       assert.equal(descriptor.supportsPackageScope, true);
+      const benchmarkInvocation = record(
+        descriptor.benchmarkInvocation,
+        `${String(descriptor.method)} benchmarkInvocation`,
+      );
+      const benchmarkArgs = stringArray(
+        benchmarkInvocation.args,
+        `${String(descriptor.method)} benchmarkInvocation.args`,
+      );
+      assert.deepEqual(benchmarkArgs.slice(0, 2), ["search", descriptor.view]);
+      assert.ok(benchmarkArgs.includes("{workspace}"));
+      assert.equal(typeof benchmarkInvocation.expectsJson, "boolean");
+      assert.ok(Number(benchmarkInvocation.maxElapsedMs) > 0);
       assert.deepEqual(
         descriptor.acceptedPipes === undefined
           ? []
@@ -344,7 +356,7 @@ test("semantic language registry JSON documents the TypeScript provider identity
         String(descriptor.method) === "query/owner-items"
           ? ["exact-set"]
           : String(descriptor.method) === "search/lexical"
-            ? ["fuzzy-set"]
+            ? ["lexical-set"]
             : [],
       );
       assert.deepEqual(

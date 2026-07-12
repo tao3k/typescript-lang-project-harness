@@ -20,7 +20,7 @@ import {
   lexicalQueryCoverage,
   lexicalSearchSynthesis,
 } from "./lexical-query-synthesis.js";
-import { MAX_FZF_HITS } from "./types.js";
+import { MAX_LEXICAL_HITS } from "./types.js";
 import type {
   SemanticSearchBuildOptions,
   SemanticSearchEdge,
@@ -164,7 +164,7 @@ function buildTextQuerySetPacket(
       fields: {
         q: query,
         querySet: queryTerms.length,
-        selector: "fuzzy-set",
+        selector: "lexical-set",
         mode: "fuzzy",
         backend: "provider",
         ...(ownerScope === undefined ? {} : { scopeOwner: ownerScope }),
@@ -237,7 +237,7 @@ function querySetOwnerFrontierHits(
       return compareQuerySetOwnerFrontierRank(leftRank, rightRank);
     })
     .map(([, entry]) => entry.hit)
-    .slice(0, MAX_FZF_HITS);
+    .slice(0, MAX_LEXICAL_HITS);
 }
 
 function querySetOwnerFrontierRank(

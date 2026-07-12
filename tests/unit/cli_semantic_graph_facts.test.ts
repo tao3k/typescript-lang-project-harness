@@ -4,7 +4,10 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
-import { TYPE_SCRIPT_SEARCH_VIEW_DESCRIPTORS } from "../../src/cli/semantic-language.js";
+import {
+  TYPE_SCRIPT_SEARCH_VIEW_DESCRIPTORS,
+  typeScriptSemanticLanguageRegistration,
+} from "../../src/cli/semantic-language.js";
 import { runCliCapture } from "./cli_helpers.js";
 
 test("semantic graph facts descriptor is graph-turbo owned", () => {
@@ -20,6 +23,31 @@ test("semantic graph facts descriptor is graph-turbo owned", () => {
     "semantic-fact-graph.v1",
     "semantic-fact-ontology.v1",
   ]);
+  const methodDescriptor = typeScriptSemanticLanguageRegistration().methodDescriptors.find(
+    (candidate) => candidate.method === "search/semantic-facts",
+  );
+  assert.deepEqual(methodDescriptor?.benchmarkInvocation, {
+    args: ["search", "semantic-facts", "{query}", "--workspace", "{workspace}", "--json"],
+    stdinTemplate: "{owner}:1:{query}\n",
+    expectsJson: true,
+    maxElapsedMs: 15_000,
+  });
+  const externalTypesDescriptor = typeScriptSemanticLanguageRegistration().methodDescriptors.find(
+    (candidate) => candidate.method === "search/public-external-types",
+  );
+  assert.deepEqual(externalTypesDescriptor?.benchmarkInvocation, {
+    args: [
+      "search",
+      "public-external-types",
+      "{dependency}",
+      "--workspace",
+      "{workspace}",
+      "--view",
+      "seeds",
+    ],
+    expectsJson: false,
+    maxElapsedMs: 15_000,
+  });
 });
 
 test("semantic graph facts renders field type and collection graph facts", () => {
@@ -351,5 +379,26 @@ test("semantic graph facts renders package build dependency and test facts", () 
         edge.relation === "belongs_to",
     ),
     "expected field to package bridge",
+  );
+});
+
+test("semantic graph facts skips parse-error files without dropping valid owner facts", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ts-semantic-invalid-source-"));
+  fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ name: "fixture" }));
+  fs.writeFileSync(path.join(root, "invalid.ts"), "interface Broken { value: ; }\n");
+  fs.writeFileSync(path.join(root, "model.ts"), "interface Cache {\n  entries: string[];\n}\n");
+
+  const result = runCliCapture(
+    ["search", "semantic-facts", "field", "--json", "--workspace", "."],
+    root,
+  );
+
+  assert.equal(result.exitCode, 0, result.stderr);
+  const payload = JSON.parse(result.stdout) as {
+    readonly nodes: readonly { readonly kind: string; readonly value?: string }[];
+  };
+  assert.ok(
+    payload.nodes.some((node) => node.kind === "field" && node.value === "entries: string[]"),
+    "expected valid file facts despite a parse-error peer",
   );
 });

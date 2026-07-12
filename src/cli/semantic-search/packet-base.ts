@@ -26,7 +26,7 @@ export function basePacket(
   packet: SemanticSearchPacketPayload,
 ): SemanticSearchPacket {
   const querySet = semanticSearchQueryTerms(options);
-  const querySetSelector = options.view === "lexical" ? "fuzzy-set" : "exact-set";
+  const querySetSelector = options.view === "lexical" ? "lexical-set" : "exact-set";
   return {
     schemaId: "agent.semantic-protocols.semantic-search-packet",
     schemaVersion: "1",

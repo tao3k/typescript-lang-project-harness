@@ -1,13 +1,43 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { buildKnowledgePacketPayloadForProject } from "./semantic-search/packet-knowledge.js";
+import { buildPolicyPacketPayload } from "./semantic-search/policy.js";
+import { typeScriptReasoningProfiles } from "./semantic-search/profiles.js";
+import {
+  SEMANTIC_LANGUAGE_PROTOCOL_ID,
+  SEMANTIC_LANGUAGE_PROTOCOL_VERSION,
+  TYPE_SCRIPT_BINARY,
+  TYPE_SCRIPT_LANGUAGE_ID,
+  TYPE_SCRIPT_PROVIDER_ID,
+  TYPE_SCRIPT_PROVIDER_NAMESPACE,
+} from "./semantic-language.js";
+
 interface CliStreams {
   readonly stdout: { write(chunk: string): unknown };
   readonly stderr: { write(chunk: string): unknown };
   readonly stdin?: string;
 }
 
-type FastSearchView = "owner" | "deps" | "dependency" | "prime" | "lexical";
+type MetadataFastSearchView =
+  | "env"
+  | "runtime-source"
+  | "lang"
+  | "std"
+  | "capability"
+  | "extension"
+  | "pattern"
+  | "compare";
+
+type FastSearchView =
+  | "workspace"
+  | "owner"
+  | "deps"
+  | "dependency"
+  | "policy"
+  | "prime"
+  | "lexical"
+  | MetadataFastSearchView;
 
 interface FastSearchArgs {
   readonly view: FastSearchView;
@@ -28,6 +58,9 @@ export function tryRunFastSearchCli(
   const args = parseFastSearchArgs(argv);
   if (args === undefined) return undefined;
   const output =
+    tryRenderPolicyFastPath(cwd, args) ??
+    tryRenderMetadataKnowledgeFastPath(cwd, args) ??
+    tryRenderWorkspaceSeedFastPath(cwd, args) ??
     tryRenderOwnerSeedFastPath(cwd, args) ??
     tryRenderDependencySeedFastPath(cwd, args) ??
     tryRenderPackagePrimeSeedFastPath(cwd, args) ??
@@ -41,11 +74,21 @@ function parseFastSearchArgs(argv: readonly string[]): FastSearchArgs | undefine
   if (argv[0] !== "search") return undefined;
   const view = argv[1];
   if (
+    view !== "workspace" &&
     view !== "owner" &&
     view !== "deps" &&
     view !== "dependency" &&
+    view !== "policy" &&
     view !== "prime" &&
-    view !== "lexical"
+    view !== "lexical" &&
+    view !== "env" &&
+    view !== "runtime-source" &&
+    view !== "lang" &&
+    view !== "std" &&
+    view !== "capability" &&
+    view !== "extension" &&
+    view !== "pattern" &&
+    view !== "compare"
   ) {
     return undefined;
   }
@@ -97,6 +140,132 @@ function parseFastSearchArgs(argv: readonly string[]): FastSearchArgs | undefine
     json,
     ...(renderMode === undefined ? {} : { renderMode }),
   };
+}
+
+function tryRenderPolicyFastPath(cwd: string, args: FastSearchArgs): string | undefined {
+  if (args.view !== "policy" || args.query === undefined || args.pipes.length > 0) {
+    return undefined;
+  }
+  const projectRoot = resolveProviderProjectRoot(cwd, args);
+  const packageName = nearestPackageName(projectRoot, projectRoot) ?? path.basename(projectRoot);
+  return renderFastSearchPacket(
+    projectRoot,
+    packageName,
+    args,
+    buildPolicyPacketPayload(args.query),
+  );
+}
+
+function tryRenderMetadataKnowledgeFastPath(cwd: string, args: FastSearchArgs): string | undefined {
+  if (!isMetadataFastSearchView(args.view) || args.pipes.length > 0) return undefined;
+  const projectRoot = resolveProviderProjectRoot(cwd, args);
+  const packageName = nearestPackageName(projectRoot, projectRoot) ?? path.basename(projectRoot);
+  const payload = buildKnowledgePacketPayloadForProject(
+    projectRoot,
+    packageName,
+    args.view,
+    args.query,
+  );
+  return renderFastSearchPacket(projectRoot, packageName, args, payload);
+}
+
+function renderFastSearchPacket(
+  projectRoot: string,
+  packageName: string,
+  args: FastSearchArgs,
+  payload:
+    | ReturnType<typeof buildKnowledgePacketPayloadForProject>
+    | ReturnType<typeof buildPolicyPacketPayload>,
+): string {
+  if (args.json) {
+    return `${JSON.stringify({
+      schemaId: "agent.semantic-protocols.semantic-search-packet",
+      schemaVersion: "1",
+      protocolId: SEMANTIC_LANGUAGE_PROTOCOL_ID,
+      protocolVersion: SEMANTIC_LANGUAGE_PROTOCOL_VERSION,
+      languageId: TYPE_SCRIPT_LANGUAGE_ID,
+      providerId: TYPE_SCRIPT_PROVIDER_ID,
+      binary: TYPE_SCRIPT_BINARY,
+      namespace: TYPE_SCRIPT_PROVIDER_NAMESPACE,
+      method: `search/${args.view}`,
+      projectRoot,
+      packageName,
+      view: args.view,
+      renderMode: args.renderMode ?? "graph",
+      ...(args.renderMode === "graph" || args.renderMode === "seeds" || args.renderMode === "both"
+        ? { reasoningProfiles: typeScriptReasoningProfiles() }
+        : {}),
+      ...(args.query === undefined ? {} : { query: args.query }),
+      ...(payload.queryCoverage === undefined ? {} : { queryCoverage: payload.queryCoverage }),
+      ...(payload.searchSynthesis === undefined
+        ? {}
+        : { searchSynthesis: payload.searchSynthesis }),
+      header: payload.header,
+      ...(payload.packages === undefined ? {} : { packages: payload.packages }),
+      nodes: payload.nodes,
+      edges: payload.edges,
+      owners: payload.owners,
+      ...(payload.semanticHandles === undefined
+        ? {}
+        : { semanticHandles: payload.semanticHandles }),
+      hits: payload.hits,
+      findings: payload.findings,
+      nextActions: payload.nextActions,
+      notes: payload.notes,
+    })}\n`;
+  }
+  const facts = payload.packages ?? [];
+  const handles = payload.semanticHandles ?? [];
+  const factIds =
+    [...facts.map((fact) => fact.id), ...handles.map((handle) => handle.id)].join(",") || "none";
+  const query = args.query ?? args.view;
+  return [
+    `[search-${args.view}] root=${packageName} alg=${args.view === "policy" ? "policy-handle-catalog" : "metadata-fast-path"}`,
+    "legend: ID=kind:role(value)!next; edge SRC>{DST:rel}; frontier ID.next",
+    "aliases: graph:{G=search,Q=query,M=metadata}",
+    `Q=query:term(${query})!lexical;M=metadata:axis(${args.view}:${factIds})!metadata`,
+    "G>{Q:matches,M:provides}",
+    "rank=Q,M frontier=Q.lexical,M.metadata",
+    `entries=${args.view === "policy" ? "provider-policy-catalog" : "metadata-only"}(projectRoot=${projectRoot})`,
+    "",
+  ].join("\n");
+}
+
+function isMetadataFastSearchView(view: FastSearchView): view is MetadataFastSearchView {
+  return [
+    "env",
+    "runtime-source",
+    "lang",
+    "std",
+    "capability",
+    "extension",
+    "pattern",
+    "compare",
+  ].includes(view);
+}
+
+function tryRenderWorkspaceSeedFastPath(cwd: string, args: FastSearchArgs): string | undefined {
+  if (
+    args.view !== "workspace" ||
+    args.query !== undefined ||
+    args.pipes.length > 0 ||
+    args.json ||
+    args.renderMode !== "seeds"
+  ) {
+    return undefined;
+  }
+  const projectRoot = resolveProviderProjectRoot(cwd, args);
+  const packageName = nearestPackageName(projectRoot, projectRoot) ?? path.basename(projectRoot);
+  return [
+    `[search-workspace] root=${packageName} mode=manifest-router nativeSyntaxFacts=skipped policyFindings=skipped alg=package-router`,
+    "legend: ID=kind:role(value)!next; edge SRC>{DST:rel}; frontier ID.next",
+    "aliases: graph:{G=search,P=package}",
+    `P=package:pkg(${packageName})!prime`,
+    "G>{P:selects}",
+    "rank=P frontier=P.prime",
+    "entries=search-prime(P=>package-map)",
+    "",
+  ].join("\n");
 }
 
 function tryRenderOwnerSeedFastPath(cwd: string, args: FastSearchArgs): string | undefined {
@@ -233,7 +402,7 @@ function tryRenderPackageLexicalSeedFastPath(
     rank.push("S");
   }
   return [
-    `[search-lexical] q=${query} querySet=${terms.length} selector=fuzzy-set view=hits alg=query-set-owner-resolution`,
+    `[search-lexical] q=${query} querySet=${terms.length} selector=lexical-set view=hits alg=query-set-owner-resolution`,
     "legend: ID=kind:role(value)!next; edge SRC>{DST:rel}; frontier ID.next",
     "aliases: graph:{G=search,Q=query,O=owner,S=symbol}",
     declarations.join(";"),

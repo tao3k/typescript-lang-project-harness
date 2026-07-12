@@ -215,7 +215,7 @@ export const TYPE_SCRIPT_SEARCH_VIEW_DESCRIPTORS = [
     acceptsStdin: false,
     acceptedPipes: ["owner", "tests"],
     supportsQuerySet: true,
-    acceptedQuerySetSelectors: ["fuzzy-set"],
+    acceptedQuerySetSelectors: ["lexical-set"],
     querySetScopes: ["project", "owner"],
     clients: ["semantic-agent-hook"],
     capabilities: [
@@ -449,11 +449,12 @@ export interface SemanticLanguageMethodDescriptor {
   readonly requiresQuery?: boolean;
   readonly acceptsStdin?: boolean;
   readonly supportsPackageScope?: boolean;
+  readonly benchmarkInvocation?: SemanticLanguageBenchmarkInvocation;
   readonly supportsQuerySet?: boolean;
   readonly acceptedQuerySetSelectors?: readonly (
     | "exact-set"
     | "prefix-set"
-    | "fuzzy-set"
+    | "lexical-set"
     | "stdin-path-set"
   )[];
   readonly querySetScopes?: readonly ("project" | "package" | "owner")[];
@@ -468,6 +469,13 @@ export interface SemanticLanguageMethodDescriptor {
   readonly mutationAvailable?: boolean;
   readonly supportsJson: boolean;
   readonly supportsCompact: boolean;
+}
+
+export interface SemanticLanguageBenchmarkInvocation {
+  readonly args: readonly string[];
+  readonly stdinTemplate?: string;
+  readonly expectsJson: boolean;
+  readonly maxElapsedMs: number;
 }
 
 export interface SemanticLanguageQueryCatalogDescriptor {
@@ -498,7 +506,7 @@ export interface TypeScriptSemanticSearchViewDescriptor {
   readonly acceptedQuerySetSelectors?: readonly (
     | "exact-set"
     | "prefix-set"
-    | "fuzzy-set"
+    | "lexical-set"
     | "stdin-path-set"
   )[];
   readonly querySetScopes?: readonly ("project" | "package" | "owner")[];
@@ -702,6 +710,7 @@ function typeScriptSemanticLanguageMethodDescriptors(): readonly SemanticLanguag
   return [
     ...TYPE_SCRIPT_SEARCH_VIEW_DESCRIPTORS.map((descriptor) => ({
       ...descriptor,
+      benchmarkInvocation: searchBenchmarkInvocation(descriptor.view),
       outputSchemaIds: searchOutputSchemaIds(descriptor.view),
       supportsJson: true,
       supportsCompact: descriptor.view === "semantic-facts" ? false : true,
@@ -903,6 +912,78 @@ function typeScriptSemanticLanguageMethodDescriptors(): readonly SemanticLanguag
   ];
 }
 
+function searchBenchmarkInvocation(
+  view: TypeScriptSemanticSearchView,
+): SemanticLanguageBenchmarkInvocation {
+  const workspace = ["--workspace", "{workspace}"] as const;
+  const seeds = [...workspace, "--view", "seeds"] as const;
+  const invocation = (args: readonly string[]): SemanticLanguageBenchmarkInvocation => ({
+    args,
+    expectsJson: false,
+    maxElapsedMs: 15_000,
+  });
+
+  switch (view) {
+    case "owner":
+      return invocation(["search", "owner", "{owner}", "items", "--query", "{query}", ...seeds]);
+    case "lexical":
+      return invocation([
+        "search",
+        "lexical",
+        "--query",
+        "{query}",
+        "--query",
+        "{dependency}",
+        ...seeds,
+      ]);
+    case "dependency":
+    case "deps":
+      return invocation(["search", view, "{dependency}", ...seeds]);
+    case "tests":
+      return invocation(["search", "tests", "{owner}", ...seeds]);
+    case "reasoning":
+      return invocation([
+        "search",
+        "reasoning",
+        "query-deps",
+        "--query",
+        "{query}",
+        "--dependency",
+        "{dependency}",
+        ...seeds,
+      ]);
+    case "ingest":
+      return {
+        args: ["search", "ingest", ...seeds],
+        stdinTemplate: "{owner}:1:{query}\\n",
+        expectsJson: false,
+        maxElapsedMs: 15_000,
+      };
+    case "semantic-facts":
+      return {
+        args: ["search", "semantic-facts", "{query}", ...workspace, "--json"],
+        stdinTemplate: "{owner}:1:{query}\n",
+        expectsJson: true,
+        maxElapsedMs: 15_000,
+      };
+    case "extension":
+      return invocation(["search", "extension", "{dependency}", ...seeds]);
+    case "public-external-types":
+      return invocation(["search", view, "{dependency}", ...seeds]);
+    case "api":
+    case "callsite":
+    case "compare":
+    case "docs":
+    case "import":
+    case "pattern":
+    case "policy":
+    case "symbol":
+      return invocation(["search", view, "{query}", ...seeds]);
+    default:
+      return invocation(["search", view, ...seeds]);
+  }
+}
+
 function searchOutputSchemaIds(view: TypeScriptSemanticSearchView): readonly string[] {
   return view === "semantic-facts"
     ? [SEMANTIC_FACT_GRAPH_SCHEMA_ID]
@@ -940,7 +1021,7 @@ function searchView<const View extends string>(
     readonly acceptedQuerySetSelectors?: readonly (
       | "exact-set"
       | "prefix-set"
-      | "fuzzy-set"
+      | "lexical-set"
       | "stdin-path-set"
     )[];
     readonly querySetScopes?: readonly ("project" | "package" | "owner")[];
@@ -974,7 +1055,7 @@ function searchView<const View extends string>(
   readonly acceptedQuerySetSelectors?: readonly (
     | "exact-set"
     | "prefix-set"
-    | "fuzzy-set"
+    | "lexical-set"
     | "stdin-path-set"
   )[];
   readonly querySetScopes?: readonly ("project" | "package" | "owner")[];

@@ -638,10 +638,24 @@ export function buildOwnerItemSemanticQueryPacket(
   ownerPath: string,
   itemQuery: string,
   outputMode: OwnerItemQueryOutputMode,
+  selector?: string,
 ): SemanticQueryPacket {
   const result = queryTypeScriptOwnerItems(projectRoot, ownerPath, itemQuery);
-  const matchMode = ownerItemQueryMatchMode(result.matches, result.queryTerms, result.fallback);
-  const syntaxRefs = ownerItemSyntaxRefs(result.ownerPath, result.queryTerms, result.matches);
+  const structuralSelector = selector?.startsWith("typescript://") ? selector : undefined;
+  const matches =
+    structuralSelector === undefined
+      ? result.matches
+      : result.matches.filter(
+          (item) =>
+            structuralSelector ===
+            `typescript://${result.ownerPath}#item/${item.kind}/${item.name}`,
+        );
+  const fallback = structuralSelector === undefined ? result.fallback : undefined;
+  const matchMode =
+    structuralSelector !== undefined && matches.length === 0
+      ? "unknown"
+      : ownerItemQueryMatchMode(matches, result.queryTerms, fallback);
+  const syntaxRefs = ownerItemSyntaxRefs(result.ownerPath, result.queryTerms, matches);
   return {
     schemaId: SEMANTIC_QUERY_PACKET_SCHEMA_ID,
     schemaVersion: "1",
@@ -663,11 +677,9 @@ export function buildOwnerItemSemanticQueryPacket(
       reason: "compact query packet is not a mutation authority",
       nextAction: "query --from-hook direct-source-read",
     },
-    queryCoverage: result.queryTerms.map((term) =>
-      ownerItemQueryCoverage(term, result.matches, result.fallback),
-    ),
+    queryCoverage: result.queryTerms.map((term) => ownerItemQueryCoverage(term, matches, fallback)),
     ...syntaxRefs,
-    matches: result.matches.map((item) => {
+    matches: matches.map((item) => {
       const read = `${result.ownerPath}:${item.lineStart}:${item.lineEnd}`;
       return {
         name: item.name,
@@ -698,7 +710,7 @@ export function buildOwnerItemSemanticQueryPacket(
       };
     }),
     truncated: false,
-    ...(result.fallback === undefined
+    ...(fallback === undefined
       ? {}
       : {
           notes: [

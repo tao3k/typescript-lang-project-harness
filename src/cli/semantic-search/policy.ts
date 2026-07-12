@@ -11,6 +11,7 @@ import type {
   SemanticSearchNode,
   SemanticSearchOwner,
   SemanticSearchPacket,
+  SemanticSearchPacketPayload,
 } from "./types.js";
 
 import { semanticSearchHandleId, semanticSearchHandlePath } from "./types.js";
@@ -66,7 +67,13 @@ export function buildPolicyPacket(
   report: TypeScriptHarnessReport,
   options: SemanticSearchBuildOptions,
 ): SemanticSearchPacket {
-  const query = options.query ?? "";
+  return basePacket(report, options, buildPolicyPacketPayload(options.query ?? "", options.pipes));
+}
+
+export function buildPolicyPacketPayload(
+  query: string,
+  pipes: readonly string[] | undefined = [],
+): SemanticSearchPacketPayload {
   const matches = policyHandleMatches(query);
   const ownerPaths = unique(matches.map((match) => match.ownerPath));
   const testPaths = unique(matches.flatMap((match) => match.tests));
@@ -76,7 +83,7 @@ export function buildPolicyPacket(
     ...ownerPaths.map((target) => ({ kind: "owner" as const, target })),
     ...testPaths.map((target) => ({ kind: "tests" as const, target })),
   ];
-  return basePacket(report, options, {
+  return {
     header: {
       kind: "search-policy",
       fields: {
@@ -84,7 +91,7 @@ export function buildPolicyPacket(
         handle: handles.length,
         owner: ownerPaths.length,
         tests: testPaths.length,
-        pipes: options.pipes ?? [],
+        pipes,
       },
     },
     nodes: [...owners.map(policyOwnerNode), ...testPaths.map((path) => policyTestNode(path))],
@@ -123,7 +130,7 @@ export function buildPolicyPacket(
             },
           ]
         : [],
-  });
+  };
 }
 
 function policyHandleMatches(query: string): readonly PolicyHandleMatch[] {
