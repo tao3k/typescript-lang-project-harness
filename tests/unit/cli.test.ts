@@ -393,7 +393,7 @@ test("CLI reports root asp owner for hook install and runtime", () => {
   );
   assert.match(
     guide.stdout,
-    /asp typescript search lexical <query> owner tests --workspace <workspace-root> --view seeds/u,
+    /asp typescript search lexical --query <seed> --query <seed> owner tests --workspace <workspace-root> --view seeds/u,
   );
   assert.doesNotMatch(guide.stdout, /\|cmd prime=asp typescript search prime --view seeds \//u);
   assert.doesNotMatch(guide.stdout, /--view seeds\s+--workspace <workspace-root>/u);
