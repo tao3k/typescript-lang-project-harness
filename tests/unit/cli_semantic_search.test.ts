@@ -955,6 +955,7 @@ test("CLI exposes semantic-search protocol commands", () => {
           ].includes(method),
           acceptsStdin: method === "search/ingest" || method === "search/semantic-facts",
           supportsPackageScope: true,
+          benchmarkInvocation: expectedSearchBenchmarkInvocation(method.slice("search/".length)),
           ...(method === "search/lexical" || method === "search/policy"
             ? { acceptedPipes: ["owner", "tests"] }
             : method === "search/owner"
@@ -1500,6 +1501,80 @@ function expectedSearchIngestRequiredFor(
       return [typeScriptCapability("external-api-docs")];
     default:
       return [];
+  }
+}
+
+function expectedSearchBenchmarkInvocation(view: string): {
+  readonly args: readonly string[];
+  readonly stdinTemplate?: string;
+  readonly expectsJson: boolean;
+  readonly maxElapsedMs: number;
+} {
+  const workspace = ["--workspace", "{workspace}"] as const;
+  const seeds = [...workspace, "--view", "seeds"] as const;
+  const invocation = (args: readonly string[]) => ({
+    args,
+    expectsJson: false,
+    maxElapsedMs: 15_000,
+  });
+
+  switch (view) {
+    case "owner":
+      return invocation(["search", "owner", "{owner}", "items", "--query", "{query}", ...seeds]);
+    case "lexical":
+      return invocation([
+        "search",
+        "lexical",
+        "--query",
+        "{query}",
+        "--query",
+        "{dependency}",
+        ...seeds,
+      ]);
+    case "dependency":
+    case "deps":
+      return invocation(["search", view, "{dependency}", ...seeds]);
+    case "tests":
+      return invocation(["search", "tests", "{owner}", ...seeds]);
+    case "reasoning":
+      return invocation([
+        "search",
+        "reasoning",
+        "query-deps",
+        "--query",
+        "{query}",
+        "--dependency",
+        "{dependency}",
+        ...seeds,
+      ]);
+    case "ingest":
+      return {
+        args: ["search", "ingest", ...seeds],
+        stdinTemplate: "{owner}:1:{query}\\n",
+        expectsJson: false,
+        maxElapsedMs: 15_000,
+      };
+    case "semantic-facts":
+      return {
+        args: ["search", "semantic-facts", "{query}", ...workspace, "--json"],
+        stdinTemplate: "{owner}:1:{query}\n",
+        expectsJson: true,
+        maxElapsedMs: 15_000,
+      };
+    case "extension":
+    case "public-external-types":
+      return invocation(["search", view, "{dependency}", ...seeds]);
+    case "api":
+    case "callsite":
+    case "compare":
+    case "docs":
+    case "import":
+    case "pattern":
+    case "policy":
+    case "symbol":
+      return invocation(["search", view, "{query}", ...seeds]);
+    default:
+      return invocation(["search", view, ...seeds]);
   }
 }
 
