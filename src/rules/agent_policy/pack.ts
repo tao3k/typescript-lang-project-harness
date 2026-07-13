@@ -129,9 +129,9 @@ const TS_AGENT_R015: TypeScriptHarnessRule = {
   ruleId: "TS-AGENT-POLICY-015",
   packId: "typescript.agent_policy",
   severity: "info",
-  title: "Facade module exports too many symbols without organization",
+  title: "Undocumented facade exports too many symbols",
   requirement:
-    "A facade (barrel/index) with >30 re-exports should organize symbols into namespaced sub-modules or split the facade. Pattern from Effect-TS: each subdomain has its own barrel (e.g., Schema.ts, Cause.ts).",
+    "An undocumented facade (barrel/index) with >30 re-exports should either document its responsibility groups or split symbols into namespaced sub-modules. Pattern from Effect-TS: each subdomain has its own barrel (e.g., Schema.ts, Cause.ts).",
   labels: { surface: "agent", parser: "reasoning-tree" },
 };
 
@@ -601,7 +601,7 @@ function evaluateFacadeExportDensity(
   reasoningTree: TypeScriptReasoningTree,
 ): TypeScriptHarnessFinding[] {
   return reasoningTree.ownerBranches
-    .filter((b) => b.roles.includes("facade") && b.exportNames.length > 30)
+    .filter((b) => b.roles.includes("facade") && !b.hasIntentDoc && b.exportNames.length > 30)
     .slice(0, 10)
     .map((b) => ({
       ruleId: TS_AGENT_R015.ruleId,

@@ -1,4 +1,10 @@
-/** Public facade for the TypeScript project harness library API. */
+/**
+ * Public facade for the TypeScript project harness library API.
+ *
+ * Exports are grouped by model, configuration, parsing, rendering, execution,
+ * rules, and verification so consumers can select a stable responsibility
+ * surface without reaching into implementation modules.
+ */
 
 export type {
   PackageJsonFacts,
