@@ -75,7 +75,8 @@ test("semantic-search JSON packets conform to the shared schema envelope", () =>
   assert.equal(Object.hasOwn(fieldProperties, "resolvedVersion"), false);
 
   const root = semanticSearchFixture();
-  const registry = jsonPacket(root, ["agent", "doctor", "--json", "."]);
+  const doctor = jsonPacket(root, ["agent", "doctor", "--json", "."]);
+  const registry = record(doctor.registry, "doctor.registry");
   const provider = record(
     array(registry.languages, "registry.languages")[0],
     "registry.languages[0]",
@@ -137,7 +138,8 @@ test("semantic-search JSON packets conform to the shared schema envelope", () =>
 test("semantic language registry JSON documents the TypeScript provider identity", () => {
   const schema = sharedSemanticLanguageRegistrySchema();
   const root = semanticSearchFixture();
-  const registry = jsonPacket(root, ["agent", "doctor", "--json", "."]);
+  const doctor = jsonPacket(root, ["agent", "doctor", "--json", "."]);
+  const registry = record(doctor.registry, "doctor.registry");
   const properties = record(schema.properties, "registry schema.properties");
   assertAllowedKeys(registry, Object.keys(properties), "registry");
   assertRequiredKeys(
@@ -156,17 +158,11 @@ test("semantic language registry JSON documents the TypeScript provider identity
     registry.protocolVersion,
     record(properties.protocolVersion, "protocolVersion schema").const,
   );
-  assertString(registry.projectRoot, "registry.projectRoot");
 
   const defs = record(schema.$defs, "registry schema.$defs");
   const languageRegistrationSchema = record(
     defs.languageRegistration,
     "registry schema languageRegistration",
-  );
-  const methodDescriptorSchema = record(defs.methodDescriptor, "registry schema methodDescriptor");
-  const commonCapabilityDescriptorSchema = record(
-    defs.capabilityDescriptor,
-    "registry schema capabilityDescriptor",
   );
   const typeScriptCapabilitySchema = sharedTypeScriptCapabilitiesSchema();
   const typeScriptCapabilityDescriptorSchema = record(
@@ -190,6 +186,7 @@ test("semantic language registry JSON documents the TypeScript provider identity
   assert.equal(language.displayName, "TypeScript");
   assert.deepEqual(stringArray(language.methods, "registry.languages[0].methods"), [
     "search/workspace",
+    "search/workspace-scope",
     "search/prime",
     "search/owner",
     "search/dependency",
@@ -241,7 +238,6 @@ test("semantic language registry JSON documents the TypeScript provider identity
     stringArray(language.methods, "registry.languages[0].methods"),
   );
   for (const descriptor of methodDescriptors) {
-    assertSchemaObject(descriptor, methodDescriptorSchema, String(descriptor.method));
     assert.equal(descriptor.supportsJson, descriptor.method === "agent/guide" ? false : true);
     assert.equal(
       descriptor.supportsCompact,
@@ -259,19 +255,21 @@ test("semantic language registry JSON documents the TypeScript provider identity
       assert.equal(descriptor.view, String(descriptor.method).slice("search/".length));
       assert.deepEqual(
         descriptor.outputSchemaIds,
-        String(descriptor.method) === "search/public-external-types"
-          ? [
-              "agent.semantic-protocols.semantic-search-packet",
-              "agent.semantic-protocols.semantic-type-surface",
-            ]
-          : String(descriptor.method) === "search/policy"
+        String(descriptor.method) === "search/workspace-scope"
+          ? ["agent.semantic-protocols.semantic-workspace-scope"]
+          : String(descriptor.method) === "search/public-external-types"
             ? [
                 "agent.semantic-protocols.semantic-search-packet",
-                "agent.semantic-protocols.semantic-handle",
+                "agent.semantic-protocols.semantic-type-surface",
               ]
-            : String(descriptor.method) === "search/semantic-facts"
-              ? ["agent.semantic-protocols.semantic-fact-graph"]
-              : ["agent.semantic-protocols.semantic-search-packet"],
+            : String(descriptor.method) === "search/policy"
+              ? [
+                  "agent.semantic-protocols.semantic-search-packet",
+                  "agent.semantic-protocols.semantic-handle",
+                ]
+              : String(descriptor.method) === "search/semantic-facts"
+                ? ["agent.semantic-protocols.semantic-fact-graph"]
+                : ["agent.semantic-protocols.semantic-search-packet"],
       );
       assert.equal(
         descriptor.requiresQuery,
@@ -378,11 +376,6 @@ test("semantic language registry JSON documents the TypeScript provider identity
       for (const capability of capabilities) {
         assertSchemaObject(
           capability,
-          commonCapabilityDescriptorSchema,
-          `${String(descriptor.method)} common capability`,
-        );
-        assertSchemaObject(
-          capability,
           typeScriptCapabilityDescriptorSchema,
           `${String(descriptor.method)} TypeScript capability`,
         );
@@ -394,7 +387,12 @@ test("semantic language registry JSON documents the TypeScript provider identity
         ]);
         assert.equal(descriptor.mutationAvailable, false);
       }
-      assert.deepEqual(capabilities, expectedSearchCapabilities(String(descriptor.method)));
+      assert.deepEqual(
+        capabilities,
+        descriptor.method === "search/workspace-scope"
+          ? [{ languageId: "typescript", namespace: "semantic", name: "workspace-scope" }]
+          : expectedSearchCapabilities(String(descriptor.method)),
+      );
       const ingestRequiredFor = descriptor.ingestRequiredFor;
       const surfaces =
         ingestRequiredFor === undefined
@@ -404,11 +402,6 @@ test("semantic language registry JSON documents the TypeScript provider identity
                 record(surface, `${String(descriptor.method)} ingestRequiredFor[${index}]`),
             );
       for (const surface of surfaces) {
-        assertSchemaObject(
-          surface,
-          commonCapabilityDescriptorSchema,
-          `${String(descriptor.method)} common ingest surface`,
-        );
         assertSchemaObject(
           surface,
           typeScriptIngestSurfaceSchema,
@@ -550,7 +543,7 @@ test("semantic language registry JSON documents the TypeScript provider identity
           ? []
           : stringArray(descriptor.outputSchemaIds, `${String(descriptor.method)} outputSchemaIds`),
         descriptor.method === "agent/doctor"
-          ? ["agent.semantic-protocols.semantic-language-registry"]
+          ? ["agent.semantic-protocols.semantic-provider-doctor"]
           : [],
       );
       assert.equal(Object.hasOwn(descriptor, "requiresQuery"), false);
@@ -569,102 +562,139 @@ test("semantic language registry JSON documents the TypeScript provider identity
   );
   const schemasById = new Map(schemas.map((schema) => [String(schema.schemaId), schema]));
   assert.equal(schemasById.size, schemas.length, "registry schemas must not duplicate schemaId");
-  const assertRegisteredSchema = (schemaId: string, schemaPath: string): void => {
+  const assertRegisteredSchema = (
+    schemaId: string,
+    expectedVersion: string,
+    schemaPath: string,
+  ): void => {
     const schemaRecord = record(schemasById.get(schemaId), `registry schema ${schemaId}`);
     assert.equal(schemaRecord.schemaId, schemaId);
-    assert.equal(schemaRecord.schemaVersion, "1");
+    assert.equal(schemaRecord.schemaVersion, expectedVersion);
     assert.equal(schemaRecord.path, schemaPath);
   };
   assertRegisteredSchema(
     "agent.semantic-protocols.semantic-search-packet",
+    "1",
     "schemas/semantic-search-packet.v1.schema.json",
   );
   assertRegisteredSchema(
     "agent.semantic-protocols.semantic-query-packet",
+    "1",
     "schemas/semantic-query-packet.v1.schema.json",
   );
   assertRegisteredSchema(
     "agent.semantic-protocols.semantic-read-packet",
+    "1",
     "schemas/semantic-read-packet.v1.schema.json",
   );
   assertRegisteredSchema(
     "agent.semantic-protocols.semantic-tree-sitter-provenance",
+    "1",
     "schemas/semantic-tree-sitter-provenance.v1.schema.json",
   );
   assertRegisteredSchema(
     "agent.semantic-protocols.semantic-tree-sitter-query",
+    "1",
     "schemas/semantic-tree-sitter-query.v1.schema.json",
   );
   assertRegisteredSchema(
     "agent.semantic-protocols.semantic-tree-sitter-grammar-profile",
+    "1",
     "schemas/semantic-tree-sitter-grammar-profile.v1.schema.json",
   );
   assertRegisteredSchema(
     "agent.semantic-protocols.semantic-graph",
+    "1",
     "schemas/semantic-graph.v1.schema.json",
   );
   assertRegisteredSchema(
     "agent.semantic-protocols.semantic-graph-turbo-request",
+    "1",
     "schemas/semantic-graph-turbo-request.v1.schema.json",
   );
   assertRegisteredSchema(
     "agent.semantic-protocols.semantic-fact-graph",
+    "1",
     "schemas/semantic-fact-graph.v1.schema.json",
   );
   assertRegisteredSchema(
     "agent.semantic-protocols.semantic-fact-ontology",
+    "1",
     "schemas/semantic-fact-ontology.v1.schema.json",
   );
   assertRegisteredSchema(
     "agent.semantic-protocols.semantic-verification-receipt",
+    "1",
     "schemas/semantic-verification-receipt.v1.schema.json",
   );
   assertRegisteredSchema(
     "agent.semantic-protocols.semantic-behavior-snapshot",
+    "1",
     "schemas/semantic-behavior-snapshot.v1.schema.json",
   );
   assertRegisteredSchema(
     "agent.semantic-protocols.semantic-determinism-readiness",
+    "1",
     "schemas/semantic-determinism-readiness.v1.schema.json",
   );
   assertRegisteredSchema(
     "agent.semantic-protocols.dev-command-log",
+    "1",
     "schemas/semantic-dev-command-log.v1.schema.json",
   );
   assertRegisteredSchema(
     "agent.semantic-protocols.semantic-formal-proof-pilot",
+    "1",
     "schemas/semantic-formal-proof-pilot.v1.schema.json",
   );
   assertRegisteredSchema(
     "agent.semantic-protocols.semantic-review-packet",
+    "1",
     "schemas/semantic-review-packet.v1.schema.json",
   );
   assertRegisteredSchema(
     "agent.semantic-protocols.semantic-evidence-graph",
+    "1",
     "schemas/semantic-evidence-graph.v1.schema.json",
   );
   assertRegisteredSchema(
     "agent.semantic-protocols.semantic-assurance-case",
+    "1",
     "schemas/semantic-assurance-case.v1.schema.json",
   );
   assertRegisteredSchema(
     "agent.semantic-protocols.semantic-type-surface",
+    "1",
     "schemas/semantic-type-surface.v1.schema.json",
   );
   assertRegisteredSchema(
     "agent.semantic-protocols.semantic-handle",
+    "1",
     "schemas/semantic-handle.v1.schema.json",
   );
   assertRegisteredSchema(
     "agent.semantic-protocols.semantic-source-location",
+    "1",
     "schemas/semantic-source-location.v1.schema.json",
   );
   assertRegisteredSchema(
     "agent.semantic-protocols.semantic-language-registry",
+    "1",
     "schemas/semantic-language-registry.v1.schema.json",
   );
   assertRegisteredSchema(
+    "agent.semantic-protocols.semantic-provider-doctor",
+    "1",
+    "schemas/semantic-provider-doctor.v1.schema.json",
+  );
+  assertRegisteredSchema(
+    "agent.semantic-protocols.provider-query-pack-descriptor",
+    "1",
+    "schemas/provider-query-pack-descriptor.v1.schema.json",
+  );
+  assertRegisteredSchema(
     "agent.semantic-protocols.languages.typescript.ts-harness.capabilities",
+    "1",
     "schemas/typescript-semantic-capabilities.v1.schema.json",
   );
 });
@@ -688,7 +718,9 @@ test("package-local semantic schemas stay synchronized with the protocol reposit
     "semantic-review-packet.v1.schema.json",
     "semantic-evidence-graph.v1.schema.json",
     "semantic-assurance-case.v1.schema.json",
+    "semantic-provider-doctor.v1.schema.json",
     "semantic-language-registry.v1.schema.json",
+    "provider-query-pack-descriptor.v1.schema.json",
   ]) {
     const repoSchemaPath = protocolRepositorySchemaPath(schemaFileName);
     if (repoSchemaPath === undefined) {

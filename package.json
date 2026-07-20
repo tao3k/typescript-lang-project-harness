@@ -9,7 +9,10 @@
   },
   "files": [
     "dist",
+    "provider",
     "schemas",
+    "!schemas/provider-query-pack-descriptor.v1.schema.json",
+    "!schemas/semantic-language-registry.v1.schema.json",
     "README.md",
     "docs"
   ],

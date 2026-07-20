@@ -28,6 +28,7 @@ import {
   type SemanticSearchRenderMode,
 } from "./semantic-search.js";
 import { renderTypeScriptSemanticGraphFactsJson } from "./semantic-graph-facts.js";
+import { renderTypeScriptWorkspaceScopeJson } from "./workspace-scope.js";
 import {
   buildTypeScriptEvidenceAnalysisRequest,
   buildTypeScriptEvidenceGraph,
@@ -242,6 +243,15 @@ export function runProtocolCli(
             : renderTypeScriptEvidenceAnalysisRequest(request),
         );
       }
+      return 0;
+    }
+    if (args.view === "workspace-scope") {
+      if (!args.json) {
+        streams.stderr.write("search workspace-scope requires --json\n");
+        return 2;
+      }
+      const projectRoot = path.resolve(cwd, args.projectRoot ?? ".");
+      streams.stdout.write(renderTypeScriptWorkspaceScopeJson(projectRoot));
       return 0;
     }
     if (args.view === "semantic-facts") {

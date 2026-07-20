@@ -14,6 +14,7 @@ import {
   semanticLanguageRegistryDocument,
   typeScriptSemanticLanguageRegistration,
 } from "./semantic-language.js";
+import { semanticProviderDoctorDocument } from "./semantic-provider-doctor.js";
 
 export type AgentArgs = AgentDoctorArgs | AgentGuideArgs;
 
@@ -76,7 +77,8 @@ export function renderAgentDoctor(projectRoot: string): string {
 }
 
 export function renderAgentDoctorJson(projectRoot: string): string {
-  return `${JSON.stringify(semanticLanguageRegistryDocument(projectRoot))}\n`;
+  void projectRoot;
+  return `${JSON.stringify(semanticProviderDoctorDocument())}\n`;
 }
 
 interface ProtocolAgentErrorArgs {

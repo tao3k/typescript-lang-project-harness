@@ -84,16 +84,18 @@ test("agent registry advertises evidence methods", () => {
 
   assert.equal(result.exitCode, 0, result.stderr);
   const payload = JSON.parse(result.stdout) as {
-    readonly languages: readonly {
-      readonly methods: readonly string[];
-      readonly methodDescriptors: readonly {
-        readonly method: string;
-        readonly command: string;
-        readonly outputSchemaIds?: readonly string[];
+    readonly registry: {
+      readonly languages: readonly {
+        readonly methods: readonly string[];
+        readonly methodDescriptors: readonly {
+          readonly method: string;
+          readonly command: string;
+          readonly outputSchemaIds?: readonly string[];
+        }[];
       }[];
-    }[];
+    };
   };
-  const language = payload.languages[0]!;
+  const language = payload.registry.languages[0]!;
   assert.ok(language.methods.includes("evidence/graph"));
   assert.ok(language.methods.includes("evidence/analyze"));
   const analyze = language.methodDescriptors.find(

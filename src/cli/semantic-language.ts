@@ -9,6 +9,8 @@ export const SEMANTIC_LANGUAGE_PROTOCOL_ID = "agent.semantic-protocols.semantic-
 export const SEMANTIC_LANGUAGE_PROTOCOL_VERSION = "1" as const;
 export const SEMANTIC_SEARCH_PACKET_SCHEMA_ID =
   "agent.semantic-protocols.semantic-search-packet" as const;
+export const SEMANTIC_WORKSPACE_SCOPE_SCHEMA_ID =
+  "agent.semantic-protocols.semantic-workspace-scope" as const;
 export const SEMANTIC_QUERY_PACKET_SCHEMA_ID =
   "agent.semantic-protocols.semantic-query-packet" as const;
 export const SEMANTIC_READ_PACKET_SCHEMA_ID =
@@ -57,7 +59,7 @@ export const TYPE_SCRIPT_BINARY = "ts-harness" as const;
 export const TYPE_SCRIPT_PROVIDER_NAMESPACE =
   "agent.semantic-protocols.languages.typescript.ts-harness" as const;
 
-export type TypeScriptSemanticSearchView =
+type TypeScriptSemanticSearchCoreView =
   | "workspace"
   | "prime"
   | "owner"
@@ -83,10 +85,17 @@ export type TypeScriptSemanticSearchView =
   | "compare"
   | "semantic-facts"
   | "ingest";
-export type TypeScriptSemanticSearchPipe =
+export type TypeScriptSemanticSearchView = TypeScriptSemanticSearchCoreView | "workspace-scope";
+
+type TypeScriptSemanticSearchDeclaredPipe =
   | Exclude<TypeScriptSemanticSearchView, "semantic-facts">
   | "items";
 export type TypeScriptSemanticSearchMethod = `search/${TypeScriptSemanticSearchView}`;
+export type TypeScriptSemanticSearchPipe = Exclude<
+  TypeScriptSemanticSearchDeclaredPipe,
+  "workspace-scope"
+>;
+
 export type TypeScriptSemanticQueryMethod =
   | "query"
   | "query/owner-items"
@@ -97,6 +106,11 @@ export const TYPE_SCRIPT_SEARCH_VIEW_DESCRIPTORS = [
     requiresQuery: false,
     acceptsStdin: false,
     capabilities: [semanticCapability("workspace-router")],
+  }),
+  searchView("workspace-scope", {
+    requiresQuery: false,
+    acceptsStdin: false,
+    capabilities: [semanticCapability("workspace-scope")],
   }),
   searchView("prime", {
     requiresQuery: false,
@@ -384,10 +398,15 @@ export interface SemanticLanguageRegistration {
   readonly displayName: "TypeScript";
   readonly methods: readonly TypeScriptSemanticLanguageMethod[];
   readonly methodDescriptors: readonly SemanticLanguageMethodDescriptor[];
+  readonly queryPackDescriptor: ReturnType<typeof typeScriptQueryPackDescriptor>;
   readonly schemas: readonly SemanticLanguageSchemaRegistration[];
 }
 
 export interface SemanticLanguageMethodDescriptor {
+  readonly invocation?: {
+    readonly argv: readonly string[];
+    readonly stdinMode?: "none" | "pipe-candidates" | "pipe-diff" | "unknown";
+  };
   readonly method: TypeScriptSemanticLanguageMethod;
   readonly command: SemanticLanguageCommand;
   readonly view?: string;
@@ -538,15 +557,63 @@ export interface SemanticLanguageSchemaRegistration {
 }
 
 export function semanticLanguageRegistryDocument(
-  projectRoot?: string,
+  _projectRoot?: string,
 ): SemanticLanguageRegistryDocument {
   return {
     registryId: SEMANTIC_LANGUAGE_REGISTRY_ID,
     registryVersion: SEMANTIC_LANGUAGE_REGISTRY_VERSION,
     protocolId: SEMANTIC_LANGUAGE_PROTOCOL_ID,
     protocolVersion: SEMANTIC_LANGUAGE_PROTOCOL_VERSION,
-    ...(projectRoot === undefined ? {} : { projectRoot }),
     languages: [typeScriptSemanticLanguageRegistration()],
+  };
+}
+
+function typeScriptQueryPackDescriptor() {
+  return {
+    descriptorId: "typescript.query-pack",
+    descriptorVersion: "1",
+    languageId: TYPE_SCRIPT_LANGUAGE_ID,
+    semanticFactsDescriptorId: "typescript.semantic-facts",
+    termRoleOverrides: ["Effect", "Scope", "Queue", "Stream"].map((term) => ({
+      term,
+      role: "symbol" as const,
+      caseSensitive: true,
+    })),
+    recipes: [
+      {
+        recipeId: "typescript.effect-runtime",
+        trigger: { terms: ["Effect", "runtime", "scheduling"], match: "any" as const },
+        clauses: [
+          {
+            terms: ["Effect", "runtime", "scheduling"],
+            roles: ["symbol", "concept"] as const,
+            intentAxes: ["concurrency"] as const,
+          },
+        ],
+      },
+      {
+        recipeId: "typescript.scope-lifecycle",
+        trigger: { terms: ["Scope", "lifecycle"], match: "any" as const },
+        clauses: [
+          {
+            terms: ["Scope", "lifecycle"],
+            roles: ["symbol", "concept"] as const,
+            intentAxes: ["resource-lifecycle"] as const,
+          },
+        ],
+      },
+      {
+        recipeId: "typescript.stream-queue-backpressure",
+        trigger: { terms: ["Queue", "Stream", "backpressure"], match: "any" as const },
+        clauses: [
+          {
+            terms: ["Queue", "Stream", "backpressure"],
+            roles: ["symbol", "concept"] as const,
+            intentAxes: ["collection", "stream"] as const,
+          },
+        ],
+      },
+    ],
   };
 }
 
@@ -566,11 +633,17 @@ export function typeScriptSemanticLanguageRegistration(): SemanticLanguageRegist
       ...TYPE_SCRIPT_AGENT_METHODS,
     ],
     methodDescriptors: typeScriptSemanticLanguageMethodDescriptors(),
+    queryPackDescriptor: typeScriptQueryPackDescriptor(),
     schemas: [
       {
         schemaId: SEMANTIC_SEARCH_PACKET_SCHEMA_ID,
         schemaVersion: "1",
         path: "schemas/semantic-search-packet.v1.schema.json",
+      },
+      {
+        schemaId: SEMANTIC_WORKSPACE_SCOPE_SCHEMA_ID,
+        schemaVersion: "1",
+        path: "schemas/semantic-workspace-scope.v1.schema.json",
       },
       {
         schemaId: SEMANTIC_QUERY_PACKET_SCHEMA_ID,
@@ -688,6 +761,16 @@ export function typeScriptSemanticLanguageRegistration(): SemanticLanguageRegist
         path: "schemas/semantic-language-registry.v1.schema.json",
       },
       {
+        schemaId: "agent.semantic-protocols.semantic-provider-doctor",
+        schemaVersion: "1",
+        path: "schemas/semantic-provider-doctor.v1.schema.json",
+      },
+      {
+        schemaId: "agent.semantic-protocols.provider-query-pack-descriptor",
+        schemaVersion: "1",
+        path: "schemas/provider-query-pack-descriptor.v1.schema.json",
+      },
+      {
         schemaId: TYPE_SCRIPT_CAPABILITIES_SCHEMA_ID,
         schemaVersion: "1",
         path: "schemas/typescript-semantic-capabilities.v1.schema.json",
@@ -706,8 +789,56 @@ export function isTypeScriptSemanticSearchView(view: string): view is TypeScript
   return typeScriptSemanticSearchViewDescriptor(view) !== undefined;
 }
 
+function invocationForMethodDescriptor(descriptor: {
+  readonly method: string;
+  readonly benchmarkInvocation?: SemanticLanguageBenchmarkInvocation;
+}): NonNullable<SemanticLanguageMethodDescriptor["invocation"]> {
+  if (descriptor.benchmarkInvocation !== undefined) {
+    return {
+      argv: [TYPE_SCRIPT_BINARY, ...descriptor.benchmarkInvocation.args],
+      stdinMode:
+        descriptor.benchmarkInvocation.stdinTemplate === undefined ? "none" : "pipe-candidates",
+    };
+  }
+  const invocations: Readonly<Record<string, readonly string[]>> = {
+    query: [TYPE_SCRIPT_BINARY, "query", "--catalog", "{query}", "--workspace", "{workspace}"],
+    "query/owner-items": [
+      TYPE_SCRIPT_BINARY,
+      "query",
+      "{owner}",
+      "--term",
+      "{query}",
+      "--workspace",
+      "{workspace}",
+    ],
+    "query/direct-source-read": [
+      TYPE_SCRIPT_BINARY,
+      "query",
+      "--from-hook",
+      "direct-source-read",
+      "--workspace",
+      "{workspace}",
+      "--selector",
+      "{owner}",
+      "--code",
+    ],
+    "check/changed": [TYPE_SCRIPT_BINARY, "check", "--changed", "{workspace}"],
+    "check/full": [TYPE_SCRIPT_BINARY, "check", "--full", "{workspace}"],
+    "ast-patch/dry-run": [TYPE_SCRIPT_BINARY, "ast-patch", "dry-run", "--packet", "{packet}"],
+    "evidence/graph": [TYPE_SCRIPT_BINARY, "evidence", "graph", "--json", "{workspace}"],
+    "evidence/analyze": [TYPE_SCRIPT_BINARY, "evidence", "analyze", "--json", "{workspace}"],
+    "agent/doctor": [TYPE_SCRIPT_BINARY, "agent", "doctor", "--json"],
+    "agent/guide": [TYPE_SCRIPT_BINARY, "agent", "guide"],
+  };
+  const argv = invocations[descriptor.method];
+  if (argv === undefined) {
+    throw new Error(`missing invocation descriptor for ${descriptor.method}`);
+  }
+  return { argv, stdinMode: "none" };
+}
+
 function typeScriptSemanticLanguageMethodDescriptors(): readonly SemanticLanguageMethodDescriptor[] {
-  return [
+  const descriptors: readonly SemanticLanguageMethodDescriptor[] = [
     ...TYPE_SCRIPT_SEARCH_VIEW_DESCRIPTORS.map((descriptor) => ({
       ...descriptor,
       benchmarkInvocation: searchBenchmarkInvocation(descriptor.view),
@@ -899,7 +1030,7 @@ function typeScriptSemanticLanguageMethodDescriptors(): readonly SemanticLanguag
     {
       method: "agent/doctor" as const,
       command: "agent" as const,
-      outputSchemaIds: [SEMANTIC_LANGUAGE_REGISTRY_ID],
+      outputSchemaIds: ["agent.semantic-protocols.semantic-provider-doctor"],
       supportsCompact: true,
       supportsJson: true,
     },
@@ -910,6 +1041,10 @@ function typeScriptSemanticLanguageMethodDescriptors(): readonly SemanticLanguag
       supportsJson: false,
     },
   ];
+  return descriptors.map((descriptor) => ({
+    ...descriptor,
+    invocation: invocationForMethodDescriptor(descriptor),
+  }));
 }
 
 function searchBenchmarkInvocation(
@@ -985,13 +1120,15 @@ function searchBenchmarkInvocation(
 }
 
 function searchOutputSchemaIds(view: TypeScriptSemanticSearchView): readonly string[] {
-  return view === "semantic-facts"
-    ? [SEMANTIC_FACT_GRAPH_SCHEMA_ID]
-    : view === "public-external-types"
-      ? [SEMANTIC_SEARCH_PACKET_SCHEMA_ID, SEMANTIC_TYPE_SURFACE_SCHEMA_ID]
-      : view === "policy"
-        ? [SEMANTIC_SEARCH_PACKET_SCHEMA_ID, SEMANTIC_HANDLE_SCHEMA_ID]
-        : [SEMANTIC_SEARCH_PACKET_SCHEMA_ID];
+  return view === "workspace-scope"
+    ? [SEMANTIC_WORKSPACE_SCOPE_SCHEMA_ID]
+    : view === "semantic-facts"
+      ? [SEMANTIC_FACT_GRAPH_SCHEMA_ID]
+      : view === "public-external-types"
+        ? [SEMANTIC_SEARCH_PACKET_SCHEMA_ID, SEMANTIC_TYPE_SURFACE_SCHEMA_ID]
+        : view === "policy"
+          ? [SEMANTIC_SEARCH_PACKET_SCHEMA_ID, SEMANTIC_HANDLE_SCHEMA_ID]
+          : [SEMANTIC_SEARCH_PACKET_SCHEMA_ID];
 }
 
 function queryCatalog(
