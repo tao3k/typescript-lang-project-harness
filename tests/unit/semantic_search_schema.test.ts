@@ -683,16 +683,6 @@ test("semantic language registry JSON documents the TypeScript provider identity
     "schemas/semantic-language-registry.v1.schema.json",
   );
   assertRegisteredSchema(
-    "agent.semantic-protocols.semantic-provider-doctor",
-    "1",
-    "schemas/semantic-provider-doctor.v1.schema.json",
-  );
-  assertRegisteredSchema(
-    "agent.semantic-protocols.provider-query-pack-descriptor",
-    "1",
-    "schemas/provider-query-pack-descriptor.v1.schema.json",
-  );
-  assertRegisteredSchema(
     "agent.semantic-protocols.languages.typescript.ts-harness.capabilities",
     "1",
     "schemas/typescript-semantic-capabilities.v1.schema.json",
@@ -718,9 +708,8 @@ test("package-local semantic schemas stay synchronized with the protocol reposit
     "semantic-review-packet.v1.schema.json",
     "semantic-evidence-graph.v1.schema.json",
     "semantic-assurance-case.v1.schema.json",
-    "semantic-provider-doctor.v1.schema.json",
     "semantic-language-registry.v1.schema.json",
-    "provider-query-pack-descriptor.v1.schema.json",
+    "semantic-owner-item-evidence.v1.schema.json",
   ]) {
     const repoSchemaPath = protocolRepositorySchemaPath(schemaFileName);
     if (repoSchemaPath === undefined) {
