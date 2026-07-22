@@ -24,6 +24,12 @@ export function runTypeScriptQueryCommand(
   streams: QueryCommandStreams,
   cwd: string,
 ): number {
+  if (args.selector === undefined && (args.ownerPath.length > 0 || args.terms.length > 0)) {
+    streams.stderr.write(
+      "typescript query requires an exact --selector; use `asp typescript search owner <owner-path> items --query <symbol> --names-only --workspace .` for discovery\n",
+    );
+    return 3;
+  }
   let projectRoot = path.resolve(cwd, args.projectRoot ?? ".");
   if (args.packagePath !== undefined && !args.workspace) {
     projectRoot = path.resolve(projectRoot, args.packagePath);
