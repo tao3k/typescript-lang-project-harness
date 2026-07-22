@@ -1,0 +1,29 @@
+{
+  "schemaId": "agent.semantic-protocols.provider-workspace-install",
+  "schemaVersion": "1",
+  "schemaAuthority": "https://tao3k.github.io/agent-semantic-protocols/schemas/",
+  "providerId": "ts-harness",
+  "binary": "ts-harness",
+  "workspaceArtifact": {
+    "root": "languages/typescript-lang-project-harness/dist/provider",
+    "entrypoint": "ts-harness.mjs",
+    "launch": {
+      "program": "node",
+      "args": ["ts-harness.mjs"],
+      "programRelativeToArtifact": false,
+      "argsRelativeToArtifact": true
+    }
+  },
+  "workspaceBuild": {
+    "program": "npm",
+    "args": ["run", "build"],
+    "workingDirectory": "languages/typescript-lang-project-harness",
+    "sourceSnapshotAnchors": [
+      "languages/typescript-lang-project-harness/package.json",
+      "languages/typescript-lang-project-harness/package-lock.json",
+      "languages/typescript-lang-project-harness/pnpm-lock.yaml"
+    ],
+    "derivedPaths": ["languages/typescript-lang-project-harness/dist"],
+    "env": {}
+  }
+}
