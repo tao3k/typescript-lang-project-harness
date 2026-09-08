@@ -19,7 +19,7 @@ export type TypeScriptPackageExtensionDependencySource = TypeScriptPackageDepend
 export type TypeScriptPackageExtensionConfigSource =
   | "typescriptProjectHarness"
   | "typescriptLangProjectHarness"
-  | "typescript-lang-project-harness";
+  | "asp-typescript";
 
 export type TypeScriptPackageExtensionCoverage = "project";
 

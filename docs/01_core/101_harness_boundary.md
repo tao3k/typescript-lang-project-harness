@@ -1,6 +1,6 @@
 # Harness Boundary
 
-`typescript-lang-project-harness` owns a standalone, library-first TypeScript
+`asp-typescript` owns a standalone, library-first TypeScript
 project harness. It exists because `tsc`, ESLint, and Prettier do not provide a
 compact project reasoning tree for repair-oriented agents.
 

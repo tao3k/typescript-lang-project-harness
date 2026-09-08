@@ -22,7 +22,7 @@ export function typeScriptHarnessRulesMarkdown(): string {
 
 export function renderTypeScriptHarnessRulesMarkdown(): string {
   const output = [
-    "# typescript-lang-project-harness",
+    "# asp-typescript",
     "",
     "## Harness Rules",
     "",

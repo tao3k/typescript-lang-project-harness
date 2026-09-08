@@ -60,7 +60,7 @@ export function buildTypeScriptEvidenceGraph(projectRoot: string): JsonObject {
       summary:
         "Attach the receipt emitted by the TypeScript dependency policy API before treating the claim as verified.",
       fields: {
-        authority: "typescript-lang-project-harness-api",
+        authority: "asp-typescript-api",
         trigger: "package-test",
       },
     },

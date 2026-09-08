@@ -33,9 +33,17 @@ test("ASP client frame clientInfo definition is concrete and reusable", () => {
   assert.equal(clientInfo.$ref, undefined);
 });
 
-test("provider manifest route bindings expose no removed check command", () => {
+test("provider manifest route bindings expose no ASP-owned orchestration commands", () => {
   const contract = schema("provider-manifest.schema.json");
   const routeBindings = object(object(contract.$defs).hookRouteBindings);
-  assert.equal((routeBindings.required as readonly unknown[]).includes("checkChanged"), false);
+  assert.equal(
+    (routeBindings.required as readonly unknown[] | undefined)?.includes("checkChanged") ?? false,
+    false,
+  );
   assert.equal(object(routeBindings.properties).checkChanged, undefined);
+  assert.equal(
+    (routeBindings.required as readonly unknown[] | undefined)?.includes("playbook") ?? false,
+    false,
+  );
+  assert.equal(object(routeBindings.properties).playbook, undefined);
 });

@@ -1,4 +1,4 @@
-# typescript-lang-project-harness
+# asp-typescript
 
 ## Harness Rules
 

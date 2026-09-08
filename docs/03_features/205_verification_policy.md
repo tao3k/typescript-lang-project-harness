@@ -152,7 +152,7 @@ import {
   buildTypeScriptVerificationReportBundle,
   renderTypeScriptVerificationReportArtifactJson,
   writeTypeScriptVerificationReports,
-} from "typescript-lang-project-harness";
+} from "asp-typescript";
 
 const index = buildTypeScriptVerificationTaskIndex(plan);
 const perf = buildTypeScriptVerificationPerformanceIndex(plan);
@@ -198,7 +198,7 @@ import {
   activeTypeScriptVerificationProfileHints,
   buildTypeScriptVerificationProfileIndex,
   renderTypeScriptVerificationProfileIndex,
-} from "typescript-lang-project-harness";
+} from "asp-typescript";
 
 const index = buildTypeScriptVerificationProfileIndex(".");
 console.log(renderTypeScriptVerificationProfileIndex(index));

@@ -41,7 +41,7 @@ const KNOWN_PACKAGE_EXTENSIONS = [
 const HARNESS_CONFIG_SOURCE_NAMES: readonly TypeScriptPackageExtensionConfigSource[] = [
   "typescriptProjectHarness",
   "typescriptLangProjectHarness",
-  "typescript-lang-project-harness",
+  "asp-typescript",
 ];
 
 export function packageExtensionFacts(

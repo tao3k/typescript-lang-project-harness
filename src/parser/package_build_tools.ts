@@ -69,7 +69,7 @@ const BUILD_TOOL_DESCRIPTORS: readonly BuildToolDescriptor[] = [
 const HARNESS_CONFIG_SOURCE_NAMES: readonly TypeScriptPackageExtensionConfigSource[] = [
   "typescriptProjectHarness",
   "typescriptLangProjectHarness",
-  "typescript-lang-project-harness",
+  "asp-typescript",
 ];
 
 export function packageBuildToolFacts(

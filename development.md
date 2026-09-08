@@ -3,15 +3,15 @@
 ## Format, Typecheck, Test
 
 ```shell
-direnv exec . npm install
-direnv exec . npm run check:implementation
-direnv exec . npm run check:policy
-direnv exec . npm run lint
-direnv exec . npm run format:check
-direnv exec . npm run test:implementation
-direnv exec . npm run test:policy
-direnv exec . npm run harness
-direnv exec . git diff --check
+.devenv/devenv-profile-exec npm --prefix languages/asp-typescript install
+.devenv/devenv-profile-exec npm --prefix languages/asp-typescript run check:implementation
+.devenv/devenv-profile-exec npm --prefix languages/asp-typescript run check:policy
+.devenv/devenv-profile-exec npm --prefix languages/asp-typescript run lint
+.devenv/devenv-profile-exec npm --prefix languages/asp-typescript run format:check
+.devenv/devenv-profile-exec npm --prefix languages/asp-typescript run test:implementation
+.devenv/devenv-profile-exec npm --prefix languages/asp-typescript run test:policy
+.devenv/devenv-profile-exec npm --prefix languages/asp-typescript run harness
+.devenv/devenv-profile-exec git diff --check
 ```
 
 ## Global CLI Install
@@ -20,7 +20,7 @@ Install the local checkout as the global `asp-typescript` binary before testing
 agent hook flows from other repositories:
 
 ```shell
-direnv exec . npm install -g --prefix /opt/homebrew .
+.devenv/devenv-profile-exec npm install -g --prefix /opt/homebrew languages/asp-typescript
 asp-typescript agent doctor .
 asp-typescript search prime --workspace . --view seeds
 asp-typescript agent install --client codex .

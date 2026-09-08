@@ -1,4 +1,4 @@
-# typescript-lang-project-harness
+# asp-typescript
 
 Standalone project-level TypeScript language harness for agent repair loops,
 local checks, and CI policy gates.
@@ -11,7 +11,7 @@ source text as the source of truth.
 ## Use
 
 ```ts
-import { assertTypeScriptProjectHarnessClean } from "typescript-lang-project-harness";
+import { assertTypeScriptProjectHarnessClean } from "asp-typescript";
 
 assertTypeScriptProjectHarnessClean(new URL(".", import.meta.url));
 ```
@@ -22,7 +22,7 @@ For compact repair output:
 import {
   renderTypeScriptProjectHarnessAgentCompactText,
   runTypeScriptProjectHarness,
-} from "typescript-lang-project-harness";
+} from "asp-typescript";
 
 const report = runTypeScriptProjectHarness(".");
 console.log(renderTypeScriptProjectHarnessAgentCompactText(report));

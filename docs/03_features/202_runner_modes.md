@@ -31,7 +31,7 @@ discovery path does not infer JavaScript ownership on its own.
 `TypeScriptHarnessConfig` owns parser inclusion and assertion policy:
 
 ```ts
-import { defaultTypeScriptHarnessConfig } from "typescript-lang-project-harness";
+import { defaultTypeScriptHarnessConfig } from "asp-typescript";
 
 const config = {
   ...defaultTypeScriptHarnessConfig(),

@@ -1,4 +1,4 @@
-# TypeScript Lang Project Harness: Map Of Content
+# ASP TypeScript: Map Of Content
 
 Documentation surface for the standalone TypeScript language project harness.
 The README stays compact; durable package details live here so parser boundary,

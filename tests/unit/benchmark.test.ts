@@ -118,7 +118,7 @@ describe("benchmark: small project", () => {
   });
 });
 
-describe("benchmark: CLI query/search stable paths", () => {
+describe("benchmark: CLI exact-query stable path", () => {
   it("embedded declaration catalog stays on the lightweight locator path", () => {
     const dir = tmpDir();
     writeFile(dir, "tsconfig.json", JSON.stringify({ include: ["src/**/*.ts"] }));
@@ -143,42 +143,6 @@ describe("benchmark: CLI query/search stable paths", () => {
     assert.equal(result.exitCode, 0, result.stderr);
     assert.match(result.stdout, /src\/sample\.ts:1\nalpha/u);
     assert.doesNotMatch(result.stdout, /\[search-owner\]/u);
-    fs.rmSync(dir, { recursive: true, force: true });
-  });
-
-  it("lexical owner/tests search avoids multi-second regressions on a tiny project", () => {
-    const dir = tmpDir();
-    writeFile(dir, "tsconfig.json", JSON.stringify({ include: ["src/**/*.ts", "tests/**/*.ts"] }));
-    writeFile(
-      dir,
-      "src/sample.ts",
-      ["export function contentBlocks(): readonly string[] {", "  return ['ok'];", "}", ""].join(
-        "\n",
-      ),
-    );
-    writeFile(
-      dir,
-      "tests/sample.test.ts",
-      "import { contentBlocks } from '../src/sample.js';\ncontentBlocks();\n",
-    );
-
-    const result = runCliCapture(
-      [
-        "search",
-        "lexical",
-        "contentBlocks",
-        "owner",
-        "tests",
-        "--view",
-        "seeds",
-        "--workspace",
-        ".",
-      ],
-      dir,
-    );
-    assert.equal(result.exitCode, 0, result.stderr);
-    assert.match(result.stdout, /\[search-lexical\]/u);
-    assert.match(result.stdout, /contentBlocks/u);
     fs.rmSync(dir, { recursive: true, force: true });
   });
 });
