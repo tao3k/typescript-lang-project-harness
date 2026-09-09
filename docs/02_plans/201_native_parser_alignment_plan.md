@@ -55,7 +55,7 @@ raw source text.
 4. Compact agent output
    - Keep compact output as the default human/agent surface; JSON remains for
      tools.
-   - The agent snapshot should follow the Rust harness shape: `Modules:`,
+   - The agent snapshot should follow the ASP Rust shape: `Modules:`,
      `OwnerBranches:`, `OwnerDependencies:`, and `FindingGroups:`. It should
      render reasoning-tree `ownerBranches` and `ownerDependencies`, omit
      singleton and zero-value boilerplate, and keep full diagnostics in the
@@ -64,10 +64,10 @@ raw source text.
 5. Self-apply validation
    - Boundary tests must prove only the parser layer imports `typescript` and
      that rules/renderers consume reasoning-tree facts.
-   - The repository must pass its own default harness and advice surface with
+   - The repository must pass its own default ASP TypeScript and advice surface with
      zero findings.
    - Acceptance stays: `npm run check`, `npm run lint`, `npm test`,
-     `npm run harness`, and `git diff --check` through `direnv exec .`.
+     `npm run check:policy`, and `git diff --check` through `direnv exec .`.
 
 ## Current Parser Slice
 

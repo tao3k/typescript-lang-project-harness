@@ -2,7 +2,7 @@
   "name": "asp-typescript",
   "version": "0.1.0",
   "private": true,
-  "description": "Project-level TypeScript language harness with native parser facts and compact diagnostics for agents",
+  "description": "Project-level TypeScript ASP language provider with native parser facts and compact diagnostics for agents",
   "license": "Apache-2.0",
   "bin": {
     "asp-typescript": "./dist/src/cli/main.js"

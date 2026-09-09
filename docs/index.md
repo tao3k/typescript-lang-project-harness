@@ -1,13 +1,13 @@
 # ASP TypeScript: Map Of Content
 
-Documentation surface for the standalone TypeScript language project harness.
+Documentation surface for the standalone TypeScript language ASP TypeScript.
 The README stays compact; durable package details live here so parser boundary,
 runner modes, rule catalogs, and CLI behavior can evolve without turning the
 entrypoint into a catch-all reference page.
 
 ## 01_core: Architecture And Foundation
 
-- [Harness Boundary](01_core/101_harness_boundary.md): package ownership,
+- [ASP TypeScript Boundary](01_core/101_asp_typescript_boundary.md): package ownership,
   TypeScript-native parser boundary, project runner, explicit-path runner, and
   non-goals.
 

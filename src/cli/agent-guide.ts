@@ -27,8 +27,6 @@ function commandGuide(input: {
     `|cmd exact-source=asp typescript query --selector <exact-structural-selector> --projection source ${workspace}`,
     `|cmd callable-skeleton=asp typescript query --selector <exact-structural-selector> --projection callable-skeleton ${workspace}`,
     "|cmd ast-patch=asp typescript ast-patch dry-run --packet <semantic-ast-patch.json>",
-    `|cmd evidence-graph=asp typescript evidence graph --json ${workspace}`,
-    `|cmd evidence-analyze=asp typescript evidence analyze --json ${workspace}`,
     "|policy authority=asp-typescript-api trigger=package-test",
     "|rule agent hook install/runtime is owned by asp",
     "|rule selector queries do not need a trailing project root; --workspace <workspace-root> is the independent workspace override",

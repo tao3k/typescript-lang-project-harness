@@ -6,14 +6,6 @@ import path from "node:path";
 import { renderCodexAgentGuide } from "./agent-guide.js";
 import { renderTypeScriptAstPatchDryRunReceiptJson } from "./ast-patch.js";
 import {
-  buildTypeScriptEvidenceAnalysisRequest,
-  buildTypeScriptEvidenceGraph,
-  renderTypeScriptEvidenceAnalysisRequest,
-  renderTypeScriptEvidenceAnalysisRequestJson,
-  renderTypeScriptEvidenceGraph,
-  renderTypeScriptEvidenceGraphJson,
-} from "./evidence-graph.js";
-import {
   parseAgentArgs,
   renderAgentDoctor,
   renderAgentDoctorJson,
@@ -47,7 +39,6 @@ export type ProtocolArgs =
   | DirectSourceReadArgs
   | TreeSitterQueryArgs
   | FlowLiteQueryArgs
-  | EvidenceArgs
   | AgentArgs
   | AstPatchArgs
   | ProtocolHelpArgs
@@ -58,13 +49,6 @@ interface DirectSourceReadArgs {
   readonly projectRoot: string | undefined;
   readonly packagePath: string | undefined;
   readonly selector: string;
-  readonly json: boolean;
-}
-
-export interface EvidenceArgs {
-  readonly kind: "evidence";
-  readonly action: "graph" | "analyze";
-  readonly projectRoot: string | undefined;
   readonly json: boolean;
 }
 
@@ -97,7 +81,6 @@ export function parseProtocolArgs(argv: readonly string[]): ProtocolArgs | undef
         : parseQueryArgs(queryArgs);
   }
   if (command === "ast-patch") return parseAstPatchArgs(argv.slice(1));
-  if (command === "evidence") return parseEvidenceArgs(argv.slice(1));
   if (command === "agent") return parseAgentArgs(argv.slice(1));
   return undefined;
 }
@@ -161,23 +144,8 @@ export function runProtocolCli(
       );
       return 0;
     }
-    const projectRoot = path.resolve(cwd, args.projectRoot ?? ".");
-    if (args.action === "graph") {
-      const graph = buildTypeScriptEvidenceGraph(projectRoot);
-      streams.stdout.write(
-        args.json
-          ? renderTypeScriptEvidenceGraphJson(projectRoot)
-          : renderTypeScriptEvidenceGraph(graph),
-      );
-    } else {
-      const request = buildTypeScriptEvidenceAnalysisRequest(projectRoot);
-      streams.stdout.write(
-        args.json
-          ? renderTypeScriptEvidenceAnalysisRequestJson(projectRoot)
-          : renderTypeScriptEvidenceAnalysisRequest(request),
-      );
-    }
-    return 0;
+    const exhaustive: never = args;
+    return exhaustive;
   } catch (error) {
     streams.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
     return 3;
@@ -265,32 +233,6 @@ function aspOwnedExactProjectionError(): ProtocolErrorArgs {
     kind: "error",
     message:
       "exact source projection is ASP-owned; use `asp typescript query --selector <exact-structural-selector> --projection source|callable-skeleton --workspace <workspace-root>`",
-  };
-}
-
-function parseEvidenceArgs(argv: readonly string[]): ProtocolArgs {
-  const actionValue = argv[0];
-  if (actionValue === "--help" || actionValue === "-h") return { kind: "help" };
-  if (actionValue !== "graph" && actionValue !== "analyze" && actionValue !== "analysis") {
-    return { kind: "error", message: "expected evidence <graph|analyze>" };
-  }
-  let json = false;
-  const positionals: string[] = [];
-  for (const arg of argv.slice(1)) {
-    if (arg === "--json") json = true;
-    else if (arg === "--help" || arg === "-h") return { kind: "help" };
-    else if (arg.startsWith("-")) {
-      return { kind: "error", message: `unknown evidence option: ${arg}` };
-    } else positionals.push(arg);
-  }
-  if (positionals.length > 1) {
-    return { kind: "error", message: "expected at most one PROJECT_ROOT argument" };
-  }
-  return {
-    kind: "evidence",
-    action: actionValue === "analysis" ? "analyze" : actionValue,
-    projectRoot: positionals[0],
-    json,
   };
 }
 

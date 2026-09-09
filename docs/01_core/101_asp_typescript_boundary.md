@@ -1,7 +1,7 @@
-# Harness Boundary
+# ASP TypeScript Boundary
 
 `asp-typescript` owns a standalone, library-first TypeScript
-project harness. It exists because `tsc`, ESLint, and Prettier do not provide a
+ASP TypeScript. It exists because `tsc`, ESLint, and Prettier do not provide a
 compact project reasoning tree for repair-oriented agents.
 
 ## Ownership
@@ -130,7 +130,7 @@ the reasoning tree, including its `runMode`; it must not accept parser module
 reports or project parser scopes as policy inputs. Reports expose this marker
 as `runMode` so structured consumers can distinguish project-scoped policy from
 explicit-path checks without reverse-engineering optional project fields. Every
-harness report carries a reasoning tree: full project facts for project runs
+ASP TypeScript report carries a reasoning tree: full project facts for project runs
 and minimal parser-owned file facts for explicit-path runs.
 Agent-facing modularity and repair rules use reasoning-tree owner facts such
 as `ownerBranches` and `ownerDependencies` before falling back to lower-level
@@ -154,7 +154,7 @@ policy logic for TypeScript syntax, imports, exports, or ownership.
 
 ## Runner Modes
 
-Use `runTypeScriptProjectHarness()` when a caller has a project path. The
+Use `runAspTypeScript()` when a caller has a project path. The
 project runner first resolves the nearest parent `package.json` and uses that
 directory as the package project anchor. It then reads `tsconfig.json` when
 present and uses TypeScript's own config parser to select root file names.
@@ -162,7 +162,7 @@ Without a config file, it falls back to conventional recursive TypeScript file
 discovery while emitting project-policy guidance from the reasoning tree's
 missing `configPath` fact.
 
-Use `runTypeScriptLangHarness()` for explicit files or directories. This runner
+Use `runAspTypeScriptPaths()` for explicit files or directories. This runner
 is useful for focused parser checks and editor integrations. It attaches a
 minimal reasoning tree built from parser-owned file facts, so syntax diagnostics
 still flow through reasoning-tree diagnostic facts before rule packs render
@@ -171,7 +171,7 @@ findings. Project-scoped policy stays quiet unless a project scope is available.
 ## Reasoning Tree
 
 `renderTypeScriptReasoningTree()` turns a report into a compact agent snapshot.
-It follows the Rust harness agent snapshot shape: `Modules:`, `Extensions:`,
+It follows the ASP Rust agent snapshot shape: `Modules:`, `Extensions:`,
 `BuildTools:`, `OwnerBranches:`, `OwnerDependencies:`, and `FindingGroups:`. It renders reasoning-tree
 `ownerBranches` and `ownerDependencies` facts built from parser-owned module
 roles, source exports, import specifiers, TypeScript-native
@@ -217,10 +217,10 @@ dependency checks.
 
 `warning` and `error` findings block assertions by default. `info` findings are
 advisory. TypeScript semantic diagnostics are reported as `TS-SEM-R001` advice
-because they should be visible to agents without turning the harness into a
+because they should be visible to agents without turning ASP TypeScript into a
 replacement for `tsc`. Malformed `package.json` metadata is reported as
 `TS-AGENT-PROJECT-003` advice, including malformed package metadata in TypeScript
-project references, so the project harness can still produce a repair surface.
+project references, so the ASP TypeScript can still produce a repair surface.
 Project-reference config shape and package-entry module-resolution shape are
 reported as `TS-AGENT-PROJECT-004`/`TS-AGENT-PROJECT-005` advice from parser-owned
 compiler-option facts, not package-manager or style policy. Rspack build-tool
@@ -255,7 +255,7 @@ unless a caller explicitly promotes them.
 ## Non-Goals
 
 The first standalone version does not replace `tsc`, ESLint, Prettier,
-framework compilers, bundlers, or package-manager audits. The harness should
+framework compilers, bundlers, or package-manager audits. ASP TypeScript should
 avoid rules those tools already own and focus on project facts that help agents
 choose the correct owner, entrypoint, facade, and edit surface.
 M8 does not implement the full Rust verification execution subsystem. It plans

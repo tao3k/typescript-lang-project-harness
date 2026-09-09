@@ -23,28 +23,10 @@ export const SEMANTIC_TREE_SITTER_QUERY_SCHEMA_ID =
 export const SEMANTIC_TREE_SITTER_GRAMMAR_PROFILE_SCHEMA_ID =
   "agent.semantic-protocols.semantic-tree-sitter-grammar-profile" as const;
 export const SEMANTIC_GRAPH_SCHEMA_ID = "agent.semantic-protocols.semantic-graph" as const;
-export const SEMANTIC_GRAPH_TURBO_REQUEST_SCHEMA_ID =
-  "agent.semantic-protocols.semantic-graph-turbo-request" as const;
 export const SEMANTIC_FACT_GRAPH_SCHEMA_ID =
   "agent.semantic-protocols.semantic-fact-graph" as const;
 export const SEMANTIC_FACT_ONTOLOGY_SCHEMA_ID =
   "agent.semantic-protocols.semantic-fact-ontology" as const;
-export const SEMANTIC_VERIFICATION_RECEIPT_SCHEMA_ID =
-  "agent.semantic-protocols.semantic-verification-receipt" as const;
-export const SEMANTIC_BEHAVIOR_SNAPSHOT_SCHEMA_ID =
-  "agent.semantic-protocols.semantic-behavior-snapshot" as const;
-export const SEMANTIC_DETERMINISM_READINESS_SCHEMA_ID =
-  "agent.semantic-protocols.semantic-determinism-readiness" as const;
-export const SEMANTIC_DEV_COMMAND_LOG_SCHEMA_ID =
-  "agent.semantic-protocols.dev-command-log" as const;
-export const SEMANTIC_FORMAL_PROOF_PILOT_SCHEMA_ID =
-  "agent.semantic-protocols.semantic-formal-proof-pilot" as const;
-export const SEMANTIC_REVIEW_PACKET_SCHEMA_ID =
-  "agent.semantic-protocols.semantic-review-packet" as const;
-export const SEMANTIC_EVIDENCE_GRAPH_SCHEMA_ID =
-  "agent.semantic-protocols.semantic-evidence-graph" as const;
-export const SEMANTIC_ASSURANCE_CASE_SCHEMA_ID =
-  "agent.semantic-protocols.semantic-assurance-case" as const;
 export const SEMANTIC_AST_PATCH_SCHEMA_ID = "agent.semantic-protocols.semantic-ast-patch" as const;
 export const SEMANTIC_AST_PATCH_RECEIPT_SCHEMA_ID =
   "agent.semantic-protocols.semantic-ast-patch-receipt" as const;
@@ -57,15 +39,13 @@ export const TYPE_SCRIPT_CAPABILITIES_SCHEMA_ID = `${TYPE_SCRIPT_PROVIDER_NAMESP
 
 export const TYPE_SCRIPT_QUERY_METHODS = ["query"] as const;
 export const TYPE_SCRIPT_AST_PATCH_METHODS = ["ast-patch/dry-run"] as const;
-export const TYPE_SCRIPT_EVIDENCE_METHODS = ["evidence/graph", "evidence/analyze"] as const;
 export const TYPE_SCRIPT_AGENT_METHODS = ["agent/doctor", "agent/guide"] as const;
 
 export type TypeScriptSemanticLanguageMethod =
   | (typeof TYPE_SCRIPT_QUERY_METHODS)[number]
   | (typeof TYPE_SCRIPT_AST_PATCH_METHODS)[number]
-  | (typeof TYPE_SCRIPT_EVIDENCE_METHODS)[number]
   | (typeof TYPE_SCRIPT_AGENT_METHODS)[number];
-export type SemanticLanguageCommand = "query" | "ast-patch" | "evidence" | "agent";
+export type SemanticLanguageCommand = "query" | "ast-patch" | "agent";
 export type SemanticLanguageOutputMode = "frontier" | "json" | "names";
 
 export interface SemanticLanguageRegistryDocument {
@@ -149,7 +129,6 @@ export function typeScriptSemanticLanguageRegistration(): SemanticLanguageRegist
     methods: [
       ...TYPE_SCRIPT_QUERY_METHODS,
       ...TYPE_SCRIPT_AST_PATCH_METHODS,
-      ...TYPE_SCRIPT_EVIDENCE_METHODS,
       ...TYPE_SCRIPT_AGENT_METHODS,
     ],
     methodDescriptors: typeScriptSemanticLanguageMethodDescriptors(),
@@ -258,32 +237,6 @@ function typeScriptSemanticLanguageMethodDescriptors(): readonly SemanticLanguag
       mutationAvailable: false,
       supportsJson: true,
       supportsCompact: false,
-    },
-    {
-      method: "evidence/graph",
-      command: "evidence",
-      invocation: {
-        argv: [TYPE_SCRIPT_BINARY, "evidence", "graph", "--json", "{workspace}"],
-        stdinMode: "none",
-      },
-      input: "provider project root",
-      outputSchemaIds: [SEMANTIC_EVIDENCE_GRAPH_SCHEMA_ID],
-      supportsJson: true,
-      supportsCompact: true,
-    },
-    {
-      method: "evidence/analyze",
-      command: "evidence",
-      invocation: {
-        argv: [TYPE_SCRIPT_BINARY, "evidence", "analyze", "--json", "{workspace}"],
-        stdinMode: "none",
-      },
-      input: "provider project root",
-      outputSchemaIds: [SEMANTIC_GRAPH_TURBO_REQUEST_SCHEMA_ID],
-      packetSchemas: ["semantic-graph-turbo-request.v1"],
-      clients: ["asp-python-graphs"],
-      supportsJson: true,
-      supportsCompact: true,
     },
     {
       method: "agent/doctor",

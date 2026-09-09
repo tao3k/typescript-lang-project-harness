@@ -4,21 +4,21 @@ import { fileURLToPath } from "node:url";
 import test from "node:test";
 
 import {
-  assertTypeScriptProjectHarnessClean,
+  assertAspTypeScriptClean,
   advisoryFindings,
-  isTypeScriptHarnessClean,
-  runTypeScriptProjectHarness,
+  isAspTypeScriptClean,
+  runAspTypeScript,
 } from "../../src/index.js";
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 
-test("repository self-applies the default TypeScript project harness", () => {
-  assertTypeScriptProjectHarnessClean(projectRoot);
+test("repository self-applies the default ASP TypeScript policy", () => {
+  assertAspTypeScriptClean(projectRoot);
 });
 
 test("repository self-applies the default advice surface with minimal findings", () => {
-  const report = runTypeScriptProjectHarness(projectRoot);
-  assert.ok(isTypeScriptHarnessClean(report), "harness must have zero errors");
+  const report = runAspTypeScript(projectRoot);
+  assert.ok(isAspTypeScriptClean(report), "ASP TypeScript must have zero errors");
 
   const modularityAdvice = report.findings.filter(
     (finding) => finding.packId === "typescript.modularity",

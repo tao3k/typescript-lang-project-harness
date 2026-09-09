@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
-import { renderTypeScriptReasoningTree, runTypeScriptProjectHarness } from "../../src/index.js";
+import { renderTypeScriptReasoningTree, runAspTypeScript } from "../../src/index.js";
 import { relativePath } from "./path_helpers.js";
 
 test("reasoning tree renders tsconfig paths, package entries, roles, and import edges", () => {
@@ -105,7 +105,7 @@ test("reasoning tree renders tsconfig paths, package entries, roles, and import 
     'import { consumed } from "../src/consumer.js";\n',
   );
 
-  const report = runTypeScriptProjectHarness(root);
+  const report = runAspTypeScript(root);
   const tree = report.reasoningTree;
   assert.deepEqual(
     tree.pathAliases.map((alias) => alias.pattern),
@@ -309,7 +309,7 @@ test("reasoning tree reports shadowed TypeScript source owner shapes", () => {
   fs.writeFileSync(path.join(root, "src", "domain.ts"), "export const domain = 1;\n");
   fs.writeFileSync(path.join(root, "src", "domain", "index.ts"), "export const indexed = 1;\n");
 
-  const report = runTypeScriptProjectHarness(root);
+  const report = runAspTypeScript(root);
   const tree = report.reasoningTree;
   const rendered = renderTypeScriptReasoningTree(report);
 
@@ -347,7 +347,7 @@ test("reasoning tree does not treat explicit facade forwarding as shadowed sourc
   fs.writeFileSync(path.join(root, "src", "domain.ts"), 'export * from "./domain/index.js";\n');
   fs.writeFileSync(path.join(root, "src", "domain", "index.ts"), "export const domain = 1;\n");
 
-  const report = runTypeScriptProjectHarness(root);
+  const report = runAspTypeScript(root);
   const rendered = renderTypeScriptReasoningTree(report);
 
   assert.deepEqual(report.reasoningTree.shadowedSourceOwners, []);
@@ -371,7 +371,7 @@ test("reasoning tree reports orphaned TypeScript source files from entry roots",
   fs.writeFileSync(path.join(root, "src", "index.ts"), "export const ok = 1;\n");
   fs.writeFileSync(path.join(root, "src", "forgotten.ts"), "export const forgotten = 1;\n");
 
-  const report = runTypeScriptProjectHarness(root);
+  const report = runAspTypeScript(root);
   const tree = report.reasoningTree;
   const rendered = renderTypeScriptReasoningTree(report);
 

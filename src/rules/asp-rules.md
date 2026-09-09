@@ -1,4 +1,4 @@
-- TS-SEM-R001: Surfaces TypeScript semantic diagnostics as harness findings.
+- TS-SEM-R001: Surfaces TypeScript semantic diagnostics as ASP TypeScript findings.
 - TS-AGENT-PROJECT-001: Requires TypeScript projects to declare a tsconfig boundary.
 - TS-AGENT-PROJECT-002: Requires tsconfig files to parse before project policy runs.
 - TS-AGENT-PROJECT-003: Requires package manifests to parse before package policy runs.

@@ -6,15 +6,15 @@ import { fileURLToPath } from "node:url";
 import test from "node:test";
 
 import {
-  renderTypeScriptHarnessRulesMarkdown,
-  typeScriptHarnessRulesMarkdown,
+  renderAspTypeScriptRulesMarkdown,
+  aspTypeScriptRulesMarkdown,
   typeScriptAgentPolicyRules,
   typeScriptExtensionPolicyRules,
   typeScriptModularityRules,
   typeScriptProjectPolicyRules,
   typeScriptSemanticRules,
   typeScriptTestLayoutRules,
-  writeTypeScriptHarnessRulesToUnitTests,
+  writeAspTypeScriptRulesToUnitTests,
 } from "../../src/index.js";
 
 const agentPolicyRuleIdPattern = /^TS-AGENT(?:-[A-Z][A-Z0-9]*)+-[0-9]{3}$/;
@@ -24,8 +24,8 @@ function packageRoot(): string {
   return path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 }
 
-function harnessRulesRuleIds(): string[] {
-  return typeScriptHarnessRulesMarkdown()
+function aspRulesRuleIds(): string[] {
+  return aspTypeScriptRulesMarkdown()
     .trimEnd()
     .split(/\r?\n/)
     .map((line) => {
@@ -46,8 +46,8 @@ function catalogRuleIds(): string[] {
   ].map((rule) => rule.ruleId);
 }
 
-test("harness rules markdown is a plain rule-id list", () => {
-  const lines = typeScriptHarnessRulesMarkdown().trimEnd().split(/\r?\n/);
+test("ASP TypeScript rules markdown is a plain rule-id list", () => {
+  const lines = aspTypeScriptRulesMarkdown().trimEnd().split(/\r?\n/);
 
   assert.equal(lines.length, 46);
   for (const [index, line] of lines.entries()) {
@@ -68,27 +68,27 @@ test("harness rules markdown is a plain rule-id list", () => {
   }
 });
 
-test("harness rules ids match rule catalog", () => {
-  assert.deepEqual(harnessRulesRuleIds().sort(), catalogRuleIds().sort());
+test("ASP TypeScript rules ids match rule catalog", () => {
+  assert.deepEqual(aspRulesRuleIds().sort(), catalogRuleIds().sort());
 });
 
-test("generated harness rules matches unit fixture", () => {
+test("generated ASP TypeScript rules matches unit fixture", () => {
   const unitDir = path.join(packageRoot(), "tests", "unit");
-  const fixture = path.join(unitDir, "harness-rules.generated.md");
+  const fixture = path.join(unitDir, "asp-rules.generated.md");
   if (process.env.UPDATE_HARNESS_RULES) {
-    writeTypeScriptHarnessRulesToUnitTests(unitDir);
+    writeAspTypeScriptRulesToUnitTests(unitDir);
   }
 
-  assert.equal(fs.readFileSync(fixture, "utf8"), renderTypeScriptHarnessRulesMarkdown());
+  assert.equal(fs.readFileSync(fixture, "utf8"), renderAspTypeScriptRulesMarkdown());
 });
 
-test("harness rules writer targets requested unit directory", () => {
+test("ASP TypeScript rules writer targets requested unit directory", () => {
   const unitDir = fs.mkdtempSync(path.join(os.tmpdir(), "asp-typescript-rules-"));
   try {
-    const output = writeTypeScriptHarnessRulesToUnitTests(unitDir);
+    const output = writeAspTypeScriptRulesToUnitTests(unitDir);
 
-    assert.equal(output, path.join(unitDir, "harness-rules.generated.md"));
-    assert.equal(fs.readFileSync(output, "utf8"), renderTypeScriptHarnessRulesMarkdown());
+    assert.equal(output, path.join(unitDir, "asp-rules.generated.md"));
+    assert.equal(fs.readFileSync(output, "utf8"), renderAspTypeScriptRulesMarkdown());
   } finally {
     fs.rmSync(unitDir, { recursive: true, force: true });
   }

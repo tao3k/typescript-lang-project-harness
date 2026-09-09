@@ -20,8 +20,6 @@ Usage:
   asp typescript query --selector <exact-structural-selector> --projection <source|callable-skeleton> --workspace <root>
   asp-typescript query (--catalog <id> | --treesitter-query <s-expression>) [--workspace <root>] [--selector <structural-selector>] [--json]
   asp-typescript ast-patch dry-run --packet <semantic-ast-patch.json|->
-  asp-typescript evidence graph [--json] [PROJECT_ROOT]
-  asp-typescript evidence analyze [--json] [PROJECT_ROOT]
   asp-typescript agent doctor [--json]
   asp-typescript agent guide
 

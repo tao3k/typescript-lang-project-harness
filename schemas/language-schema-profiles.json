@@ -96,12 +96,10 @@
       "semantic-dev-command-log.v1.schema.json",
       "semantic-formal-proof-pilot.v1.schema.json",
       "semantic-review-packet.v1.schema.json",
-      "semantic-evidence-graph.v1.schema.json",
       "semantic-graph-resident-evaluation-request.v1.schema.json",
       "semantic-graph-resident-evaluation-result.v1.schema.json",
       "python-generation-graph-performance-receipt.v1.schema.json",
       "semantic-graph-turbo-request.v1.schema.json",
-      "semantic-assurance-case.v1.schema.json",
       "semantic-ast-patch.v1.schema.json",
       "semantic-ast-patch-receipt.v1.schema.json"
     ]
