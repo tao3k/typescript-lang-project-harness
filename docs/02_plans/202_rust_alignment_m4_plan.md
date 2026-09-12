@@ -1,6 +1,6 @@
 # Rust Alignment M4 Plan
 
-M4 aligns the TypeScript harness with the current Rust harness mechanism while
+M4 aligns the ASP TypeScript with the current ASP Rust mechanism while
 keeping the TypeScript-specific parser contract intact:
 
 ```text
@@ -51,6 +51,6 @@ surfaces; they are not package-manager gates.
   behavior;
 - snapshot tests prove compact caps, no `-> -` placeholders, and fan-in/fan-out
   grouping;
-- self-policy tests prove the repository default harness remains clean;
+- self-policy tests prove the repository default ASP TypeScript remains clean;
 - acceptance runs remain `npm run check`, `npm run lint`, `npm test`,
-  `npm run harness`, and `git diff --check` through `direnv exec .`.
+  `npm run check:policy`, and `git diff --check` through `direnv exec .`.

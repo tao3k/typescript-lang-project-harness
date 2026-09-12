@@ -408,38 +408,16 @@
     },
     "methodId": {
       "type": "string",
-      "pattern": "^(?:guide|query|(search|query|check|proof|review|verification|evidence|ast-patch|agent)/[a-z][a-z0-9_-]*)$"
+      "pattern": "^(?:guide|query|(query|proof|review|ast-patch|agent)/[a-z][a-z0-9_-]*)$"
     },
     "hookRouteBindings": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "prime",
-        "owner",
-        "lexical",
-        "ingest",
-        "checkChanged"
-      ],
       "properties": {
-        "prime": {
-          "$ref": "#/$defs/methodId"
-        },
-        "owner": {
-          "$ref": "#/$defs/methodId"
-        },
-        "lexical": {
-          "$ref": "#/$defs/methodId"
-        },
         "query": {
           "$ref": "#/$defs/methodId"
         },
         "exactSelectorNative": {
-          "$ref": "#/$defs/methodId"
-        },
-        "ingest": {
-          "$ref": "#/$defs/methodId"
-        },
-        "checkChanged": {
           "$ref": "#/$defs/methodId"
         },
         "dependencyTopology": {

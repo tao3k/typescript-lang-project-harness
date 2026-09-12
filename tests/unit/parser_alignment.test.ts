@@ -62,7 +62,7 @@ test("runner, rule, and render layers stay downstream of the reasoning tree", ()
     [
       'from "./parser',
       'from "./reasoning',
-      "TypeScriptProjectHarnessScope",
+      "AspTypeScriptProjectScope",
       "TypeScriptModuleReport",
       "moduleReport.diagnostics",
       "semanticDiagnostics",
